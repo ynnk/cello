@@ -1,0 +1,7 @@
+# ignore editor temp files
+*~
+# ignore pyc files
+*.pyc
+
+# ignore _rep in documentation dir
+_*

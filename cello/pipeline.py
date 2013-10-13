@@ -1,12 +1,31 @@
 #-*- coding:utf-8 -*-
+"""
+:mod:`cello.pipeline`
+=====================
 
+:copyright: (c) 2013 - 2014 by Yannick Chudy, Emmanuel Navarro.
+:license: TODO
+
+Abstract objects used to setup processing pipelines.
+
+
+inheritance diagrams
+--------------------
+
+.. inheritance-diagram:: cello.pipeline
+
+Class
+-----
+"""
 
 class Optionable:
+    """ Abstract class for an optionable component
+    """
+
     def __init__(self, name):
-        """ Create a new optionable object
-        
-        @param name: the name of the Optionable object
-        @type name: str or unicode
+        """ 
+        :param name: name of the Optionable component
+        :type name: str
         """
         self._options_info = {}
         self._force_options = {}
@@ -15,67 +34,42 @@ class Optionable:
 
     @staticmethod
     def _parse_bool(value):
-        if value is None : return False
-        if value is True or value is False: return value
+        if value is None:
+            return False
+        if value is True or value is False:
+            return value
         boolean = str(value).strip().lower()
         return boolean in ['true','yes', 'on', '1']
 
+    @property
+    def name(self):
+        """Name of the optionables component"""
+        return self._name
+
+    @name.setter
+    def name(self, name):
+        self._name = name
+
     def force_option_value(self, opt_name, value):
         """ force the value of an option.
-        The option is no more visible with L{get_options()}.
+        The option is then no more listed by :func:`get_options()`.
+        
+        :param opt_name: option name
+        :type opt_items: str
+        
+        :param value: option value
         """
         if not opt_name in self._options_info:
             raise KodexValueError, "Unknow option name (%s)" % opt_name
         self._force_options[opt_name] = value
 
-    def add_bool_option(self, opt_name, default, description ):
-        """ add a boolean option 
-        @param opt_name: L{str} Option name
-        @param default: L{bool} Default value
-        @param description: L{str} Short description of the option
-        """
-        self._add_option(opt_name, {'type':'bool', 'default':default, 'description':description, 'cast':Optionable._parse_bool} )
-
-    def add_enum_option(self, opt_name, enum, default, description, cast):
-        """ Add an option to the object same as add option except enum can be provided  
-        @param enum: list of data 
-        """
-        if enum is not None and type(enum) == list and len(set(enum)) == len(enum):
-            self._add_option(opt_name, {'type':'enum', 'enum':enum, 'default':default, 'description':description, 'cast':cast})
-
-    def add_option(self, opt_name, default, description, cast, **kwargs):
-        """ Add an option to the object
-        
-        @param opt_name: Option name
-        @type opt_name: str
-        @param default: Default value
-        @type default: str
-        @param description: Short description of the option
-        @type description: str
-        @param cast: Function to transform the option value from string to appropriate format
-        @type cast: function or callable object
-        """
-        self._add_option(opt_name, {'type':'text','default':default, 'description':description, 'cast':cast} )
-        
-    def _add_option(self, opt_name, opt):
-        """ private methode used to add an option.
-        
-        an option 'opt' is a dict with :
-        {
-         'type':'text', # 'text' or 'enum' or 'bool'
-         'enum': [],    # if enum
-         'default':default,
-         'description':description,
-         'cast':cast
-        }
-        """
-        assert opt_name not in self._options_info, "Option '%s' already setted" %opt_name
-        opt['value'] = opt['default']
-        self._options_info[opt_name] = opt
-        self._options_order.append(opt_name)
-
     def change_option_default(self, opt_name, default_val):
         """ Change the default value of an option
+        
+        :param opt_name: option name
+        :type opt_items: str
+        
+        :param value: new default option value
         """
         print "change_option_default %s %s" % (opt_name, default_val) 
         if opt_name in self._options_info:
@@ -83,7 +77,84 @@ class Optionable:
             self._options_info[opt_name]["value"] = default_val   #XXX: est-ce que c'est utile ? ou donc ?
         else:
             raise KodexValueError, "Unknow option name (%s)" % opt_name
-            
+
+    def add_bool_option(self, opt_name, default, description):
+        """ Add a boolean option
+        
+        :param opt_name: option's name
+        :type opt_name: str
+        
+        :param default: default value of the option
+        :type default: str
+    
+        :param description: short description of the option
+        :type description: str
+        """
+        self._add_option(
+            opt_name,
+            {
+                'type':'bool',
+                'default':default,
+                'description':description,
+                'cast':Optionable._parse_bool
+            }
+        )
+
+    def add_enum_option(self, opt_name, enum, default, description, cast):
+        """ Add an option to the object same as add option except enum can be provided  
+        
+        :param opt_name: option name
+        :type opt_items: str
+        
+        :param enum: list of possible values
+        
+        :param default_val: default value
+        
+        :param description: short description of the option
+        :type description: str
+        
+        :param cast: function to transform the option value from string to
+             appropriate format
+        :type cast: function
+        """
+        #TODO check default est bien dans enum
+        if enum is not None and type(enum) == list and len(set(enum)) == len(enum):
+            self._add_option(opt_name, {'type':'enum', 'enum':enum, 'default':default, 'description':description, 'cast':cast})
+
+    def add_option(self, opt_name, default, description, cast, **kwargs):
+        """ Add an option to the object
+        
+        :param opt_name: option name
+        :type opt_name: str
+        
+        :param default: default value
+        :type default: str
+        
+        :param description: short description of the option
+        :type description: str
+        
+        :param cast: function to transform the option value from string to
+            appropriate format
+        :type cast: function
+        """
+        self._add_option(opt_name, {'type':'text','default':default, 'description':description, 'cast':cast} )
+        
+    def _add_option(self, opt_name, opt):
+        """ private methode used to add an option.
+        
+        an option 'opt' is a dict with ::
+            {
+             'type':'text', # 'text' or 'enum' or 'bool'
+             'enum': [],    # if enum
+             'default':default,
+             'description':description,
+             'cast':cast
+            }
+        """
+        assert opt_name not in self._options_info, "Option '%s' already setted" %opt_name
+        opt['value'] = opt['default']
+        self._options_info[opt_name] = opt
+        self._options_order.append(opt_name)
 
     def parse_options(self, options):
         parse = {}
@@ -100,16 +171,28 @@ class Optionable:
 
     def get_default_value(self, opt_name):
         """ Return the default value of a given option
+        
+        :param opt_name: option name
+        :type opt_name: str
         """
         if opt_name in self._force_options:
             return self._force_options[opt_name]
         return self._options_info[opt_name]["default"]
 
     def get_options(self):
+        """
+        :returns: dictionary of all options (with option's information)
+        :rtype: dict
+        """
         #TODO: replace the dict by a list to get ordered options
         return dict(self.get_ordered_options())
 
     def get_ordered_options(self):
+        """
+        :returns: **ordered** list of all options (with option's information)
+        :rtype: list ::
+            [(<opt_name>, )]
+        """
         return [(opt_name, self._options_info[opt_name]) \
                     for opt_name in self._options_order \
                     if not opt_name in self._force_options]
@@ -125,11 +208,13 @@ class Composable:
     >>>     print("result: %s" % e)
     
     Is the same than :
+    
     >>> e1 = Composable()
     >>> e2 = Composable()
     >>> for e in e2(e1(iterable)):
     >>>     print("result: %s" % e)
     """
+
     def __init__(self):
         pass
 
@@ -250,9 +335,6 @@ class ComposableChain(Composable, Optionable):
                 item.close()
 
 
-
-
-
 #{ Document Pipeline
 
 class DocPipelineElmt(Composable):
@@ -263,18 +345,18 @@ class DocPipelineElmt(Composable):
     
     def __call__(self, kdocs):
         """
-        @param kdocs: input generator of L{KodexDoc}
-        @type kdocs: (L{KodexDoc}, ...)
+        :param kdocs: input generator of :class:`KodexDoc`
+        :type kdocs: 
         
-        @return: A generator of L{KodexDoc}
-        @rtype: (L{KodexDoc}, ...)
+        :returns: generator of L{KodexDoc}
+        :rtype: (L{KodexDoc}, ...)
         """
         raise NotImplementedError
         #for kdoc in kdocs:
         #    yield kdoc
 
 class OptDocPipelineElmt(DocPipelineElmt, Optionable):
-    """ L{Optionable} document pipeline element.
+    """ :class:`Optionable` document pipeline element.
     """
     def __init__(self, name):
         DocPipelineElmt.__init__(self)
@@ -286,9 +368,10 @@ class OptDocPipelineElmt(DocPipelineElmt, Optionable):
         #    yield kdoc
 
 class DocListPipelineElmt(OptDocPipelineElmt):
-    """ Excactly as L{OptDocPipelineElmt} except than the L{__call__} method
-    return a list and not a generator.
+    """ Excactly as :class:`OptDocPipelineElmt` except than the :func:`__call__`
+    method returns a list and not a generator.
     """
     def __call__(self, kdocs):
         raise NotImplementedError
         #return [kdoc for kdoc in kdocs]
+
