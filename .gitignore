@@ -4,4 +4,7 @@
 *.pyc
 
 # ignore _rep in documentation dir
-_*
+/docs/_*
+
+/.private/
+.ipynb_checkpoints/

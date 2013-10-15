@@ -4,6 +4,6 @@
 class CelloError(Exception):
     """Base KodexError"""
 
-class CelloValueError(KodexError, ValueError):
+class CelloValueError(CelloError, ValueError):
     """Base KodexValueError"""
 

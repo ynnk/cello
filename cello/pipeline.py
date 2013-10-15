@@ -4,7 +4,7 @@
 =====================
 
 :copyright: (c) 2013 - 2014 by Yannick Chudy, Emmanuel Navarro.
-:license: TODO
+:license: ${LICENSE}
 
 Abstract objects used to setup processing pipelines.
 
@@ -348,12 +348,10 @@ class DocPipelineElmt(Composable):
         :param kdocs: input generator of :class:`KodexDoc`
         :type kdocs: 
         
-        :returns: generator of L{KodexDoc}
-        :rtype: (L{KodexDoc}, ...)
+        :returns: generator of L{Doc}
+        :rtype: (L{Doc}, ...)
         """
         raise NotImplementedError
-        #for kdoc in kdocs:
-        #    yield kdoc
 
 class OptDocPipelineElmt(DocPipelineElmt, Optionable):
     """ :class:`Optionable` document pipeline element.
@@ -364,8 +362,6 @@ class OptDocPipelineElmt(DocPipelineElmt, Optionable):
     
     def __call__(self, kdocs, **kwargs):
         raise NotImplementedError
-        #for kdoc in kdocs:
-        #    yield kdoc
 
 class DocListPipelineElmt(OptDocPipelineElmt):
     """ Excactly as :class:`OptDocPipelineElmt` except than the :func:`__call__`
@@ -373,5 +369,4 @@ class DocListPipelineElmt(OptDocPipelineElmt):
     """
     def __call__(self, kdocs):
         raise NotImplementedError
-        #return [kdoc for kdoc in kdocs]
 

@@ -5,7 +5,7 @@ import random
 
 from cello.errors import CelloError
 
-logger = logging.getLogger("kodex.models")
+logger = logging.getLogger("cello.models")
 
 
 class Doc(dict):
@@ -13,9 +13,9 @@ class Doc(dict):
 
     Exemple d'utilisation sans asssociations des scores et des terms fields
     >>> kdoc = Doc()
-    >>> kdoc.declare_term_field("snippet")
-    >>> kdoc.declate_term_attr_field("snippet_tf")
-    >>> kdoc.declate_term_attr_field("snippet_bm25")
+    >>> kdoc.declare_field("snippet")
+    >>> kdoc.declate_attr_field("snippet_tf")
+    >>> kdoc.declate_attr_field("snippet_bm25")
     >>> for term, tf, bm25 in [("chat", 2, 4.34), ("poche", 34, 1.2)]:
     >>>     kdoc.add_term("snippet", term)
     >>>     kdoc.set_term_attr("snippet_tf", term, tf)
@@ -248,7 +248,7 @@ class LU(dict):
             self.posting = list(posting)
 
     def __repr__(self):
-        return "<KodexLU(\"%s\")>" % str(self)
+        return "<LU(\"%s\")>" % str(self)
 
     def __hash__(self):
         """ implemented method to make set() works. Standard hash method on KodexLU.form
@@ -265,60 +265,4 @@ class LU(dict):
 
     def __str__(self):
         return unicode(self).encode('utf8')
-
-
-
-
-class KGraph():
-    """
-    You should not have to modify the graph !
-    """
-    # KodexGraph dans un pyro ? why not
-    
-    import igraph as ig
-
-    def __init__(self, name, gurl, vindex_attr="label", **kwargs):
-        """
-        """
-        self._logger = logging.getLogger("Kodex.KodexGraph")
-        # charge le graphe ne RAM
-        self._logger.info("Load the graph '%s': %s" % (name, gurl))
-        self.name = name
-
-        try :
-            self.graph = ig.read(gurl)
-        except :
-            raise KodexError("Cannot open graph at %s" %gurl)
-
-        self._logger.info("graph '%s' loaded" % (name))
-        if vindex_attr not in self.graph.vs.attributes():
-            raise ValueError("'%s' is not a vertex attribute (vertex attributes = %s)" % (search_attr, graph.vs.attributes()))
-        # calul de l'index des sommets
-        self.vindex_attr = vindex_attr
-        self.vindex = {}
-        if vindex_attr is not None:
-            self.vindex = dict((vtx[vindex_attr], vtx.index) for vtx in self.graph.vs)
-        self.color_vertices = []
-        if 'colors' in kwargs :
-            self.color_vertices = [ (self.vindex.get(label), color)  for label, color in kwargs['colors'].iteritems() ]
-            print self.color_vertices
-
-    def random_vertex(self, attr=None, from_edges=False):
-        """ return a random graph vertex
-
-        @param attr: if not None return the attribute 'attr' of the random vertex, instead of the id (of the random vertex).
-        @param from_edges: if True get an edges by random and then pick one of the ends of the edge by random
-        """
-        # calcul un radom vid
-        if from_edges:
-            #on tire une arrete et on prend un de voisin de l'arete
-            es = random.choice(self.graph.es)
-            vid = random.choice([es.source, es.target])
-        else:
-            vid = random.choice(xrange(self.graph.vcount()))
-        # recup d'un attribut si demandé
-        if attr is not None:
-            return self.graph.vs[vid][attr]
-        else:
-            return vid
 
