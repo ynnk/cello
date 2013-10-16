@@ -1,28 +1,38 @@
-#!/usr/bin/python
-# -*- coding: utf-8 -*-
-""" Python version of Prox over igraph
+#-*- coding:utf-8 -*-
+""" :mod:`cello.utils.prox`
+===========================
+
+:copyright: (c) 2013 - 2014 by Yannick Chudy, Emmanuel Navarro.
+:license: ${LICENSE}
+
+Python version of Prox over igraph :
 
 >>> import igraph as ig
 >>> g = igraph.Graph.Erdos_Renyi(n = 1000, p = 0.01, directed=False, loops=False)
 >>> p1 = prox_markov(g, [i], l)
 
-"""
 
-import igraph as ig
+.. currentmodule:: cello.utils.prox
+
+.. autosummary::
+    prox_markov
+    
+"""
 from random import randint
 
-import prox
+import igraph as ig
 
 #{ Prox on graph in igraph object
 def spreading(g, in_vect, neighbors_fct):
-    """ Basic function : spread value of in_vect throw the graph g.
+    """ spread value of in_vect throw the graph g.
     
-    @param g: graph in igraph format
-    @param in_vect: input vector, a python dictionary : {vertex_id:value, ...}   
-    @param neighbors_func : a function to retrieve nodes neighbors list takes a graph and from_vertex as arguments 
-                            default returns g.neighbors(from_vertex)
-    @return: output vector same format as in_vect.
-    """    
+    
+    :param g: graph in igraph format
+    :param in_vect: input vector, a python dictionary : {vertex_id:value, ...}
+    :param neighbors_func: a function to retrieve nodes neighbors list
+    
+    :returns: output vector same format as in_vect.
+    """
     out_vect = {}
     for from_vertex, value in in_vect.iteritems():
         neighborhood = neighbors_fct(g, from_vertex)
@@ -33,17 +43,21 @@ def spreading(g, in_vect, neighbors_fct):
     return out_vect
 
 
-def prox_markov(g, p0, neighbors_fct = ig.Graph.neighbors, l=3 ):
+def prox_markov(g, p0, neighbors_fct=ig.Graph.neighbors, l=3):
     """ Prox 'classic'
-    @param g: graph in igraph format
-    @param p0: list of starting nodes : [id_vertex1, id_vertex2, ...]
-    or dict of starting node {(id, weight) , ... }
-    Giving a list as pzero will set initial vector to v0 = 1./len(p0).
-    @param neighbors_func : a function to retrieve nodes neighbors list takes a graph and from_vertex as arguments 
+    
+    For `neighbors_fct` you can use :
+    
     >>> neighbors_fct = lambda g, from_vertex : g.neighbors(from_vertex)
     >>> neighbors_fct = ig.Graph.neighbors
-    @param l: random walk length
-    @return: result vector, a python dictionary : {vertex_id:value, ...}
+    
+    :param g: graph in igraph format
+    :param p0: list of starting nodes: [id_vertex1, id_vertex2, ...] or dict of starting node {(id, weight) , ... }. Giving a list as pzero will set initial vector to v0 = 1./len(p0).
+    :param neighbors_func: a function to retrieve nodes neighbors list takes a graph and from_vertex as arguments 
+    
+    :param l: random walk length
+    
+    :returns: result vector, a python dictionary : {vertex_id:value, ...}
     """
     
     if isinstance(p0, dict):
@@ -59,12 +73,14 @@ def prox_markov(g, p0, neighbors_fct = ig.Graph.neighbors, l=3 ):
 
 def prox_markov_mtcl(g, p0, neighbors_fct = ig.Graph.neighbors, l=3, nb_throw=10):
     """ Prox 'classic' by an approximate method montecarlo with nb_throw throws
-    @param g: graph in igraph format
-    @param p0: list of starting nodes : [id_vertex1, id_vertex2, ...]
-    @parma l: random walk length
-    @param nb_throw : the number of throws in montecarlo process
-    @param false_relf: if True do as if every vertex hold a self loop (reflexif graph)
-    @return: prox_vect, died: prox_vect is a python dictionary : {vertex_id:value, ...} AND died is the probability of dying during the random walks (the walker die when he has to do a step starting from a vertex without neighbors)
+
+    :param g: graph in igraph format
+    :param p0: list of starting nodes : [id_vertex1, id_vertex2, ...]
+    :parma l: random walk length
+    :param nb_throw: the number of throws in montecarlo process
+    :param false_relf: if True do as if every vertex hold a self loop (reflexif graph)
+    
+    :returns: prox_vect, died: prox_vect is a python dictionary : {vertex_id:value, ...} AND died is the probability of dying during the random walks (the walker die when he has to do a step starting from a vertex without neighbors)
     """ 
     prox_vect={} # le vecteur de proxemie approchée part montecarlo
     died=0 # proba de mourir : on meurt qd on doit faire un pas a partir d'un sommet sans voisins
@@ -97,12 +113,12 @@ def prox_markov_mtcl(g, p0, neighbors_fct = ig.Graph.neighbors, l=3, nb_throw=10
 def spreading_wgt(g, in_vect, wgt=lambda i: 1., epsi=0, false_refl=False):
     """ Basic function : spread value of in_vect throw the graph g. (weighted version)
     
-    @param g: graph in igraph format
-    @param in_vect: input vector, a python dictionary : {vertex_id:value, ...}   
-    @param wgt: weighting fuction, given a edge id return the weight of the edge 
-    @param false_refl: if True do as if every vertex hold a self loop (reflexif graph)
+    :param g: graph in igraph format
+    :param in_vect: input vector, a python dictionary : {vertex_id:value, ...}   
+    :param wgt: weighting fuction, given a edge id return the weight of the edge 
+    :param false_refl: if True do as if every vertex hold a self loop (reflexif graph)
 
-    @return: output vector same format as in_vect.
+    :returns: output vector same format as in_vect.
     """
     out_vect = {}
     for from_vertex, value in in_vect.iteritems():
@@ -120,13 +136,13 @@ def spreading_wgt(g, in_vect, wgt=lambda i: 1., epsi=0, false_refl=False):
 def prox_markov_wgt(g, p0, length=3, wgt=None, epsi=0, false_refl=False):
     """ Prox 'classic'
         
-    @param g: graph in igraph format
-    @param p0: list of starting nodes : [id_vertex1, id_vertex2, ...]
-    @param l: random walk length
-    @param wgt: weighting fuction, given a edge id return the weight of the edge 
-    @param false_refl: if True do as if every vertex hold a self loop (reflexif graph)
+    :param g: graph in igraph format
+    :param p0: list of starting nodes : [id_vertex1, id_vertex2, ...]
+    :param l: random walk length
+    :param wgt: weighting fuction, given a edge id return the weight of the edge 
+    :param false_refl: if True do as if every vertex hold a self loop (reflexif graph)
 
-    @return: result vector, a python dictionary : {vertex_id:value, ...}
+    :returns: result vector, a python dictionary : {vertex_id:value, ...}
     """
     
     v0 = 1./len(p0)
@@ -140,7 +156,7 @@ def prox_markov_wgt(g, p0, length=3, wgt=None, epsi=0, false_refl=False):
     return prox_vect
 
 
-def confluence(g, p0, neighbors_fct = ig.Graph.neighbors, l=3 , method=prox.prox_markov ):
+def confluence(g, p0, neighbors_fct = ig.Graph.neighbors, l=3 , method=prox_markov):
     pm = method(g, p0, neighbors_fct = neighbors_fct, l=l )
     conf =  { k: 1.*v / (v+(1.*len(neighbors_fct(g,k))/(2*g.ecount()))) for k,v in pm.iteritems()}
     #~ print conf
@@ -151,11 +167,11 @@ def confluence(g, p0, neighbors_fct = ig.Graph.neighbors, l=3 , method=prox.prox
 
 def sortcut( v_extract, nnodes ):
     """ Return the neighborhood of a list of vertices by using prox.
-    @param pzero: list of starting vertices (ids)
-    @param l: length of the random walk use to compute the neighborhood
-    @param neighbors_fct: (optional) function that return, for a given graph and
-        a given vertex id, the neighbors of the vertexs
-    @return: a list of the form: [(vid1, score), (vid2, score), ...]
+
+    :param pzero: list of starting vertices (ids)
+    :param l: length of the random walk use to compute the neighborhood
+    :param neighbors_fct: (optional) function that return, for a given graph and a given vertex id, the neighbors of the vertexs
+    :return: a list of the form: [(vid1, score), (vid2, score), ...]
     """
     v_extract = v_extract.items() #  sparce prox_vect : [(id, prox_value)]
     v_extract.sort(key=lambda x: x[1], reverse=True) # sorting by prox.prox_markov
@@ -164,13 +180,15 @@ def sortcut( v_extract, nnodes ):
     return v_extract
 
 
-def neighborhood_bipartite(graph, pzero, l, nnodes, neighbors_fct = None):
-    """ Return the neighborhood of a list of vertices in a bipartite graph
-    @param pzero: list of starting vertices (ids)
-    @param l: length of the random walk use to compute the neighborhood
-    @param neighbors_fct: (optional) function that return, for a given graph and
-        a given vertex id, the neighbors of the vertexs
-    @return: a list of the form: [(vid1, score), (vid2, score), ...]
+
+def neighborhood_bipartite(graph, pzero, l, nnodes, neighbors_fct=None):
+    """ neighborhood of a list of vertices in a bipartite graph
+
+    :param pzero: list of starting vertices (ids)
+    :param l: length of the random walk use to compute the neighborhood
+    :param neighbors_fct: (optional) function that return, for a given graph and a given vertex id, the neighbors of the vertexs
+
+    :returns: a list of the form: [(vid1, score), (vid2, score), ...]
     """
     if neighbors_fct is None:
         neighbors_fct = lambda g, vid: g.neighbors(vid)

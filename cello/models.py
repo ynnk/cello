@@ -1,4 +1,12 @@
 #-*- coding:utf-8 -*-
+""" :mod:`cello.models`
+=======================
+
+:copyright: (c) 2013 - 2014 by Yannick Chudy, Emmanuel Navarro.
+:license: ${LICENSE}
+
+Cello basic objects.
+"""
 
 import logging
 import random
@@ -11,7 +19,8 @@ logger = logging.getLogger("cello.models")
 class Doc(dict):
     """ Document
 
-    Exemple d'utilisation sans asssociations des scores et des terms fields
+    Exemple d'utilisation sans asssociations des scores et des terms fields :
+    
     >>> kdoc = Doc()
     >>> kdoc.declare_field("snippet")
     >>> kdoc.declate_attr_field("snippet_tf")
@@ -21,32 +30,27 @@ class Doc(dict):
     >>>     kdoc.set_term_attr("snippet_tf", term, tf)
     >>>     kdoc.set_term_attr("snippet_bm25", term, bm25)
 
-    Exemple d'utiliation avec asssociations des scores et des terms fields
+    Exemple d'utiliation avec asssociations des scores et des terms fields :
+    
     >>> kdoc = Doc()
     >>> kdoc.declare_term_field("snippet", "tf", "bm25")
     >>> for term, tf, bm25 in [("chat", 2, 4.34), ("poche", 34, 1.2)]:
     >>>     kdoc.add_term("snippet", term, tf=tf, bm25=bm25)
 
-    @ivar docnum: uniq identifier of the document
-    @type docnum: L{unicode}
+    :ivar docnum: uniq identifier of the document
+    :type docnum: unicode
 
-    @ivar rank: rank of doc
-    @type rank: L{int}
+    :ivar rank: rank of doc
+    :type rank: int
 
-    @ivar title: Title of the document
-    @type title: L{str} or L{unicode}
+    :ivar title: Title of the document
+    :type title: str
 
-    @ivar url: url of the document
-    @type url: L{str} or L{unicode}
+    :ivar url: url of the document
+    :type url: str
 
-    @ivar text: Full text of the document !! may not be stored !!
-    @type text: L{str} or L{unicode}
-
-    @ivar terms: dictionary of the key:lexical unit value: position in list indexed in the document
-    @type terms: {string:int, .. )}
-
-    @ivar terms_tf: list of tfs of LUs of doc
-    @type terms_tf: [int]
+    :ivar text: Full text of the document (may not be stored)
+    :type text: str
     """
 
     # It's a Dictionary who's keys act like attributes as well
@@ -84,8 +88,8 @@ class Doc(dict):
         _docnum = self.docnum
         if isinstance(self.docnum, str):
             _docnum = self.docnum.encode("utf8")
-#        return "<KodexDoc(\"%s\")>" % _docnum
-        return  ("<KodexDoc(\"%s\")>\n" % _docnum) + "\n".join([ '%s:%s'% (k,repr(v))  for k,v in self.iteritems() ])
+        return  ("<KodexDoc(\"%s\")>\n" % _docnum) + \
+             "\n".join([ '%s:%s'% (k,repr(v))  for k,v in self.iteritems() ])
 
     def _get_attr_field_name(self, field_name, attr_field_suffix):
         return "%s_%s" % (field_name, attr_field_suffix)
@@ -101,8 +105,8 @@ class Doc(dict):
     def declare_field(self, field_name, associated_attr_fields=None):
         """ Declare a new field (for terms for ex.)
 
-        @param field_name: The name of the field to create
-        @param associated_attr_fields: a list of associated attr field to create
+        :param field_name: The name of the field to create
+        :param associated_attr_fields: a list of associated attr field to create
         """
         if field_name in self._term_fields:
             raise ValueError("The field '%s' already exist" % field_name)
@@ -185,10 +189,10 @@ class Doc(dict):
     def set_element_attr(self, attr_field_name, element, attr, field_name=None):
         """ Set a attr (score or a data) for a element
 
-        @param attr_field_name: the name of the attr field name
-        @param element: the element
-        @param attr: the new attr
-        @param field_name:
+        :param attr_field_name: the name of the attr field name
+        :param element: the element
+        :param attr: the new attr
+        :param field_name:
         """
         if field_name is not None:
             attr_field_name = self._get_attr_field_name(field_name, attr_field_name)
@@ -201,7 +205,7 @@ class Doc(dict):
 
     def inc_element_attr(self, attr_field_name, element, increment=1, field_name=None):
         """ Increment the attr 'attr_field_name'  (or a data) of ans element
-        @param increment : add to the current value default is 1
+        :param increment : add to the current value default is 1
         """
         val = self.get_element_attr(attr_field_name, element, field_name=field_name)
         self.set_element_attr(attr_field_name, element, val + increment, field_name=field_name)
@@ -210,17 +214,17 @@ class Doc(dict):
 class LU(dict):
     """ Lexical unit
 
-    @ivar form: form of the lexical unit
-    @type form: L{unicode}
+    :ivar form: form of the lexical unit
+    :type form: unicode
 
-    @ivar TF: total term frequency in the L{Index}
-    @type TF: L{int}
+    :ivar TF: total term frequency in the index
+    :type TF: int
 
-    @ivar df: number of documents containing the lexical unit
-    @type df: L{int}
+    :ivar df: number of documents containing the lexical unit
+    :type df: int
 
-    @ivar posting: set of documents that contain lexical unit
-    @type posting: L{set(docnum)}
+    :ivar posting: set of documents that contain lexical unit
+    :type posting: set(docnum)
     """
     #It's a Dictionary who's keys act like attributes as well
     #from: http://code.activestate.com/recipes/577590-dictionary-whos-keys-act-like-attributes-as-well/
@@ -252,8 +256,8 @@ class LU(dict):
 
     def __hash__(self):
         """ implemented method to make set() works. Standard hash method on KodexLU.form
-        @return: hash(self.form)
-        @rtype: L{int}
+        :returns: hash(self.form)
+        :rtype: int
          """
         return  hash(self.form)
 

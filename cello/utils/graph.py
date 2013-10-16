@@ -1,11 +1,17 @@
 #-*- coding:utf-8 -*-
+""" :mod:`cello.utils.graph`
+====================================
 
+:copyright: (c) 2013 - 2014 by Yannick Chudy, Emmanuel Navarro.
+:license: ${LICENSE}
+
+"""
 
 def random_vertex(graph, attr=None, from_edges=False):
     """ return a random vertex of the given graph
 
-    @param attr: if not None return the attribute 'attr' of the random vertex, instead of the id (of the random vertex).
-    @param from_edges: if True get an edges by random and then pick one of the ends of the edge by random
+    :param attr: if not None return the attribute 'attr' of the random vertex, instead of the id (of the random vertex).
+    :param from_edges: if True get an edges by random and then pick one of the ends of the edge by random
     """
     if from_edges:
         # random edge

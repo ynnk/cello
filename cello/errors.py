@@ -1,9 +1,15 @@
-#!/usr/bin/env python
 #-*- coding:utf-8 -*-
+""" :mod:`cello.errors`
+======================
+
+:copyright: (c) 2013 - 2014 by Yannick Chudy, Emmanuel Navarro.
+:license: ${LICENSE}
+
+"""
 
 class CelloError(Exception):
-    """Base KodexError"""
+    """Basic cello error"""
 
 class CelloValueError(CelloError, ValueError):
-    """Base KodexValueError"""
+    """Cello value error: one value (attribute) was wrong"""
 

@@ -1,24 +1,27 @@
-#!/usr/bin/env python
 #-*- coding:utf-8 -*-
+""" :mod:`cello.search.base_search`
+====================================
 
-""" Linear search 
-    
-    returns a ordered list of L{Doc}
+:copyright: (c) 2013 - 2014 by Yannick Chudy, Emmanuel Navarro.
+:license: ${LICENSE}
 
-    * AbstractSearch
-    * GraphProxSearch
-G{classtree AbstractSearch}
+Cello basic search components
+
+All search components returns a ordered list of :class:`Doc`
+
+* AbstractSearch
+* GraphProxSearch
 """
-
-
 #TODO: Question: est-ce que les searchers ne doivent pas faire comme les tokenizers 
 # dans Whoosh, c'est a dire retourné juste un générateurs, et ne pas créer
 # un obj par document ???
 import logging
-import igraph as ig 
+
+import igraph as ig #TODO: pas térible d'avoir le import igraph ici
 
 from cello.pipeline import Optionable
 from cello.models import Doc
+
 
 class AbstractSearch(Optionable):
     def __init__(self, name ):
@@ -29,18 +32,19 @@ class AbstractSearch(Optionable):
     def search(): pass
     
     def __call__(self, query, **kwargs):
-        """ Callable search 
-        @param query: query string 
-        @type query: L{str}
+        """ Search method itself
         
-        @param kwargs: class dependant options
-        @type kwargs: L{dict}
-        @return: a  set of L{KodexDoc} 
-        @see: L{Optionable}
+        :param query: query string 
+        :type query: str
+        
+        :param kwargs: class dependant options
+        :type kwargs: dict
+        
+        :returns: a  set of :class:`Doc` 
+        
+        :see: :class:`Optionable`
         """
         raise NotImplemented, "Should be implemented in a inherited class"
-
-from cello.utils import prox
 
 
 class GraphProxSearch(AbstractSearch):
@@ -49,8 +53,6 @@ class GraphProxSearch(AbstractSearch):
     
     #TODO: pour avoir d'autre extract que ProxMarkov:
     # passer ceette class en Abstract, et choix du 'prox' dans class filles (methode protected _extract)
-
-    
 
     def __init__(self, graph, name="simple_graph_search"):
         """ Initialise searcher with the graph.
@@ -82,6 +84,7 @@ class GraphProxSearch(AbstractSearch):
     def search(self, p0, nb_results, l):
         """ retrive a 'nb_results' number of vertices by random walk starting from p0
         """
+        from cello.utils import prox
         global_graph = self.graph
         #TODO: choix de la méthode d'extraction
         #TODO: forcer la reflexivité ou pas
