@@ -23,19 +23,30 @@ class Doc(dict):
     
     >>> kdoc = Doc()
     >>> kdoc.declare_field("snippet")
-    >>> kdoc.declate_attr_field("snippet_tf")
-    >>> kdoc.declate_attr_field("snippet_bm25")
+    >>> kdoc.declare_attr_field("snippet_tf")
+    >>> kdoc.declare_attr_field("snippet_bm25")
     >>> for term, tf, bm25 in [("chat", 2, 4.34), ("poche", 34, 1.2)]:
-    >>>     kdoc.add_term("snippet", term)
-    >>>     kdoc.set_term_attr("snippet_tf", term, tf)
-    >>>     kdoc.set_term_attr("snippet_bm25", term, bm25)
+    ...     kdoc.add_element("snippet", term)
+    ...     kdoc.set_element_attr("snippet_tf", term, tf)
+    ...     kdoc.set_element_attr("snippet_bm25", term, bm25)
 
+    Et donc on a ensuite :
+    
+    >>> kdoc.list_fields()
+    ['_all_terms', 'snippet']
+    >>> kdoc.list_attr_fields()
+    ['snippet_tf', 'snippet_bm25']
+    >>> "chat" in kdoc.snippet
+    True
+    >>> kdoc.get_element_attr("snippet_tf", "chat")
+    2
+    
     Exemple d'utiliation avec asssociations des scores et des terms fields :
     
     >>> kdoc = Doc()
-    >>> kdoc.declare_term_field("snippet", "tf", "bm25")
+    >>> kdoc.declare_field("snippet", "tf", "bm25")
     >>> for term, tf, bm25 in [("chat", 2, 4.34), ("poche", 34, 1.2)]:
-    >>>     kdoc.add_term("snippet", term, tf=tf, bm25=bm25)
+    ...     kdoc.add_element("snippet", term, tf=tf, bm25=bm25)
 
     :ivar docnum: uniq identifier of the document
     :type docnum: unicode
@@ -102,7 +113,7 @@ class Doc(dict):
                         and field not in self.list_term_fields()
                         and field not in self.list_attr_fields())
 
-    def declare_field(self, field_name, associated_attr_fields=None):
+    def declare_field(self, field_name, *associated_attr_fields):
         """ Declare a new field (for terms for ex.)
 
         :param field_name: The name of the field to create
@@ -177,7 +188,7 @@ class Doc(dict):
         return self[field_name].iterkeys()
 
     def get_element_attr(self, attr_field_name, element, field_name=None):
-        """ Get the attr ( could be a score or data) of a element
+        """ Get the attr (could be a score or data) of a element
         """
         if field_name is not None:
             attr_field_name = self._get_attr_field_name(field_name, attr_field_name)

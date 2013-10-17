@@ -197,21 +197,36 @@ class Optionable:
                     if not opt_name in self._force_options]
 
 class Composable:
-    """ Basic composable element, ie. an object that may be a basic element of a pipeline
+    """ Basic composable element
+    
+    Composable is abstract, you need to implemented the :fct:`__call__` method
     
     >>> e1 = Composable()
     >>> e2 = Composable()
+    >>> e1.__call__ = lambda iterable: (element**2 for element in iterable)
+    >>> e2.__call__ = lambda iterable: (element + 10 for element in iterable)
+    
+    Then Composable can be pipelined this way :
+
     >>> chain = e1 | e2
-    >>> iterable = xrange(10)
+
+    So yo got :
+    
+    >>> iterable = xrange(0,6,2)
     >>> for e in chain(iterable):
-    >>>     print("result: %s" % e)
-    
-    Is the same than :
-    
-    >>> e1 = Composable()
-    >>> e2 = Composable()
+    ...     print("result: %s" % e)
+    result: 10
+    result: 14
+    result: 26
+
+    equivalent to :
+
+    >>> iterable = xrange(0,6,2)
     >>> for e in e2(e1(iterable)):
-    >>>     print("result: %s" % e)
+    ...     print("result: %s" % e)
+    result: 10
+    result: 14
+    result: 26
     """
 
     def __init__(self):

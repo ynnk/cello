@@ -44,7 +44,7 @@ class AbstractSearch(Optionable):
         
         :see: :class:`Optionable`
         """
-        raise NotImplemented, "Should be implemented in a inherited class"
+        raise NotImplementedError("Should be implemented in a inherited class")
 
 
 class GraphProxSearch(AbstractSearch):

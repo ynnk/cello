@@ -8,9 +8,14 @@
 Python version of Prox over igraph :
 
 >>> import igraph as ig
->>> g = igraph.Graph.Erdos_Renyi(n = 1000, p = 0.01, directed=False, loops=False)
->>> p1 = prox_markov(g, [i], l)
-
+>>> g = ig.Graph.Famous("Zachary")
+>>> p4 = prox_markov(g, [0], l=4)
+>>> len(p4)
+34
+>>> p4[0]
+0.20139916513480394
+>>> p4[2]
+0.06625652318218955
 
 .. currentmodule:: cello.utils.prox
 
