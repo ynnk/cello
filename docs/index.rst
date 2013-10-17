@@ -12,6 +12,7 @@ Contents:
     :maxdepth: 2
 
     getstarted
+    documents
     api/api
 
 
