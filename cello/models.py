@@ -15,24 +15,6 @@ from cello.errors import CelloError
 
 logger = logging.getLogger("cello.models")
 
-class ValueField():
-    def __init__(self, name, default):
-        self.name=name
-        self.value = default
-        
-    def __getattr__(self, name):
-        try:
-            return self.value
-        except KeyError as e:
-            raise AttributeError("%s is not a KodexDoc attribut (existing attributes are: %s)" % (e, self.keys()))
-
-    def __setattr__(self, name, value):
-        self[name] = value
-    
-
-class VectorField(): 
-    pass
-
 class Doc(dict):
     """ Document
 
