@@ -9,13 +9,11 @@
 TODO
 
 schema ds doc doit pas etre une key
-doc.x.a = [1,2,3] pqoi ca marche ?
 attrs={'a':Numeric(multi=True, default=1)} )) ne gere pas les postings
-vectoritem.attributes
 DocField => DocContainer 
 rename _field => _ftype
 
-clean notebook
+clean notebook in progress
 """
 
 
@@ -103,7 +101,7 @@ class FieldType(object):
     """
     Abstract FieldType
     """
-    def __init__(self, multi=False, uniq=False, default=None, attrs={} ):
+    def __init__(self, multi=False, uniq=False, default=None, attrs=None):
         """
         :param multi: field is a list or a set
         :param uniq: wether the values are unique. only apply if multi == True-
@@ -114,14 +112,16 @@ class FieldType(object):
         self.uniq = uniq
         self.default = default
         self.attrs = attrs
+        
+        # TODO
         # self.sorted = sorted
         # self.required = required  # test ds Doc ds le constructeur
     
     
     def __repr__(self):
-        temp = "%s(multi=%s, uniq=%s, default=%s)"
+        temp = "%s(multi=%s, uniq=%s, default=%s, attrs=%s)"
         return temp % (self.__class__.__name__,
-                    self.multi, self.uniq, self.default )
+                    self.multi, self.uniq, self.default, self.attrs )
     
     def validate(self, value):
         pass
@@ -205,7 +205,8 @@ class SetField(DocField):
     """
     def __init__(self, fieldtype):
         DocField.__init__(self, fieldtype)
-        self.value = set(fieldtype.default or [])
+        self.value = None
+        self.set(fieldtype.default or [])
     
     def get_value(self):
         return  list(self.value)
@@ -213,13 +214,15 @@ class SetField(DocField):
     def add(self, value):
         self.add( self._field.validate(value) )
 
-       
-    def set(self, value):
-        if type(value) == list:
-            self.value = set([ self._field.validate(v) for v in value ])
+    def set(self, values):
+        if type(values) == list:
+            self.value = set([ self._field.validate(v) for v in values ])
         else:
-            raise SchemaError("Wrong value '%s' for field 's'" % (value, self._field))
+            raise SchemaError("Wrong value '%s' for field 's'" % (values, self._field))
 
+    def __iter__(self):
+        """ iterator over values """
+        return iter(self.value)
         
 class ListField(DocField):
     def __init__(self, fieldtype):
@@ -236,7 +239,7 @@ class ListField(DocField):
         if type(value) == list:
             self.value = [ self._field.validate(v) for v in value ]
         else:
-            raise SchemaError("Wrong value '%s' for field 's'" % (value, self._field))
+            raise SchemaError("Wrong value type '%s' for field '%s'" % (value, self._field))
     def __iter__(self):
         """ iterator over values """
         for x in self.value: yield x
@@ -245,7 +248,9 @@ class ListField(DocField):
         return self.value[idx]
 
     def __setitem__(self, idx, value):
-        self.value[idx] = value 
+        # TODO validate !!!
+        raise Warning("TODO implement validate")
+        self.value[idx] = value  
         
 class VectorField(DocField):
     """
@@ -259,7 +264,6 @@ class VectorField(DocField):
         DocField.__init__(self, fieldtype)
         self._attrs =  {} # attr_name : [FieldType, ]
         self._keys = {}   # key: idx
-        self.clear_attributes()
     
     def attribute_names(self):
         return self._attrs.keys()
@@ -267,7 +271,7 @@ class VectorField(DocField):
     def clear_attributes(self):
         self._attrs =  {} # removes all attr
         for name, attr_field in self._field.attrs.iteritems():
-            self._attrs[name] = create_field(attr_field)
+            self._attrs[name] = []
        
     def __repr__(self):
         return "<%s:%s >" %( self.__class__.__name__, self._attrs.keys() )
@@ -277,51 +281,61 @@ class VectorField(DocField):
     def __len__(self):
         """ Vector keys count """
         return len(self._keys)
-    
+        
+    def __iter__(self):
+        return self._keys.iterkeys()
+        
     def keys(self): 
         """ list of keys in the vector """
         return self._keys.keys()
 
-    def get_value(self): 
-        return self
-
-    def get_attr_value(self, key , attr):
-        idx = self._keys[key]
-        return self._attrs[attr][idx]
-    
-    def set_attr_value(self, key, attr, value):
-        idx = self._keys[key]
-        self._attrs[attr][idx] = value
-    
-    
-    def has(self, key): 
+    def __contains__(self, key):
         """ 
             Return True if the vector has the specified key 
             vector.has('mykey')
             >>> False 
         """
         return key in self._keys
+        
+    def has(self, key): 
+        return self.__contains__(key)
+
+    def __getitem__(self, key):
+        return VectorItem(self, key )
     
+    def get_value(self): 
+        """ from DocField, convenient method """
+        return self
+
     def add(self, key):
+        """ Add a key to the vector """
         if not self.has(key):
             self._keys[key] = len(self._keys)
-        
         #append to attributes
         for name, attr_field  in self._field.attrs.iteritems():
-            self._attrs[name].add(attr_field.default)
+            self._attrs[name].append(create_field(attr_field))
         
     def set(self, keys):
         """ set new keys 
-            this will clear all attributes and keys before adding new keys
+            Mind this will clear all attributes and keys before adding new keys
+            doc.terms = ['a', 'b']
         """
         # clear keys and atributes
         self._keys = {}
+        _field = self._field 
         self.clear_attributes()
-            
         for key in keys:
             if not self.has(key):
-                self.add(key)
+                self.add(_field.validate(key))
                 
+    def get_attr_value(self, key , attr):
+        idx = self._keys[key]
+        return self._attrs[attr][idx].get_value()
+    
+    def set_attr_value(self, key, attr, value):
+        idx = self._keys[key]
+        self._attrs[attr][idx].set(value)
+
     def __getattr__(self, name):
         """
             :param name: attribute name
@@ -331,25 +345,34 @@ class VectorField(DocField):
         else :
             raise SchemaError("No such attribute '%s' in Vector" % name)
     
-    def __setattr__(self, attr, value):
-        if attr.startswith('_'):
-            self.__dict__[attr] = value
-        elif self.__dict__['_attrs'].has_key(attr):
-            self._attrs[attr].set(value)
-        print self.__dict__
-            
-    
-    def __getitem__(self, key):
-        return VectorItem(self, key )
-  
-class VectorAttr():
+    def __setattr__(self, name, values):
+        """
+            doc.terms.x = [1,2]
+        """
+        if name.startswith('_'):
+            DocField.__setattr__(self, name, values)
+            #self.__dict__[attr] = value
+        elif self.__dict__['_attrs'].has_key(name):
+            if len(values) != len(self):
+                raise SchemaError('Wrong size : |values| (%s) should be equals to |keys| (%s) '\
+                        %(len(values), len(self)))
+            _attr = [ create_field(self._field.attrs[name]) for x in xrange(len(values)) ]
+            for i, v in enumerate(values) :
+                _attr[i].set(v)
+            self._attrs[name] = _attr
+
+class VectorAttr(object):
     def __init__(self, vector, attr):
         self.vector = vector
         self.attr = attr
-    
+            
     def __iter__(self):
         for attr_value in self.vector._attrs[self.attr]:
-            yield attr_value
+            yield attr_value.get_value()
+    
+    def values(self):
+        # should we use doc.terms.tf() ??? 
+        return list(self)
             
     def __getslice__(self, i, j):
         return self.vector._attrs[self.attr][i:j]
@@ -371,9 +394,12 @@ class VectorItem(object):
     def attribute_names(self):
         return self._vector.attribute_names()
     
+    def as_dict(self):
+        return { k: self[k] for k in self.attribute_names()  }
+        
     def __getattr__(self, attr_name):
         if attr_name.startswith('_'):
-            return self.__getattribute__(attr_name)
+            return self.__getattribute__(attr_name) # XXXX WTF ???
         return self._vector.get_attr_value(self._key, attr_name)
     
     def __setattr__(self, attr, value):
@@ -381,7 +407,9 @@ class VectorItem(object):
             self._vector.set_attr_value(self._key, attr, value)
         else: 
             object.__setattr__(self, attr, value)
-    
+            
+    def __getitem__(self, name ):
+        return getattr(self, name)
 
 
 def create_field(field):
