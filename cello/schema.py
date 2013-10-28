@@ -6,7 +6,7 @@
 :license: ${LICENSE}
 
 
-TODO
+TODO:
 
 schema ds doc doit pas etre une key
 attrs={'a':Numeric(multi=True, default=1)} )) ne gere pas les postings
@@ -16,55 +16,54 @@ rename _field => _ftype
 clean notebook in progress
 """
 
-
-"""
-    Errors  
-"""
+#TODO: précissé le docstr, c'est quoi quand on a cette erreur exactement ?
 class SchemaError(Exception):
+    """ Error
+    """
     pass
 
-"""
-    Main Schema class inspired from Matt Chaput's Whoosh.  
-"""
+
 class Schema(object):
-    """
-    Schema definition for docs <Doc>
+    """ Schema definition for docs <Doc>
+    class inspired from Matt Chaput's Whoosh.  
     
     Creating a schema :
-        >>>schema = Schema(**{ 'title': Text(), 'score':Numeric(numtype=int, multi=True) })
-        >>># or
-        >>>schema = Schema( title=Text(), score=Numeric() )
-        >>>schema.field_names()
-        >>># ['score', 'title']
-        """
+        >>> schema = Schema(**{ 'title': Text(), 'score':Numeric(numtype=int, multi=True) })
+        >>> # or
+        >>> schema = Schema( title=Text(), score=Numeric() )
+        >>> schema.field_names()
+        ['score', 'title']
+    """
     
     def __init__(self, **fields):
         self._fields = {}
-        
-        for name,fieldtype in fields.iteritems():
+        # Create fields
+        for name, fieldtype in fields.iteritems():
             self.add_field(name, fieldtype)
-        
+    
     def add_field(self, name, field):
-        """s
-            Add a named field to the schema.
-            :param name : name of the new field
-            :param field : FieldType instance for the field 
+        """ Add a named field to the schema.
+        
+        :param name: name of the new field
+        :param field:  FieldType instance for the field 
         """
         # testing names 
         if name.startswith("_"):
-            raise SchemaError("Field names cannot start with an underscore")
+            raise SchemaError("Field names cannot start with an underscore.")
         if " " in name:
-            raise SchemaError("Field names cannot contain spaces")
+            raise SchemaError("Field names cannot contain spaces.")
         
-        if name in self._fields: 
-            raise SchemaError("Schema already has a field named '%s'" %s)
-        if isinstance(field, FieldType) == False:
-            raise SchemaError("Wrong FieldType in schema for field :%s, v" % (name, field ) )
+        if name in self._fields:
+            raise SchemaError("Schema already has a field named '%s'" % name)
+        if not isinstance(field, FieldType):
+            raise SchemaError("Wrong FieldType in schema for field: %s, %s is not a FieldType" % (name, field))
+        #TODO: est-ce que ces quatres erreurs ne sont pas plutot des ValueError ? 
+        # (erreur sur les valeurs)
         self._fields[name] = field
     
     def remove_field(self, field_name):
         raise NotImplementedError()
-        
+    
     def iter_fields(self):
         return self._fields.iteritems()
     
@@ -82,8 +81,7 @@ class Schema(object):
         return self.__getitem__(name)
         
     def __getitem__(self, name): 
-        if name == '_fields':
-            
+        if name == '_fields': #XXX: est-ce que c'est pas mieux de faire le check dans getattr ? d'ailleur on a pas un pb de boucle dans ce cas précis ? TEST NEEDED
             return self._fields
         elif name in self._fields:
             return self._fields[name]
@@ -91,42 +89,50 @@ class Schema(object):
             raise SchemaError("Field '%s' does not exist in Schema (%s)" % (name, self.field_names()))
     
     def __repr__(self):
-        return "<%s: %s>"%( self.__class__.__name__, self._fields)
+        return "<%s: %s>" % (self.__class__.__name__, self._fields)
 
-
+#XXX: est-ce que ca marche ces docstring "volante" ?? jms vu ca...
 """
    * FieldTypes to declare in schemas 
 """
 class FieldType(object):
-    """
-    Abstract FieldType
+    """ Abstract FieldType
     """
     def __init__(self, multi=False, uniq=False, default=None, attrs=None):
         """
         :param multi: field is a list or a set
-        :param uniq: wether the values are unique. only apply if multi == True-
+        :param uniq: wether the values are unique, only apply if multi == True
         :param default: default value for the field
-        :param attrs: field attributes name: FieldType
+        :param attrs: field attributes dict of {name: FieldType()}
         """
         self.multi = multi 
         self.uniq = uniq
         self.default = default
         self.attrs = attrs
-        
         # TODO
         # self.sorted = sorted
         # self.required = required  # test ds Doc ds le constructeur
-    
     
     def __repr__(self):
         temp = "%s(multi=%s, uniq=%s, default=%s, attrs=%s)"
         return temp % (self.__class__.__name__,
                     self.multi, self.uniq, self.default, self.attrs )
     
+    #TODO: est-ce que validate permet le cast, comme c'est pour le moment ? ou return juste True/False ?
     def validate(self, value):
-        pass
+        """ check if a value is correct (type).
+        Should be override.
+        
+        This method should:
+        * raise :class:`TypeError` if the type 
+        * return the given value, that may have been converted
+        """
+        return value
+
 
 class Numeric(FieldType):
+    """ Numerical type (int or float)
+    """
     _types_ = [int, float]
     
     def __init__(self, numtype=int, **field_options):
@@ -138,45 +144,52 @@ class Numeric(FieldType):
         if numtype not in Numeric._types_  : 
             raise ValueError('Wrong type for Numeric %s' % Numeric._types_ )
         self.numtype = numtype
-        
+    
     def validate(self, value):
-        if isinstance(value, self.numtype) == False :
-            raise TypeError("Wrong type '%s' should be '%s'" % (type(value), self.numtype ))
+        if not isinstance(value, self.numtype):
+            raise TypeError("Wrong type: get '%s' but '%s' expected" % (type(value), self.numtype))
         return value
-   
+
+
 class Text(FieldType):
-    """
-        
+    """ Text type (str or unicode)
     """
     # valid type for text
     _types_ = [str, unicode]
     
-    def __init__(self,texttype=str, **field_options):
+    def __init__(self, texttype=str, **field_options):
         FieldType.__init__(self, **field_options)
-        if texttype not in Text._types_  : 
+        if texttype not in Text._types_:
             raise SchemaError('Wrong type for Numeric %s' % Numeric._types_ )
         self.texttype = texttype
-        
+    
     def validate(self, value):
-        if isinstance(value, self.texttype) == False :
-            raise TypeError("Wrong type '%s' should be '%s'" % (type(value), self.texttype ))
+        if not isinstance(value, self.texttype):
+            raise TypeError("Wrong type: get '%s' but '%s' expected" % (type(value), self.texttype))
         return value
-
 
 
 # Add more FiledType here
 
 # ...
-# ...
-
 """
 Document fields implementations 
 """
 class DocField(object):
+    """ Abstract document field
+    
+    Theses objects are containers of document's data.
+    """
     def __init__(self, fieldtype):
+        """
+        :param fieldtype: the type for the field
+        :type fieldtype: one of the :class:`FieldType` subclass
+        """
         self._field = fieldtype
-        
-    def get_value(self): pass
+    
+    def get_value(self):
+        raise NotImplementedError
+
 
 class ValueField(DocField):
     """
@@ -190,18 +203,20 @@ class ValueField(DocField):
         return self.value
     
     def set(self, value): 
-         self.value = self._field.validate(value)
+        self.value = self._field.validate(value)
+
 
 class SetField(DocField):
-    """
-        
-        usage: 
-            doc.schema.add_fields(tags=Text(multi=True, uniq=True) )
-            doc.tags # SetField
-            doc.tags.add('boo')
-            doc.tags.add('foo')
-            doc.tags # >>> ['boo', 'foo']
-            
+    """ Document field for a set of values (i.e. the fieldtype is "multi" and "uniq")
+    
+    usage example:
+    >>> schema = Schema(tags=Text(multi=True, uniq=True))
+    >>> doc = Doc(schema, docnum=42)
+    >>> doc.tags
+    []
+    >>> doc.tags.add('boo')
+    >>> doc.tags.add('foo')
+    >>> doc.tags
     """
     def __init__(self, fieldtype):
         DocField.__init__(self, fieldtype)
@@ -212,18 +227,19 @@ class SetField(DocField):
         return  list(self.value)
     
     def add(self, value):
-        self.add( self._field.validate(value) )
+        self.add(self._field.validate(value))
 
     def set(self, values):
         if type(values) == list:
             self.value = set([ self._field.validate(v) for v in values ])
         else:
-            raise SchemaError("Wrong value '%s' for field 's'" % (values, self._field))
+            raise SchemaError("Wrong value '%s' for field '%s'" % (values, self._field))
 
     def __iter__(self):
         """ iterator over values """
         return iter(self.value)
-        
+
+
 class ListField(DocField):
     def __init__(self, fieldtype):
         DocField.__init__(self, fieldtype)
@@ -233,25 +249,29 @@ class ListField(DocField):
         return self.value
     
     def add(self, value):
-        self.value.append( self._field.validate(value) )
-        
+        self.value.append(self._field.validate(value))
+    
     def set(self, value):
         if type(value) == list:
             self.value = [ self._field.validate(v) for v in value ]
         else:
             raise SchemaError("Wrong value type '%s' for field '%s'" % (value, self._field))
+    
     def __iter__(self):
         """ iterator over values """
-        for x in self.value: yield x
+        #TODO; est-ce que __iter__ doit être impémenté come ca ?, est ce que ca ne doit pas plutot returné un truc sur le quel il y a un next qui fait les yeilds ? tocheck
+        for elem in self.value:
+            yield elem
             
     def __getitem__(self, idx):
         return self.value[idx]
 
     def __setitem__(self, idx, value):
-        # TODO validate !!!
+        #XXX validate !!!
         raise Warning("TODO implement validate")
-        self.value[idx] = value  
-        
+        self.value[idx] = value
+
+
 class VectorField(DocField):
     """
         usage: 
@@ -267,16 +287,17 @@ class VectorField(DocField):
     
     def attribute_names(self):
         return self._attrs.keys()
-        
+    
     def clear_attributes(self):
-        self._attrs =  {} # removes all attr
+        self._attrs = {} # removes all attr
         for name, attr_field in self._field.attrs.iteritems():
             self._attrs[name] = []
        
     def __repr__(self):
-        return "<%s:%s >" %( self.__class__.__name__, self._attrs.keys() )
+        return "<%s:%s>" % ( self.__class__.__name__, self._attrs.keys())
     
-    def __str__(self) : return self.__repr__()
+    def __str__(self):
+        return self.__repr__()
     
     def __len__(self):
         """ Vector keys count """
@@ -290,10 +311,7 @@ class VectorField(DocField):
         return self._keys.keys()
 
     def __contains__(self, key):
-        """ 
-            Return True if the vector has the specified key 
-            vector.has('mykey')
-            >>> False 
+        """ returns True if the vector has the specified key
         """
         return key in self._keys
         
@@ -354,12 +372,13 @@ class VectorField(DocField):
             #self.__dict__[attr] = value
         elif self.__dict__['_attrs'].has_key(name):
             if len(values) != len(self):
-                raise SchemaError('Wrong size : |values| (%s) should be equals to |keys| (%s) '\
-                        %(len(values), len(self)))
-            _attr = [ create_field(self._field.attrs[name]) for x in xrange(len(values)) ]
-            for i, v in enumerate(values) :
-                _attr[i].set(v)
+                raise SchemaError('Wrong size : |values| (=%s) should be equals to |keys| (=%s) ' \
+                        % (len(values), len(self)))
+            _attr = [create_field(self._field.attrs[name]) for _ in xrange(len(values)) ]
+            for idx, val in enumerate(values):
+                _attr[idx].set(val)
             self._attrs[name] = _attr
+
 
 class VectorAttr(object):
     def __init__(self, vector, attr):
@@ -382,10 +401,8 @@ class VectorAttr(object):
         
     def __setitem__(self, idx, value):
         self.vector._attrs[self.attr][idx] = value
-        
-    
-    
-    
+
+
 class VectorItem(object):
     def __init__(self, vector, key):
         self._vector = vector
@@ -411,50 +428,53 @@ class VectorItem(object):
     def __getitem__(self, name ):
         return getattr(self, name)
 
-
+#TODO: ca doit être une métode de field
 def create_field(field):
-    """
-    Create a convenient field to store data
+    """ Create a convenient field to store data
+    
+    not multi => default or None
+    multi and uniq and fields.attr => dict
+    multi and uniq => set
+    multi and not uniq => list
     """
     if not(field.multi):
-         return ValueField(field)
+        return ValueField(field)
     elif field.multi and not field.uniq:
         return ListField(field)
     elif field.multi and field.uniq and field.attrs == None:
-        return SetField(field)    
+        return SetField(field)
     else:
         return VectorField(field)
 
+
 class Doc(dict):
-    
+    """ Cello Document object
+    """
     __reserved__ = ['docnum', 'schema']
-        
     
     def __init__(self, schema, **data):
+        dict.__init__(self)
         # schema 
         self['schema'] = schema
         # fields value(s)
         
-        # Doc should always have a docnum ?
+        #TODO: docnum doit etre un field spécial
+        #TODO: la valeur de docnum doit être passer en argument de __init__
+        # Doc should always have a docnum ? YES
         self['docnum'] = data['docnum'] # or fail
         
-        for key,field in schema.iter_fields():
-            # field.multi & ! field.uniq >> list
-            # field.multi & field.uniq >> set
-            # field.multi & field.uniq & fields.attr >> dict
-            # ! field.multi >> default or None
+        for key, field in schema.iter_fields():
             self[key] = create_field(field) 
             if data and data.has_key(key):
                 self[key].set(data[key])
-            
+    
     def __getattr__(self, name):
         try:
             if name == 'schema':
                 return self['schema']
             return self[name].get_value()
-        
-        except KeyError as e:
-            raise AttributeError("%s is not a Doc field (existing attributes are: %s)" % (e, self.keys()))
+        except KeyError as err:
+            raise AttributeError("%s is not a Doc field (existing attributes are: %s)" % (err, self.keys()))
 
     def __setattr__(self, name, value):
         assert name in self['schema'].field_names(), \
