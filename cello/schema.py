@@ -9,7 +9,6 @@
 TODO:
 
 schema ds doc doit pas etre une key
-attrs={'a':Numeric(multi=True, default=1)} )) ne gere pas les postings
 DocField => DocContainer 
 rename _field => _ftype
 
@@ -112,7 +111,7 @@ class FieldType(object):
         # TODO
         # self.sorted = sorted
         # self.required = required  # test ds Doc ds le constructeur
-    
+        # self.choices = 
     def __repr__(self):
         temp = "%s(multi=%s, uniq=%s, default=%s, attrs=%s)"
         return temp % (self.__class__.__name__,
@@ -170,10 +169,10 @@ class Text(FieldType):
 
 
 # Add more FiledType here
-
 # ...
+
 """
-Document fields implementations 
+Document fields implementations interna use only
 """
 class DocField(object):
     """ Abstract document field
@@ -206,7 +205,7 @@ class ValueField(DocField):
         self.value = self._field.validate(value)
 
 
-class SetField(DocField):
+class SetField(DocField, set ):
     """ Document field for a set of values (i.e. the fieldtype is "multi" and "uniq")
     
     usage example:
@@ -220,56 +219,47 @@ class SetField(DocField):
     """
     def __init__(self, fieldtype):
         DocField.__init__(self, fieldtype)
-        self.value = None
         self.set(fieldtype.default or [])
-    
-    def get_value(self):
-        return  list(self.value)
     
     def add(self, value):
         self.add(self._field.validate(value))
 
     def set(self, values):
-        if type(values) == list:
-            self.value = set([ self._field.validate(v) for v in values ])
+        if type(values) in [set, list]:
+            items = set([ self._field.validate(v) for v in values ])
+            self.clear()
+            self.update(items)
         else:
             raise SchemaError("Wrong value '%s' for field '%s'" % (values, self._field))
 
-    def __iter__(self):
-        """ iterator over values """
-        return iter(self.value)
 
-
-class ListField(DocField):
+class ListField(DocField, list):
     def __init__(self, fieldtype):
         DocField.__init__(self, fieldtype)
-        self.value = [] 
-    
-    def get_value(self):
-        return self.value
     
     def add(self, value):
-        self.value.append(self._field.validate(value))
+        self.append(value)
     
-    def set(self, value):
-        if type(value) == list:
-            self.value = [ self._field.validate(v) for v in value ]
-        else:
-            raise SchemaError("Wrong value type '%s' for field '%s'" % (value, self._field))
+    def append(self, value ):
+        list.append(self, self._field.validate(value))
+        
+    def set(self, iterable):
+        """ set new values (values have to be iterable )     
+        """
+        # check data are valid before deleting the data
+        # prevents losing data if wrong type is passed
+        values = [ self._field.validate(v) for v in iterable ]
+        del self[:]
+        for v in values: list.append(self ,v)
     
-    def __iter__(self):
-        """ iterator over values """
-        #TODO; est-ce que __iter__ doit être impémenté come ca ?, est ce que ca ne doit pas plutot returné un truc sur le quel il y a un next qui fait les yeilds ? tocheck
-        for elem in self.value:
-            yield elem
-            
-    def __getitem__(self, idx):
-        return self.value[idx]
-
     def __setitem__(self, idx, value):
-        #XXX validate !!!
-        raise Warning("TODO implement validate")
-        self.value[idx] = value
+        list.__setitem__(self, idx, self._field.validate(value) )
+        
+    def __setslice__(self, i, j, values):
+        assert j-i == len(values), "%s %s %s "% (i, j , len(values))
+        for x, xi in enumerate(xrange(i,j)):
+            self[xi] = values[x]
+            
 
 
 class VectorField(DocField):
@@ -472,7 +462,10 @@ class Doc(dict):
         try:
             if name == 'schema':
                 return self['schema']
-            return self[name].get_value()
+            field = self[name]
+            if type(field) == ValueField:
+                return self[name].get_value()
+            return field  
         except KeyError as err:
             raise AttributeError("%s is not a Doc field (existing attributes are: %s)" % (err, self.keys()))
 
