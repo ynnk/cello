@@ -70,7 +70,12 @@ class Schema(object):
         return self._fields.keys()
     
     def has_field(self, name):
+        return self.__contains__(name)
+    
+    def __contains__(self, name):
         return name in self._fields
+        
+    
     
     def __len__(self): 
         """ returns field count in schema """
@@ -112,6 +117,7 @@ class FieldType(object):
         # self.sorted = sorted
         # self.required = required  # test ds Doc ds le constructeur
         # self.choices = 
+
     def __repr__(self):
         temp = "%s(multi=%s, uniq=%s, default=%s, attrs=%s)"
         return temp % (self.__class__.__name__,
@@ -187,7 +193,7 @@ class DocField(object):
         self._field = fieldtype
     
     def get_value(self):
-        raise NotImplementedError
+        return self
 
 
 class ValueField(DocField):
@@ -211,18 +217,18 @@ class SetField(DocField, set ):
     usage example:
     >>> schema = Schema(tags=Text(multi=True, uniq=True))
     >>> doc = Doc(schema, docnum=42)
-    >>> doc.tags
-    []
     >>> doc.tags.add('boo')
     >>> doc.tags.add('foo')
-    >>> doc.tags
+    >>> len(doc.tags)
+    2
+    
     """
     def __init__(self, fieldtype):
         DocField.__init__(self, fieldtype)
         self.set(fieldtype.default or [])
     
     def add(self, value):
-        self.add(self._field.validate(value))
+        set.add(self, self._field.validate(value))
 
     def set(self, values):
         if type(values) in [set, list]:
@@ -234,6 +240,7 @@ class SetField(DocField, set ):
 
 
 class ListField(DocField, list):
+    """ list container for non uniq field  """
     def __init__(self, fieldtype):
         DocField.__init__(self, fieldtype)
     

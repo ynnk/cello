@@ -11,7 +11,7 @@ Cello basic objects.
 import logging
 import random
 
-from cello.errors import CelloError
+from cello import CelloError
 
 logger = logging.getLogger("cello.models")
 

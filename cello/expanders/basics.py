@@ -7,6 +7,9 @@
 
 """
 
+from cello.pipeline import DocPipelineElmt
+from cello.expanders import  AbstractDocListExpand
+
 class AddFixedScore(DocPipelineElmt):
     """ Add a score field with a fixed value for each term
     """

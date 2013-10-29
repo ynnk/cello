@@ -8,8 +8,7 @@ class TestFieldTypes(unittest.TestCase):
     def setUp(self):
         pass
 
-    def test_numeric(self):
-
+    def test_schema(self):
         # create a schema
         schema = Schema(title= Text(), rank=Numeric() )
         schema = Schema(**{ 'title':Text(), 'rank':Numeric()} )
@@ -29,3 +28,10 @@ class TestFieldTypes(unittest.TestCase):
 
         # Fields iterator
         schema.iter_fields()
+        assert 'text' in [ name for name, fieldtype in  schema.iter_fields()]
+
+        # remove field
+        # unimplemented
+        field_name = "text"
+        self.assertRaises(NotImplementedError, schema.remove_field,  field_name )
+
