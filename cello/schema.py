@@ -40,6 +40,9 @@ class Schema(object):
         for name, fieldtype in fields.iteritems():
             self.add_field(name, fieldtype)
     
+    def copy(self):
+        return Schema(**self._fields)
+    
     def add_field(self, name, field):
         """ Add a named field to the schema.
         
@@ -73,9 +76,7 @@ class Schema(object):
         return self.__contains__(name)
     
     def __contains__(self, name):
-        return name in self._fields
-        
-    
+        return name in self._fields    
     
     def __len__(self): 
         """ returns field count in schema """
@@ -163,6 +164,8 @@ class Text(FieldType):
     _types_ = [str, unicode]
     
     def __init__(self, texttype=str, **field_options):
+        if 'default' not in field_options:
+            field_options['default']=""
         FieldType.__init__(self, **field_options)
         if texttype not in Text._types_:
             raise SchemaError('Wrong type for Text %s' % Numeric._types_ )
@@ -452,7 +455,7 @@ class Doc(dict):
     def __init__(self, schema, **data):
         dict.__init__(self)
         # schema 
-        self['schema'] = schema
+        self['schema'] = schema.copy()
         # fields value(s)
         
         #TODO: docnum doit etre un field spécial
@@ -465,6 +468,10 @@ class Doc(dict):
             if data and data.has_key(key):
                 self[key].set(data[key])
     
+    def add_field(self, name, fieldtype):
+        self.schema.add_field(name, fieldtype)
+        self[name] = create_field(fieldtype) 
+    
     def __getattr__(self, name):
         try:
             field = self[name]
@@ -475,7 +482,10 @@ class Doc(dict):
             raise SchemaError("%s is not a Doc field (existing attributes are: %s)" % (err, self.keys()))
 
     def __setattr__(self, name, value):
-        assert name in self['schema'].field_names(), \
-            "%s is not declared as a field in the schema" %name
-        self[name].set( value )
+        if isinstance(value, FieldType):
+            self.add_field(name, value)
+        elif not (name in self['schema'].field_names()):
+            raise SchemaError("%s is not a Doc field (existing attributes are: %s)" % (name, self.keys()))
+        else:
+            self[name].set( value )
         

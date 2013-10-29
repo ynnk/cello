@@ -80,7 +80,6 @@ class TestDocTypes(unittest.TestCase):
             == doc.terms.score[2]  == 14
 
     def test_VectorField_chickens(self):
-        return
         from collections import OrderedDict
         text = "i have seen chicken passing the street and i believed "\
              + "how many chicken must pass in the street before you "\
@@ -109,3 +108,5 @@ class TestDocTypes(unittest.TestCase):
         assert doc.terms[key].positions == doc.terms.positions[3] \
             == doc.terms.get_attr_value(key, 'positions')
 
+        doc.boo = Text(default='boo')
+        assert doc.boo == "boo"
