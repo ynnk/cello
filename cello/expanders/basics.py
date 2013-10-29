@@ -36,10 +36,10 @@ class FieldFilter(DocPipelineElmt):
         """ Apply a filter to a given document:
         doc[dest_flield] = filter(doc[flield])
         
-        @param filter: the filter to apply
-        @param field: the field on whish the filter is applyied
-        @param dest_field: if None, the field is changed in place
-        @param keep_original: if False the original field is removed
+        :param filter: the filter to apply
+        :param field: the field on whish the filter is applyied
+        :param dest_field: if None, the field is changed in place
+        :param keep_original: if False the original field is removed
         """
         DocPipelineElmt.__init__(self)
         self._filter = filter

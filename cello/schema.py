@@ -85,7 +85,7 @@ class Schema(object):
         return self.__getitem__(name)
         
     def __getitem__(self, name): 
-        if name == '_fields': #XXX: est-ce que c'est pas mieux de faire le check dans getattr ? d'ailleur on a pas un pb de boucle dans ce cas précis ? TEST NEEDED
+        if name == '_fields': 
             return self._fields
         elif name in self._fields:
             return self._fields[name]
@@ -147,7 +147,7 @@ class Numeric(FieldType):
         """
         FieldType.__init__(self, **field_options)
         if numtype not in Numeric._types_  : 
-            raise ValueError('Wrong type for Numeric %s' % Numeric._types_ )
+            raise SchemaError('Wrong type for Numeric %s' % Numeric._types_ )
         self.numtype = numtype
     
     def validate(self, value):
@@ -165,7 +165,7 @@ class Text(FieldType):
     def __init__(self, texttype=str, **field_options):
         FieldType.__init__(self, **field_options)
         if texttype not in Text._types_:
-            raise SchemaError('Wrong type for Numeric %s' % Numeric._types_ )
+            raise SchemaError('Wrong type for Text %s' % Numeric._types_ )
         self.texttype = texttype
     
     def validate(self, value):
@@ -231,6 +231,7 @@ class SetField(DocField, set ):
         set.add(self, self._field.validate(value))
 
     def set(self, values):
+        # TODO values should be iterable 
         if type(values) in [set, list]:
             items = set([ self._field.validate(v) for v in values ])
             self.clear()
@@ -245,6 +246,7 @@ class ListField(DocField, list):
         DocField.__init__(self, fieldtype)
     
     def add(self, value):
+        """ XXX convenience mthd keep it ? never called in tests"""
         self.append(value)
     
     def append(self, value ):
@@ -279,7 +281,7 @@ class VectorField(DocField):
     """
     def __init__(self, fieldtype):
         DocField.__init__(self, fieldtype)
-        self._attrs =  {} # attr_name : [FieldType, ]
+        self._attrs =  {} # attr_name : [DocField, ]
         self._keys = {}   # key: idx
     
     def attribute_names(self):
@@ -335,7 +337,7 @@ class VectorField(DocField):
             Mind this will clear all attributes and keys before adding new keys
             doc.terms = ['a', 'b']
         """
-        # clear keys and atributes
+        # XXX clear keys and atributes
         self._keys = {}
         _field = self._field 
         self.clear_attributes()
@@ -391,13 +393,13 @@ class VectorAttr(object):
         return list(self)
             
     def __getslice__(self, i, j):
-        return self.vector._attrs[self.attr][i:j]
+        return [ x.get_value() for x in self.vector._attrs[self.attr][i:j] ]
     
     def __getitem__(self, idx):
-        return self.vector._attrs[self.attr][idx]
+        return self.vector._attrs[self.attr][idx].get_value()
         
     def __setitem__(self, idx, value):
-        self.vector._attrs[self.attr][idx] = value
+        self.vector._attrs[self.attr][idx].set(value)
 
 
 class VectorItem(object):
@@ -412,8 +414,6 @@ class VectorItem(object):
         return { k: self[k] for k in self.attribute_names()  }
         
     def __getattr__(self, attr_name):
-        if attr_name.startswith('_'):
-            return self.__getattribute__(attr_name) # XXXX WTF ???
         return self._vector.get_attr_value(self._key, attr_name)
     
     def __setattr__(self, attr, value):
@@ -467,14 +467,12 @@ class Doc(dict):
     
     def __getattr__(self, name):
         try:
-            if name == 'schema':
-                return self['schema']
             field = self[name]
             if type(field) == ValueField:
                 return self[name].get_value()
             return field  
         except KeyError as err:
-            raise AttributeError("%s is not a Doc field (existing attributes are: %s)" % (err, self.keys()))
+            raise SchemaError("%s is not a Doc field (existing attributes are: %s)" % (err, self.keys()))
 
     def __setattr__(self, name, value):
         assert name in self['schema'].field_names(), \

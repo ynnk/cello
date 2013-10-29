@@ -7,29 +7,29 @@ help:
 	@echo "  help    prints this help"
 	@echo "  doc     build doc + tests "
 	@echo "  test    runs unit tests"
+	@echo "  testlib runs unit tests on lib cello only"
 	@echo "  testall runs all unit tests doc+rst"
-	@echo "  clean   remove .pyc files "
+	@echo "  testcov runs coverage unit tests:"
+	@echo "          $ py.test --cov PATH_OR_FILE --cov-report term-missing"
 
-test: 
-	# TODO run tests
-	export PYTHONPATH=`pwd`
-	python -c "import cello"
-	cd tests 
-	py.test -v ./tests
-
-testlib: 
-	py.test -v ./cello
-
-
-testall: 
-	export PYTHONPATH=`pwd`
-	py.test  -v
-		
 doc:
 	ipython nbconvert --to rst notebooks/Cello*.ipynb 
 	mv Cello*.rst ./docs
 	make -C ./docs html
 	py.test -v ./docs
+	@echo "  clean   remove .pyc files "
+
+test: 
+	py.test -v ./tests
+
+testlib: 
+	py.test -v ./cello
+
+testall: 
+	py.test  -v
+
+testcov:
+	py.test --cov cello --cov-report term-missing 
 	
 clean:
 	# removing .pyc filesin

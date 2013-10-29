@@ -10,6 +10,8 @@ class TestFieldTypes(unittest.TestCase):
     def test_numeric(self):
         # Numeric Field (int or float)
         f = Numeric(numtype=float)
+        assert repr(f) != ""
+        self.assertRaises(SchemaError, lambda: Numeric(numtype=any) )
         self.assertTrue( 2. == f.validate(2.) )  # ok
         self.assertTrue( 2 ==  f.validate(2.) )  # ok 
         try : 
@@ -18,11 +20,12 @@ class TestFieldTypes(unittest.TestCase):
         except TypeError as e: print "test passed",  e
     
     def test_text(self):
-        # Text Field (unicode or str )
         f = Text(texttype=unicode)
+        assert repr(f) != ""
         # good type
         self.assertTrue( u'boé' == f.validate(u"boé"))
         # setting wrong types 
+        self.assertRaises(SchemaError, lambda: Text(texttype=any) )
         self.assertRaises(  TypeError,  f.validate, "boo" )
         self.assertRaises(  TypeError,  f.validate, 1 )
 
