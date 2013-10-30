@@ -17,6 +17,7 @@
 
 import re
 import urllib2
+import simplejson as json
 
 JSON_CLEAN_LAST_COMMA = re.compile(",([\s]*\})")
 def _json_text_clean(json_text):

@@ -39,8 +39,7 @@ class TestDocTypes(unittest.TestCase):
 
     def test_VectorField_base(self):
         # declare a schema with term field
-        term_field = Text(multi=True, uniq=True, 
-                          attrs={'tf':Numeric(default=1),
+        term_field = Text(attrs={'tf':Numeric(default=1),
                                  'positions':Numeric(multi=True),
                                  'score':Numeric(default=17), } )
         schema = Schema( docnum=Numeric(), terms=term_field )
@@ -90,12 +89,12 @@ class TestDocTypes(unittest.TestCase):
         terms_tf = [ tokens.count(k) for k in text_terms ]
         terms_pos = [[i for i, tok in enumerate(tokens) if tok == k ] for k in text_terms]
         # document
-        term_field = Text(multi=True, uniq=True, 
-                          attrs={'tf':Numeric(default=1),
+        term_field = Text(attrs={'tf':Numeric(default=1),
                                  'positions':Numeric(multi=True), } )
         schema = Schema( docnum=Numeric(), title=Text(), text=Text(), terms=term_field )
         doc = Doc(schema , docnum=1, text=text, title="chickens")
         doc.terms = text_terms
+        assert doc.terms.tf.values() == [1]*len(text_terms)
         doc.terms.tf = terms_tf
         doc.terms.positions = terms_pos
 

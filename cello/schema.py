@@ -15,9 +15,9 @@ rename _field => _ftype
 clean notebook in progress
 """
 
-#TODO: précissé le docstr, c'est quoi quand on a cette erreur exactement ?
 class SchemaError(Exception):
     """ Error
+    #TODO: précissé le docstr, c'est quoi quand on a cette erreur exactement ?
     """
     pass
 
@@ -27,9 +27,9 @@ class Schema(object):
     class inspired from Matt Chaput's Whoosh.  
     
     Creating a schema :
-        >>> schema = Schema(**{ 'title': Text(), 'score':Numeric(numtype=int, multi=True) })
-        >>> # or
         >>> schema = Schema( title=Text(), score=Numeric() )
+        >>> # or
+        >>> schema = Schema(**{ 'title': Text(), 'score':Numeric(numtype=int, multi=True) })
         >>> schema.field_names()
         ['score', 'title']
     """
@@ -172,8 +172,8 @@ class Text(FieldType):
         self.texttype = texttype
     
     def validate(self, value):
-        if not isinstance(value, self.texttype):
-            raise TypeError("Wrong type: get '%s' but '%s' expected" % (type(value), self.texttype))
+        #~ if not isinstance(value, self.texttype):
+            #~ raise TypeError("Wrong type: get '%s' but '%s' expected" % (type(value), self.texttype))
         return value
 
 
@@ -277,16 +277,23 @@ class ListField(DocField, list):
 class VectorField(DocField):
     """
         usage: 
-            doc.terms # vector
-            doc.terms['chat'] # vectoritem
-            doc.terms['chat'].tf = 12
-            
+            # vector with text keys and int values
+            >>> doc = Doc(Schema(), docnum=1)
+            >>> doc.terms = Text(multi=True, uniq=True, attrs={'tf': Numeric()}) 
+            >>> doc.terms.add('chat') # vectoritem
+            >>> doc.terms['chat'].tf = 12
+            >>> doc.terms['chat'].tf
+            12
+            >>> doc['boo'] = Text(default="boo")
+            >>> doc.boo
+            'boo'
     """
     def __init__(self, fieldtype):
         DocField.__init__(self, fieldtype)
         self._attrs =  {} # attr_name : [DocField, ]
         self._keys = {}   # key: idx
-    
+        self.clear_attributes()
+        
     def attribute_names(self):
         return self._attrs.keys()
     
@@ -388,7 +395,8 @@ class VectorAttr(object):
         self.attr = attr
             
     def __iter__(self):
-        for attr_value in self.vector._attrs[self.attr]:
+        vector, attr = self.vector, self.attr
+        for attr_value in vector._attrs[attr]:
             yield attr_value.get_value()
     
     def values(self):
@@ -396,7 +404,8 @@ class VectorAttr(object):
         return list(self)
             
     def __getslice__(self, i, j):
-        return [ x.get_value() for x in self.vector._attrs[self.attr][i:j] ]
+        vector, attr = self.vector, self.attr
+        return [ x.get_value() for x in vector._attrs[attr][i:j] ]
     
     def __getitem__(self, idx):
         return self.vector._attrs[self.attr][idx].get_value()
@@ -431,61 +440,81 @@ class VectorItem(object):
 #TODO: ca doit être une métode de field
 def create_field(field):
     """ Create a convenient field to store data
-    
-    not multi => default or None
-    multi and uniq and fields.attr => dict
-    multi and uniq => set
-    multi and not uniq => list
+    attribute precedence : 
+    * |attrs| > 0:  multi and uniq is implied => VectorField
+    * uniq, multi is implied => SetField 
+    * multi and !uniq => ListField 
+    * !multi => ValueField
     """
-    if not(field.multi):
-        return ValueField(field)
+    if field.attrs is not None and len(field.attrs):
+        return VectorField(field)
+    elif field.uniq and field.attrs == None:
+        return SetField(field)
     elif field.multi and not field.uniq:
         return ListField(field)
-    elif field.multi and field.uniq and field.attrs == None:
-        return SetField(field)
-    else:
-        return VectorField(field)
-
+    elif not(field.multi):
+        return ValueField(field)
+    else : raise SchemaError("Something went wrong creating the field\n%s"
+        % field) 
 
 class Doc(dict):
     """ Cello Document object
+        #TODO: docnum doit etre un field spécial
+        #TODO: la valeur de docnum doit être passer en argument de __init__
     """
-    __reserved__ = ['docnum', 'schema']
+    
+    def __repr__(self):
+        return "<%s %s %s>" % (self.__class__.__name__, self.schema, 
+            { k: self[k] for k in self.schema.field_names() } )
     
     def __init__(self, schema, **data):
         dict.__init__(self)
         # schema 
-        self['schema'] = schema.copy()
-        # fields value(s)
-        
-        #TODO: docnum doit etre un field spécial
-        #TODO: la valeur de docnum doit être passer en argument de __init__
+        self.schema = schema.copy()
         # Doc should always have a docnum ? YES
-        self['docnum'] = data['docnum'] # or fail
-        
+        if 'docnum' not in self.schema:
+            self.add_field('docnum', Numeric() )
+            if 'docnum' not in self.schema:
+                raise Exception(self.schema, 'docnum'  in self.schema)
+        #elf.docnum = data['docnum'] if "docnum" in data else 0# or fail
+        # fields value(s)
         for key, field in schema.iter_fields():
             self[key] = create_field(field) 
             if data and data.has_key(key):
-                self[key].set(data[key])
+                dict.__getitem__(self, key).set( data[key] )
     
     def add_field(self, name, fieldtype):
         self.schema.add_field(name, fieldtype)
         self[name] = create_field(fieldtype) 
     
+        
+    def __getitem__(self, name):
+        return getattr(self, name)
+            
     def __getattr__(self, name):
+        if name == 'schema':
+            return object.__getattr__('schema')
         try:
-            field = self[name]
+            field = dict.__getitem__(self, name)
             if type(field) == ValueField:
-                return self[name].get_value()
+                return field.get_value()
             return field  
         except KeyError as err:
             raise SchemaError("%s is not a Doc field (existing attributes are: %s)" % (err, self.keys()))
 
+    def __setitem__(self,name, value):
+        setattr(self, name, value)
+
+
     def __setattr__(self, name, value):
-        if isinstance(value, FieldType):
+        if name == 'schema':
+            object.__setattr__(self,'schema', value)
+        elif isinstance(value, FieldType):
             self.add_field(name, value)
-        elif not (name in self['schema'].field_names()):
+        elif isinstance(value, DocField):
+            dict.__setitem__(self, name, value)
+        elif not (name in self.schema.field_names()):
             raise SchemaError("%s is not a Doc field (existing attributes are: %s)" % (name, self.keys()))
         else:
-            self[name].set( value )
+            dict.__getitem__(self, name).set( value )
         
