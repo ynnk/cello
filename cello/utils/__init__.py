@@ -17,6 +17,7 @@
 
 import re
 import urllib2
+import logging
 import simplejson as json
 
 JSON_CLEAN_LAST_COMMA = re.compile(",([\s]*\})")
@@ -56,3 +57,23 @@ def urllib2_setup_proxy(proxy=None):
         urllib2.install_opener(opener)
 
 #}
+
+
+def deprecated(new_fct_name, logger=None):
+    if logger is None:
+        logger = logging.getLogger("kodex")
+    nfct_name = new_fct_name
+    def aux_deprecated(func):
+        """This is a decorator which can be used to mark functions
+        as deprecated. It will result in a warning being emmitted
+        when the function is used."""
+        def newFunc(*args, **kwargs):
+            msg = "DeprecationWarning: use '%s' instead of '%s'." % (new_fct_name, func.__name__)
+            logger.warning(msg)
+            warnings.warn(msg, category=DeprecationWarning)
+            return func(*args, **kwargs)
+        newFunc.__name__ = func.__name__
+        newFunc.__doc__ = func.__doc__
+        newFunc.__dict__.update(func.__dict__)
+        return newFunc
+    return aux_deprecated

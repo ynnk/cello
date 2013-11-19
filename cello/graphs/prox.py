@@ -138,7 +138,7 @@ def spreading_wgt(g, in_vect, wgt=lambda i: 1., epsi=0, false_refl=False):
     return out_vect
 
 
-def prox_markov_wgt(g, p0, length=3, wgt=None, epsi=0, false_refl=False):
+def prox_markov_wgt(g, p0, l=3, wgt=None, epsi=0, false_refl=False):
     """ Prox 'classic'
         
     :param g: graph in igraph format
@@ -156,7 +156,7 @@ def prox_markov_wgt(g, p0, length=3, wgt=None, epsi=0, false_refl=False):
     if not wgt: _spreading = lambda vect : spreading(g, vect, epsi, false_refl)
     else: _spreading = lambda vect : spreading_wgt(g, vect, wgt, epsi, false_refl)
 
-    for k in range(length):
+    for k in range(l):
         prox_vect = _spreading(prox_vect)
     return prox_vect
 

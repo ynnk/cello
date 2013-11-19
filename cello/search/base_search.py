@@ -20,7 +20,6 @@ import logging
 import igraph as ig #TODO: pas térible d'avoir le import igraph ici
 
 from cello.pipeline import Optionable
-from cello.models import Doc
 
 
 class AbstractSearch(Optionable):

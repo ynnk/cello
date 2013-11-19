@@ -9,6 +9,8 @@
 
 from cello.pipeline import DocPipelineElmt
 from cello.expanders import  AbstractDocListExpand
+from cello.schema import VectorField, Text, Numeric, Any
+
 
 class AddFixedScore(DocPipelineElmt):
     """ Add a score field with a fixed value for each term
@@ -59,6 +61,64 @@ class FieldFilter(DocPipelineElmt):
                 doc.pop(field)
             yield doc
 
+class Merges:
+    @staticmethod
+    def first(x,y): return y
+    @staticmethod
+    def sum(x,y): return x+y
+    def append(x,y): return x+y
+
+class TermSet(VectorField):
+    def __init__(self, ts_field, term_field, merges=[], posting=False):
+        """
+        create a termset from docs attribute
+        use merges as a reduce function 
+    
+        :param merges : [('termset_attr','term_attr', Merges.method)]
+            used to keep an attributes 
+            if value is same for a term in all docs
+            value
+        :param posting: keep posting list if True   
+            (keep a reference to Doc instance)
+        """
+        # create container
+        self._ts_field = ts_field
+        self._term_field = term_field
+        attrs = [ ts for ts, t , f in merges] 
+        self._merges = merges or []
+        self._posting = posting 
+        VectorField.__init__(self, Text(attrs={}))
+        
+        self.add_attribute('df_rd', Numeric(default=0))        
+        if posting : 
+            self.add_attribute('postings', Any(multi=True))
+    
+       
+    def __repr__(self):
+        return "<%s:('%s', '%s') %s>" % ( self.__class__.__name__, self._ts_field, self._term_field, self._attrs.keys())
+        
+
+    def __call__(self, docs):
+        termset = self
+        ts_field, term_field = self._ts_field, self._term_field, 
+        merges, posting = self._merges, self._posting
+        for doc in docs:
+            doc[ts_field] = termset # XXX should be marked as virtual ?
+            terms = doc[term_field]
+            for term in terms:
+                termset.add(term) 
+                vi = termset[term]
+                for ts_attr, t_attr, merge in merges:
+                    if not ts_attr in vi.attribute_names():
+                        # create attr
+                        fieldtype = doc.schema[term_field].attrs[t_attr]
+                        termset.add_attribute(ts_attr, fieldtype )
+                    vi[ts_attr] = merge(vi[ts_attr], terms[term][t_attr]) 
+                termset[term].df_rd += 1    
+                if posting :
+                    termset[term].postings.add(doc)
+        return docs
+        
 
 
 #{ KodexLU creation or/and retrieve

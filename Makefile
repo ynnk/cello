@@ -34,6 +34,7 @@ testcov:
 clean:
 	# removing .pyc filesin
 	find ./ -iname *.pyc | xargs rm
-
+	find ./ -iname *.py~ | xargs rm
+	
 all: 
 	

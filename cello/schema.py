@@ -1,4 +1,4 @@
-#-*- coding:utf-8 -*-
+    #-*- coding:utf-8 -*-
 """ :mod:`cello.schema`
 ======================
 
@@ -14,6 +14,7 @@ rename _field => _ftype
 
 clean notebook in progress
 """
+import datetime
 
 class SchemaError(Exception):
     """ Error
@@ -44,23 +45,23 @@ class Schema(object):
         return Schema(**self._fields)
     
     def add_field(self, name, field):
-        """ Add a named field to the schema.
-        
+        """ Add a named field to the schema.        
         :param name: name of the new field
         :param field:  FieldType instance for the field 
         """
         # testing names 
         if name.startswith("_"):
             raise SchemaError("Field names cannot start with an underscore.")
+
         if " " in name:
             raise SchemaError("Field names cannot contain spaces.")
         
         if name in self._fields:
             raise SchemaError("Schema already has a field named '%s'" % name)
+
         if not isinstance(field, FieldType):
             raise SchemaError("Wrong FieldType in schema for field: %s, %s is not a FieldType" % (name, field))
-        #TODO: est-ce que ces quatres erreurs ne sont pas plutot des ValueError ? 
-        # (erreur sur les valeurs)
+
         self._fields[name] = field
     
     def remove_field(self, field_name):
@@ -75,6 +76,9 @@ class Schema(object):
     def has_field(self, name):
         return self.__contains__(name)
     
+    def __iter__(self):
+        return self._fields.iterkeys()
+        
     def __contains__(self, name):
         return name in self._fields    
     
@@ -94,9 +98,10 @@ class Schema(object):
             raise SchemaError("Field '%s' does not exist in Schema (%s)" % (name, self.field_names()))
     
     def __repr__(self):
-        return "<%s: %s>" % (self.__class__.__name__, self._fields)
+        return "<%s:\n%s\n>" % (self.__class__.__name__, "\n".join(
+               [ " * %s: %s"%(k,v)  for k,v in self._fields.iteritems()]
+    ))
 
-#XXX: est-ce que ca marche ces docstring "volante" ?? jms vu ca...
 """
    * FieldTypes to declare in schemas 
 """
@@ -122,7 +127,7 @@ class FieldType(object):
     def __repr__(self):
         temp = "%s(multi=%s, uniq=%s, default=%s, attrs=%s)"
         return temp % (self.__class__.__name__,
-                    self.multi, self.uniq, self.default, self.attrs )
+                self.multi, self.uniq, self.default, self.attrs )
     
     #TODO: est-ce que validate permet le cast, comme c'est pour le moment ? ou return juste True/False ?
     def validate(self, value):
@@ -134,6 +139,12 @@ class FieldType(object):
         * return the given value, that may have been converted
         """
         return value
+
+class Any(FieldType):
+    def _init(self,**field_options):
+        FieldType.__init__(self,**field_options)
+    def validate(self, anything):
+        return anything
 
 
 class Numeric(FieldType):
@@ -166,16 +177,26 @@ class Text(FieldType):
     def __init__(self, texttype=str, **field_options):
         if 'default' not in field_options:
             field_options['default']=""
+        
         FieldType.__init__(self, **field_options)
         if texttype not in Text._types_:
             raise SchemaError('Wrong type for Text %s' % Numeric._types_ )
+        
         self.texttype = texttype
     
     def validate(self, value):
-        #~ if not isinstance(value, self.texttype):
-            #~ raise TypeError("Wrong type: get '%s' but '%s' expected" % (type(value), self.texttype))
+        if not isinstance(value, (str, unicode)):
+            raise TypeError("Wrong type: get '%s' but '%s' expected" % (type(value), self.texttype))
         return value
 
+
+class Datetime(FieldType):
+    def __init__(self, **field_options):
+        FieldType.__init__(self, **field_options)
+    def validate(self, value):
+        if not isinstance(value, datetime.datetime):
+            raise SchemaError('Wrong type for Datetime %s : %s' % (value, type(value) ))
+        return value
 
 # Add more FiledType here
 # ...
@@ -287,16 +308,29 @@ class VectorField(DocField):
             >>> doc['boo'] = Text(default="boo")
             >>> doc.boo
             'boo'
+            >>> doc.terms.add_attribute('foo', Numeric(default=42))
+            >>> doc.terms.foo.values()
+            [42]
     """
     def __init__(self, fieldtype):
         DocField.__init__(self, fieldtype)
-        self._attrs =  {} # attr_name : [DocField, ]
+        self._fieldtype = fieldtype
+        self._attrs =  {} # attr_name : [DocField, ]    
         self._keys = {}   # key: idx
         self.clear_attributes()
         
     def attribute_names(self):
         return self._attrs.keys()
-    
+        
+    def add_attribute(self, name, fieldtype):
+        attrs = self._fieldtype.attrs
+        if name in attrs:
+            raise SchemaError("Vector has a attribute named '%s'"% name)
+        attrs[name] = fieldtype
+        self._attrs[name] = []
+        for i in xrange(len(self._keys)):
+            self._attrs[name].append(create_field(fieldtype))
+        
     def clear_attributes(self):
         self._attrs = {} # removes all attr
         for name, attr_field in self._field.attrs.iteritems():
@@ -322,10 +356,10 @@ class VectorField(DocField):
     def __contains__(self, key):
         """ returns True if the vector has the specified key
         """
-        return key in self._keys
+        return self.has(key)
         
     def has(self, key): 
-        return self.__contains__(key)
+        return key in self._keys
 
     def __getitem__(self, key):
         return VectorItem(self, key )
@@ -333,14 +367,19 @@ class VectorField(DocField):
     def get_value(self): 
         """ from DocField, convenient method """
         return self
-
+        
+    def as_dict(self):
+        d = {}
+        for k in self._keys():
+            for attr in self._attrs: pass
+                
     def add(self, key):
         """ Add a key to the vector """
         if not self.has(key):
             self._keys[key] = len(self._keys)
-        #append to attributes
-        for name, attr_field  in self._field.attrs.iteritems():
-            self._attrs[name].append(create_field(attr_field))
+            #append to attributes
+            for name, attr_field  in self._field.attrs.iteritems():
+                self._attrs[name].append(create_field(attr_field))
         
     def set(self, keys):
         """ set new keys 
@@ -428,6 +467,9 @@ class VectorItem(object):
     def __getattr__(self, attr_name):
         return self._vector.get_attr_value(self._key, attr_name)
     
+    def __setitem__(self, attr, value):
+        setattr(self, attr, value)
+        
     def __setattr__(self, attr, value):
         if not(attr.startswith('_')):
             self._vector.set_attr_value(self._key, attr, value)
@@ -483,9 +525,9 @@ class Doc(dict):
             if data and data.has_key(key):
                 dict.__getitem__(self, key).set( data[key] )
     
-    def add_field(self, name, fieldtype):
+    def add_field(self, name, fieldtype, docfield=None):
         self.schema.add_field(name, fieldtype)
-        self[name] = create_field(fieldtype) 
+        self[name] = docfield or create_field(fieldtype) 
     
         
     def __getitem__(self, name):
@@ -505,7 +547,6 @@ class Doc(dict):
     def __setitem__(self,name, value):
         setattr(self, name, value)
 
-
     def __setattr__(self, name, value):
         if name == 'schema':
             object.__setattr__(self,'schema', value)
@@ -518,3 +559,8 @@ class Doc(dict):
         else:
             dict.__getitem__(self, name).set( value )
         
+    def as_dict(self, exclude=[]):
+        doc = { key: getattr(self, key) for key in self.schema \
+                        if not key.startswith("_") and key not in exclude }
+        return doc 
+            

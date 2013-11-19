@@ -384,3 +384,7 @@ class DocListPipelineElmt(OptDocPipelineElmt):
     def __call__(self, kdocs):
         raise NotImplementedError
 
+class GraphPipelineElement(Optionable, Composable):
+    def __init__(self, name):
+        Optionable.__init__(self, name)
+        Composable.__init__(self)

@@ -32,7 +32,7 @@ def get_basic_logger(level=logging.WARN):
     formatter = ColorFormatter('%(asctime)s:%(levelname)s:%(name)s:%(message)s')
     ch.setFormatter(formatter)
     # add the handlers to the logger
-    logger.addHandler(ch)
+    logger.addHandler(ch)   
     return logger
 
 
