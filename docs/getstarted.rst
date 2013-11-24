@@ -3,8 +3,8 @@ Get started: setup a simple Cello pipeline
 
 Un exemple de code (qui peut-être testé automatiquement) ::
 
-    >>> from cello.schema import Doc
-    >>> doc = Doc()
+    >>> from cello.schema import Schema, Doc
+    >>> doc = Doc(Schema(a=Numeric()), a=2 )
     >>> a = 2
     >>> print(a + 1)
     3
