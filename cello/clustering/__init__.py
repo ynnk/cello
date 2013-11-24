@@ -26,44 +26,6 @@ class CelloClusteringError(CelloError):
     pass
 
 
-def apply_clustering(component, docs, graph, *args, **kargs):
-    """ Run the clustering method on the graph
-    @note: arguments should be setted according to the clustering object options.
-    @see: L{kodex.clustering}
-    """
-    # appel de la methode de clustering, retourne une VertexCover
-    vertex_cover = component(graph, *args, **kargs)
-    # get the graph used for clustering,
-    # misc cluster ?
-    if hasattr(vertex_cover, "misc_cluster") : # "misc" cluster id
-        misc_cluster = vertex_cover.misc_cluster
-    else: # pas de "misc"
-        misc_cluster = -1
-    # save the cluster membership of each document
-    for doc in docs:
-        if not "clusters" in doc.schema : doc["clusters"] = Numeric(multi=True)
-    ### construction du dictionaire 'self.clusters'
-    clusters = {}
-    for k, vids in enumerate(vertex_cover):
-        if k == misc_cluster: k = 9998
-        clusters[k] = {}
-        # Liste des sommets (docs and terms) du clusters
-        nodes = graph.vs[set(vids)]
-        # documents
-        clusters[k]['docs'] = nodes.select(type=True)["_doc"]
-        # terms
-        terms = nodes.select(type=False)
-        if len(terms) and "kodex_LU" in graph.vs.attribute_names():
-            clusters[k]['terms'] = terms["kodex_LU"]
-        else:
-            clusters[k]['terms'] = []
-        # labels
-        clusters[k]['labels'] = {}
-        # ajoute l'info sur le cluster dans le documents
-        for doc in clusters[k]['docs']:
-            doc.clusters.append(k)
-    # clusters = {cluster_id:{"docs":[KodexDoc, ...], "terms":[KodexLU, ...]}, ...}
-    return clusters
 
 def filter_cover(cover, min_docs, min_terms, logger=None):
     """ Merge too small clusters in a "misc" one.
