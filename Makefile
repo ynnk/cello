@@ -19,8 +19,8 @@ doc:
 	py.test -v ./docs
 	@echo "  clean   remove .pyc files "
 
-test: 
-	py.test -v ./tests
+test:
+	py.test -v ./tests --cov cello --cov-report html
 
 testlib: 
 	py.test -v ./cello
