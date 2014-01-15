@@ -1,5 +1,6 @@
 #-*- coding:utf-8 -*-
 import unittest
+
 from cello.search.base_search import AbstractSearch
 
 class TestAbstractSearch(unittest.TestCase):

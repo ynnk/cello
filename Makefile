@@ -13,7 +13,7 @@ help:
 	@echo "          $ py.test --cov PATH_OR_FILE --cov-report term-missing"
 
 doc:
-	ipython nbconvert --to rst notebooks/Cello*.ipynb 
+	ipython nbconvert --to rst notebooks/Cello*.ipynb
 	mv Cello*.rst ./docs
 	make -C ./docs html
 	py.test -v ./docs
@@ -30,11 +30,10 @@ testall:
 
 testcov:
 	py.test --cov cello --cov-report term-missing 
-	
+
 clean:
 	# removing .pyc filesin
 	find ./ -iname *.pyc | xargs rm
 	find ./ -iname *.py~ | xargs rm
-	
-all: 
-	
+
+all: help

@@ -1,5 +1,5 @@
 
-.. automodule:: cello.models
+.. automodule:: cello.schema
     :show-inheritance:
     :members:
     :undoc-members:

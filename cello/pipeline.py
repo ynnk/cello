@@ -199,7 +199,7 @@ class Optionable:
 class Composable:
     """ Basic composable element
     
-    Composable is abstract, you need to implemented the :fct:`__call__` method
+    Composable is abstract, you need to implemented the :meth:`__call__` method
     
     >>> e1 = Composable()
     >>> e2 = Composable()
