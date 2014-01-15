@@ -6,7 +6,7 @@
 :license: ${LICENSE}
 
 
-.. inheritance-diagram:: Schema Doc FieldType Any Numeric Text Datetime
+.. inheritance-diagram:: Schema Doc AbstractType Any Numeric Text Datetime
 
 .. inheritance-diagram:: DocField VectorField ValueField SetField
 
@@ -57,7 +57,7 @@ class Schema(object):
         
         :param name: name of the new field
         :type name: str
-        :param field:  FieldType instance for the field 
+        :param field:  AbstractType instance for the field 
         """
         # testing names 
         if name.startswith("_"):
@@ -66,8 +66,8 @@ class Schema(object):
             raise SchemaError("Field names cannot contain spaces.")
         if name in self._fields:
             raise SchemaError("Schema already has a field named '%s'" % name)
-        if not isinstance(field, FieldType):
-            raise SchemaError("Wrong FieldType in schema for field: %s, %s is not a FieldType" % (name, field))
+        if not isinstance(field, AbstractType):
+            raise SchemaError("Wrong AbstractType in schema for field: %s, %s is not a AbstractType" % (name, field))
         self._fields[name] = field
     
     def remove_field(self, field_name):
@@ -116,7 +116,7 @@ Field types to declare in schemas
 *********************************
 """
 
-class FieldType(object):
+class AbstractType(object):
     """ Define a type. Abstract class.
     """
 
@@ -127,7 +127,7 @@ class FieldType(object):
         :param uniq: wether the values are unique, only apply if multi == True
         :type multi: boolean
         :param default: default value for the field
-        :param attrs: field attributes, dictionary of  ``{"name": FieldType()}``
+        :param attrs: field attributes, dictionary of  ``{"name": AbstractType()}``
         """
         self.multi = multi 
         self.uniq = uniq
@@ -156,38 +156,43 @@ class FieldType(object):
         return value
 
 
-class Any(FieldType):
+class Any(AbstractType):
     """ Any kind of data type, no validation
     """
     def _init(self, **field_options):
-        FieldType.__init__(self, **field_options)
+        AbstractType.__init__(self, **field_options)
 
     def validate(self, anything):
         return anything
 
 
-class Numeric(FieldType):
+class Numeric(AbstractType):
     """ Numerical type (int or float)
     """
     _types_ = [int, float]
     
-    def __init__(self, numtype=int, **field_options):
+    def __init__(self, numtype=int, signed=True, **field_options):
         """
         :param numtype: the type of numbers that can be stored in this field,
             either ``int``, ``float``. 
+        :param signed: if the value may be negatif (True by default)
+        :type signed: boolean
         """
-        FieldType.__init__(self, **field_options)
+        AbstractType.__init__(self, **field_options)
         if numtype not in Numeric._types_:
             raise SchemaError('Wrong type for Numeric %s' % Numeric._types_ )
         self.numtype = numtype
+        self._signed = signed
     
     def validate(self, value):
         if not isinstance(value, self.numtype):
             raise TypeError("Wrong type: get '%s' but '%s' expected" % (type(value), self.numtype))
+        if not self._signed and value < 0:
+            raise TypeError("The value can't be negatif ! (got '%s')" % (value))
         return value
 
 
-class Text(FieldType):
+class Text(AbstractType):
     """ Text type (str or unicode)
     
     if not setted default value is an empty string.
@@ -198,7 +203,7 @@ class Text(FieldType):
     def __init__(self, texttype=str, **field_options):
         if 'default' not in field_options:
             field_options['default'] = ""
-        FieldType.__init__(self, **field_options)
+        AbstractType.__init__(self, **field_options)
         if texttype not in Text._types_:
             raise SchemaError('Wrong type for Text %s' % Numeric._types_ )
         self._texttype = texttype
@@ -209,11 +214,11 @@ class Text(FieldType):
         return value
 
 
-class Datetime(FieldType):
+class Datetime(AbstractType):
     """ datetime type
     """
     def __init__(self, **field_options):
-        FieldType.__init__(self, **field_options)
+        AbstractType.__init__(self, **field_options)
 
     def validate(self, value):
         if not isinstance(value, datetime.datetime):
@@ -234,9 +239,9 @@ class DocField(object):
     def __init__(self, ftype):
         """
         :param ftype: the type for the field
-        :type ftype: subclass of :class:`FieldType` 
+        :type ftype: subclass of :class:`AbstractType` 
         """
-        assert isinstance(ftype, FieldType)
+        assert isinstance(ftype, AbstractType)
         self._ftype = ftype
 
     def get_value(self):
@@ -257,7 +262,7 @@ class DocField(object):
         * ``not multi`` => ValueField
         
         :param ftype: the desired type of field
-        :type ftype: subclass of :class:`FieldType`
+        :type ftype: subclass of :class:`AbstractType`
         """
         if ftype.attrs is not None and len(ftype.attrs):
             return VectorField(ftype)
@@ -396,11 +401,11 @@ class VectorField(DocField):
         :param name: name of the new attribute
         :type name: str
         :param ftype: type of the new attribute
-        :type ftype: subclass of :class:`FieldType`
+        :type ftype: subclass of :class:`AbstractType`
         """
         if name in self._ftype.attrs:
             raise SchemaError("Vector has a attribute named '%s'" % name)
-        # add the attr to the underlying FieldType
+        # add the attr to the underlying AbstractType
         self._ftype.attrs[name] = ftype
         # add the attr it self
         self._attrs[name] = [DocField.FromType(ftype) for _ in xrange(len(self))]
@@ -621,7 +626,7 @@ class Doc(dict):
     def __setattr__(self, name, value):
         if name == 'schema':
             object.__setattr__(self,'schema', value)
-        elif isinstance(value, FieldType):
+        elif isinstance(value, AbstractType):
             self.add_field(name, value)
         elif isinstance(value, DocField):
             dict.__setitem__(self, name, value)

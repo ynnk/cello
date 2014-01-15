@@ -14,10 +14,19 @@ class TestFieldTypes(unittest.TestCase):
         self.assertNotEqual(repr(f), "")
         self.assertRaises(SchemaError, lambda: Numeric(numtype=any) )
         self.assertEqual(f.validate(2.), 2.)  # ok
+        self.assertEqual(f.validate(-2.2), -2.2)  # ok
+        self.assertEqual(f.validate(-5e0), -5.)  # ok
+        self.assertEqual(f.validate(0.), 0.)  # ok
         self.assertRaises(TypeError, f.validate, 1)
         self.assertRaises(TypeError, f.validate, "1")
         self.assertRaises(TypeError, f.validate, "blabla")
         self.assertRaises(TypeError, f.validate, int)
+
+        # unsigned field
+        f = Numeric(numtype=int, signed=False)
+        self.assertEqual(f.validate(2), 2)  # ok
+        self.assertEqual(f.validate(0), 0)  # ok
+        self.assertRaises(TypeError, f.validate, -1)
 
     def test_text(self):
         # setting wrong types 
