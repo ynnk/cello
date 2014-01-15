@@ -578,6 +578,60 @@ class VectorItem(object):
 class Doc(dict):
     """ Cello Document object
     
+    Here is an exemple of document construction from a simple text.
+    First we define document's schema:
+    
+    >>> term_field = Text(attrs={'tf':Numeric(default=1), 'positions':Numeric(multi=True)})
+    >>> schema = Schema(docnum=Numeric(), text=Text(), terms=term_field)
+    
+    
+    Now it is how one can build a document from this simple text:
+    
+    >>> text = \"\"\"i have seen chicken passing the street and i believed
+    ... how many chicken must pass in the street before you
+    ... believe\"\"\"
+    
+    Then we can create the document:
+
+    >>> doc = Doc(schema, docnum=1, text=text)
+    >>> doc.text[:6]
+    'i have'
+    >>> len(doc.text)
+    113
+    
+    Then we can analyse the text:
+
+    >>> tokens = text.split(' ')
+    >>> from collections import OrderedDict
+    >>> text_terms =  list(OrderedDict.fromkeys(tokens))
+    >>> terms_tf = [ tokens.count(k) for k in text_terms ]
+    >>> terms_pos = [[i for i, tok in enumerate(tokens) if tok == k ] for k in text_terms]
+
+    .. note:: there is better way to analyse a text with Cello !
+    
+    and one can store the result in the field "terms":
+    
+    >>> doc.terms = text_terms
+    >>> doc.terms.tf.values()   # here we got only '1', it's the default value
+    [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
+    >>> doc.terms.tf = terms_tf
+    >>> doc.terms.positions = terms_pos
+
+    One can access the information, for example, for the term "chicken":
+    
+    >>> key = "chicken"
+    >>> doc.terms[key].tf
+    2
+    >>> doc.terms[key].positions
+    [3, 11]
+    >>> doc.terms.get_attr_value(key, 'positions')
+    [3, 11]
+    >>> doc.terms._keys[key]
+    3
+    >>> doc.terms.positions[3]
+    [3, 11]
+    
+    
     #TODO: docnum doit etre un field spécial
     #TODO: la valeur de docnum doit être passer en argument de __init__
     """
