@@ -5,31 +5,33 @@
 G{classtree AbstractGraphBuilder}
 """
 
-import itertools
 import logging
 
 from bisect import bisect
 import igraph as ig
 
-from cello.graphs import prox
-from cello.graphs import GraphBuilder, AbstractGraphBuilder
+import cello.graphs.prox 
+from cello.graphs import GraphBuilder, AbstractGraphBuilder, EDGE_WEIGHT_ATTR 
 
-# default edges attributs where graph weight are stored
-
-
-logger = logging.getLogger("cello.biulders")
+logger = logging.getLogger("cello.builders")
 
 
 #{ Graph builders
 
-class SetGraph(AbstractGraphBuilder):
+class Scoring():
+    @staticmethod    
+    def one(termset, term, doc):
+        return 1
+            
+class AbstractSetGraph(AbstractGraphBuilder):
     EDGE_WEIGHT_ATTR = "weight"
     
-    def __init__(self, copy_tops=[], copy_bottoms=[], name="TermSetGraph"):
+    def __init__(self, copy_tops=[], copy_bottoms=[], weight_attr=None, name="TermSetGraph"):
         AbstractGraphBuilder.__init__(self, self.__class__.__name__, directed=False)
         self._logger = logging.getLogger(self.__class__.__name__)
         self.copy_tops = copy_tops or []
         self.copy_bottoms = copy_bottoms or []
+        self.weight_attr = weight_attr or self.EDGE_WEIGHT_ATTR
         
         self.declare_vattr("type")
         self.declare_vattr("label")
@@ -40,22 +42,29 @@ class SetGraph(AbstractGraphBuilder):
             self.declare_vattr(k)
         for k in copy_bottoms: 
             self.declare_vattr(k)
-        self.declare_eattr(SetGraph.EDGE_WEIGHT_ATTR)
+        self.declare_eattr(EDGE_WEIGHT_ATTR)
         
     
 
-class FieldSetGraph(SetGraph):
+class FieldSetGraph(AbstractSetGraph):
+    """
+    Build a graph from a field 
+    """
+    # TODO handle scoring
+    
     def __init__(self, *field_names, **kwargs):
-        SetGraph.__init__(self,  **kwargs)
+        AbstractSetGraph.__init__(self,  **kwargs)
         self.field_names = field_names
         
-    def _parse(self, docs, ):
+    def _parse(self, docs ):
         copy_tops = self.copy_tops
         copy_bottoms = self.copy_bottoms
         fnames = self.field_names
-
+        weight_attr = self.weight_attr
+        edge_score = Scoring.one
+        
         for doc in docs:
-            doc_gid = self.add_get_vertex((True, doc.docnum))
+            doc_gid = self.add_get_vertex( (True, doc.docnum) )
             self.set_vattr(doc_gid, "_doc", doc)
             self.set_vattr(doc_gid, "type", True)            
             self.set_vattr(doc_gid, "color", "#00F")
@@ -66,38 +75,39 @@ class FieldSetGraph(SetGraph):
         for doc in docs:
             doc_gid = self.add_get_vertex((True, doc.docnum))
             for fname in fnames:
-                for term in doc[fname]:
+                termset = doc[fname]
+                for term in termset:
                     term_gid = self.add_get_vertex((False, term))
                     self.set_vattr(term_gid, "type", False)
                     self.set_vattr(term_gid, "color", "#F00")
                     self.set_vattr(term_gid, "label", term)
                     for k in copy_bottoms:
                         self.set_vattr(term_gid, k, term[k])
-                    # ad edge
+                    # add edge with score
                     eid = self.add_get_edge(doc_gid, term_gid)
-                    self.set_eattr(eid, SetGraph.EDGE_WEIGHT_ATTR, 1.0)
+                    self.set_eattr(eid, weight_attr, edge_score(termset, term, doc) )
             
 
-class TermSetGraph(SetGraph):
+class TermSetGraph(AbstractSetGraph):
     """
     Build a graph from a termset.
     Termset contains 
-    By convention and for reusability we suppose that Documents are type True vertices
-    and Terms are type false vertices. 
+    By convention and for reusability we suppose that 
+     * Documents are type True vertices (should it be int ? to handle tripartite ?)
+     * Terms are type false vertices. 
     """
     def __init__(self, **kwargs):
-        SetGraph.__init__(self,  **kwargs)
+        AbstractSetGraph.__init__(self,  **kwargs)
 
     def _parse(self, termset, weighted=True, **kwargs):
         """ Private methode called by self.build_graph().
         """
-        def ones(termset, term, doc):
-            return 1
-        
-        score = ones
-
         copy_tops = self.copy_tops
         copy_bottoms = self.copy_bottoms
+        weight_attr = self.weight_attr
+        
+        edge_score = Scoring.one
+
         # add top vertices aka docs
         for term in termset:
             for doc in termset[term].postings:
@@ -121,7 +131,7 @@ class TermSetGraph(SetGraph):
                 doc_gid = self.add_get_vertex((True, doc.docnum))
                 # ad edge
                 eid = self.add_get_edge(doc_gid, term_gid)
-                self.set_eattr(eid, SetGraph.EDGE_WEIGHT_ATTR, score(termset, term, doc))
+                self.set_eattr(eid, weight_attr, edge_score(termset, term, doc))
         
         
         
