@@ -16,8 +16,7 @@ doc:
 	ipython nbconvert --to rst notebooks/Cello*.ipynb
 	mv Cello*.rst ./docs
 	make -C ./docs html
-	py.test -v ./docs
-	@echo "  clean   remove .pyc files "
+	#py.test -v ./docs
 
 test:
 	py.test -v ./tests --cov cello --cov-report html
