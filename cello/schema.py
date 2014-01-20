@@ -640,8 +640,9 @@ class Doc(dict):
         >>> doc = Doc(Schema(titre=Text()), titre="Un titre")
         """
         dict.__init__(self)
-        # schema
-        self.schema = schema.copy()
+        # set the document schema
+        object.__setattr__(self, 'schema', schema.copy())
+        #    i.e. "self.schema = schema.copy()" but this is forbiden
         # Doc should always have a docnum !
         if 'docnum' not in self.schema:
             self.add_field('docnum', Numeric())
@@ -650,9 +651,9 @@ class Doc(dict):
         for key, ftype in schema.iter_fields():
             self[key] = DocField.FromType(ftype)
             if data.has_key(key):
-                # 
+                # explicit getitem needed for ValueField
                 dict.__getitem__(self, key).set(data[key])
-    
+
     def add_field(self, name, ftype, docfield=None):
         """ Add a field to the document (and to the underlying schema)
         
@@ -663,7 +664,7 @@ class Doc(dict):
         """
         self.schema.add_field(name, ftype)
         self[name] = docfield or DocField.FromType(ftype)
-    
+
     def __getitem__(self, name):
         return getattr(self, name)
 
@@ -684,7 +685,7 @@ class Doc(dict):
 
     def __setattr__(self, name, value):
         if name == 'schema':
-            object.__setattr__(self, 'schema', value)
+            raise SchemaError("Impossible to replace the schema of a document")
         elif isinstance(value, AbstractType):
             # the value is a "Type" => creation of a new attribute
             self.add_field(name, value)

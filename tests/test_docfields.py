@@ -197,6 +197,10 @@ class TestDoc(unittest.TestCase):
         self.assertNotEqual(repr(doc), "")
         self.assertNotEqual(doc.as_dict(), "")
         
+        # try to overide the schema
+        with self.assertRaises(SchemaError):
+            doc.schema = schema
+        
         # init with data
         doc = Doc(schema, titre="Un document qui documente")
         self.assertEqual(doc.titre, "Un document qui documente")
