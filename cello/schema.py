@@ -134,16 +134,13 @@ class AbstractType(object):
     
     #TODO: est-ce que validate permet le cast, comme c'est pour le moment ? ou return juste True/False ?
     def validate(self, value):
-        """ check if a value is correct (type).
-        Should be override.
+        """ Abstract method, check if a value is correct (type).
+        Should raise :class:`TypeError` if the type the validation fail.
         
-        This method should:
-        * raise :class:`TypeError` if the type 
-        * return the given value, that may have been converted
+        :param value: the value to validate
+        :return: the given value (that may have been converted)
         """
         raise NotImplementedError("This is an abstract class, you should use one of the ")
-        return value
-
 
 class Any(AbstractType):
     """ Any kind of data type, no validation
@@ -151,8 +148,8 @@ class Any(AbstractType):
     def __init__(self, **field_options):
         AbstractType.__init__(self, **field_options)
 
-    def validate(self, anything):
-        return anything
+    def validate(self, value):
+        return value
 
 
 class Numeric(AbstractType):
