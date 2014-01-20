@@ -2,7 +2,10 @@
 import unittest
 
 import cello
-from cello.schema import *
+from cello.schema import SchemaError
+from cello.schema import Numeric, Text
+from cello.schema import DocField, ValueField, VectorField, SetField, ListField
+from cello.schema import Schema, Doc
 
 class TestDocFields(unittest.TestCase):
     """ test ot DocField subclasses
@@ -88,7 +91,6 @@ class TestDocFields(unittest.TestCase):
         del l_field[1]
         self.assertEqual(l_field, [0, 6, 3, 4])
 
-
     def test_VectorField_base(self):
         # create a simple field
         v_field = VectorField(Text(
@@ -127,7 +129,6 @@ class TestDocFields(unittest.TestCase):
         self.assertEqual(v_field.get_attr_value("cat", "tf"), 1)
         self.assertEqual(v_field.get_attr_value("cat", "positions"), [])
 
-
     def test_VectorField_VectorItem(self):
         # create a simple field
         v_field = VectorField(Text(
@@ -149,7 +150,6 @@ class TestDocFields(unittest.TestCase):
         self.assertListEqual(v_field["chat"].positions, [45, 4])
         self.assertSetEqual(v_field["chat"].attribute_names(), set(['tf', 'positions']))
         self.assertDictEqual(v_field["chat"].as_dict(), {'positions': [45, 4], 'tf': 1})
-
 
     def test_VectorField_VectorAttr(self):
         # create a simple field
@@ -181,88 +181,46 @@ class TestDocFields(unittest.TestCase):
         v_field.add_attribute("score", Numeric(default=0))
         self.assertSetEqual(v_field.attribute_names(), set(['tf', 'positions', 'score']))
 
-#    def test_VectorField_base(self):
-#        # declare a schema with term field
-#        term_field = Text(attrs={'tf':Numeric(default=1),
-#                                 'positions':Numeric(multi=True),
-#                                 'score':Numeric(default=17), } )
-#        schema = Schema(docnum=Numeric(), terms=term_field)
-#        doc = Doc(schema , docnum=1)
-#        
-#        self.assertRaises(SchemaError, lambda : doc.boo )
-#        assert len(doc.schema) == 2
-#        terms_tf  = [11, 22, 33]
-#        term_keys = ['d', 'f', 'g']
-#        with self.assertRaises(TypeError):
-#            doc.terms = [1,2]
-#        doc.terms = term_keys # 
-#        with self.assertRaises(SchemaError):
-#            doc.terms.tf = [11,22]
-#        doc.terms.tf = terms_tf
-#        self.assertRaises(SchemaError, lambda: doc.terms.boo)
-#        assert all([key in doc.terms for key in term_keys])
-#        assert sorted( list(doc.terms) ) == sorted(doc.terms.keys())\
-#                == term_keys
-#        assert ('d' in doc.terms) == doc.terms.has('d') == True
-#        assert [11,22,33] == doc.terms.tf.values()
-#    
-#        # VectorAttr
-#        assert doc.terms._keys['d'] == 0
-#        assert type(doc.terms.tf) == VectorAttr 
-#        assert doc.terms.tf.values() == list(doc.terms.tf) == terms_tf
-#        doc.terms.score[0] = 99 # setitem
-#        assert doc.terms['d'].score == 99
-#        assert doc.terms.tf[1:3] == [22,33]
-#        
-#        # VectorItem
-#        vi = doc.terms['g']
-#        assert vi._key == 'g'
-#        assert type(doc.terms['d']) == type(vi) == VectorItem
-#        assert sorted(vi.attribute_names()) == [ 'positions', 'score', 'tf']
-#        assert vi.as_dict() == {'tf': 33, 'score':17, 'positions': []}
-#        vi.score = 14 # setitem
-#        assert vi['score'] == doc.terms['g'].score \
-#            == doc.terms.score[2]  == 14
 
-#    def test_VectorField_chickens(self):
-#        """ exemple of VectorField usage
-#        """
-#        from collections import OrderedDict
-#        text = "i have seen chicken passing the street and i believed "\
-#             + "how many chicken must pass in the street before you "\
-#             + "believe"
-#        # text analyse 
-#        tokens = text.split(' ')
-#        text_terms =  list(OrderedDict.fromkeys(tokens))
-#        terms_tf = [ tokens.count(k) for k in text_terms ]
-#        terms_pos = [[i for i, tok in enumerate(tokens) if tok == k ] for k in text_terms]
-#        # define document schema
-#        term_field = Text(attrs={'tf':Numeric(default=1),
-#                                 'positions':Numeric(multi=True), } )
-#        schema = Schema(docnum=Numeric(), title=Text(), text=Text(), terms=term_field)
-#        # create a document
-#        doc = Doc(schema, docnum=1, text=text, title="chickens")
-#        # test text
-#        self.assertEqual(doc.text[:6], "i have")
-#        self.assertEqual(len(doc.text), len(text))
-#        # set terms
-#        doc.terms = text_terms
-#        # check 
-#        # check default values for tf
-#        self.assertEqual(doc.terms.tf.values(), [1]*len(text_terms))
-#        # set tf and possitions
-#        doc.terms.tf = terms_tf
-#        doc.terms.positions = terms_pos
 
-#        # test for terms field, for the term "chicken"
-#        key = "chicken"
-#        self.assertEqual(doc.terms._keys[key], 3)
-#        # test tf
-#        self.assertEqual(doc.terms[key].tf, 2)
-#        # test positions
-#        self.assertEqual(doc.terms[key].positions, [3, 12])
-#        self.assertEqual(doc.terms[key].positions, doc.terms.positions[3])
-#        self.assertEqual(doc.terms[key].positions, doc.terms.get_attr_value(key, 'positions'))
-
-#        doc.boo = Text(default='boo')
-#        assert doc.boo == "boo"
+class TestDoc(unittest.TestCase):
+    
+    def test_doc(self):
+        schema = Schema(titre = Text())
+        doc = Doc(schema)
+        self.assertTrue("titre" in doc.schema)
+        # no equal because DocNum added
+        self.assertTrue("docnum" in doc.schema)
+        self.assertNotEqual(doc.schema, schema)
+        self.assertEqual(doc["schema"], doc.schema)
+        # repr, weak test, just avoid Exception
+        self.assertNotEqual(repr(doc), "")
+        self.assertNotEqual(doc.as_dict(), "")
+        
+        # init with data
+        doc = Doc(schema, titre="Un document qui documente")
+        self.assertEqual(doc.titre, "Un document qui documente")
+        self.assertEqual(doc["titre"], "Un document qui documente")
+        # change attr
+        doc.titre = "Un document vide"
+        self.assertEqual(doc.titre, "Un document vide")
+        
+        # add a field
+        doc.nb_pages = Numeric()
+        self.assertTrue("nb_pages" in doc.schema)
+        doc.nb_pages = 24
+        self.assertEqual(doc.nb_pages, 24)
+        with self.assertRaises(SchemaError):
+            doc.nb_page = 24
+        with self.assertRaises(SchemaError):
+            nb_page = doc.nb_page
+        with self.assertRaises(SchemaError):
+            doc.add_field("nb_pages", Numeric())
+        
+        # add a more complex field
+        doc.add_field("authors", Text(multi=True, uniq=True))
+        self.assertTrue("authors" in doc)
+        doc.authors.add("Jule Rime")
+        doc.authors.add("Jule Rime")
+        doc.authors.add("Lise Liseuse")
+        self.assertEqual(len(doc.authors), 2)
