@@ -2,11 +2,23 @@
 import unittest
 import cello
 
-from cello.schema import *
+from datetime import datetime
+from cello.schema import AbstractType, Any, Numeric, Text, Datetime
+from cello.schema import SchemaError
 
 class TestFieldTypes(unittest.TestCase):
     def setUp(self):
         pass
+
+    def test_abstract_type(self):
+        at = AbstractType()
+        self.assertRaises(NotImplementedError, at.validate, "ca")
+
+    def test_any(self):
+        f = Any()
+        self.assertEqual(f.validate("45"), "45")
+        self.assertEqual(f.validate(45), 45)
+        self.assertEqual(f.validate(str), str)
 
     def test_numeric(self):
         # Numeric Field (int or float)
@@ -49,3 +61,8 @@ class TestFieldTypes(unittest.TestCase):
         self.assertRaises(TypeError, f_str.validate, 1)
 
 
+    def test_datetime(self):
+        f = Datetime()
+        self.assertRaises(SchemaError, f.validate, "45")
+        self.assertEqual(f.validate(datetime(year=2013, month=11, day=4)), \
+                datetime(year=2013, month=11, day=4))

@@ -12,6 +12,9 @@ help:
 	@echo "  testcov runs coverage unit tests:"
 	@echo "          $ py.test --cov PATH_OR_FILE --cov-report term-missing"
 
+clean-doc:
+	rm -rf docs/_build/ docs/_static/ docs/_templates/
+
 doc:
 	ipython nbconvert --to rst notebooks/Cello*.ipynb
 	mv Cello*.rst ./docs

@@ -5,21 +5,10 @@
 :copyright: (c) 2013 - 2014 by Yannick Chudy, Emmanuel Navarro.
 :license: ${LICENSE}
 
+.. inheritance-diagram:: Schema AbstractType Any Numeric Text Datetime
 
-.. inheritance-diagram:: Schema Doc AbstractType Any Numeric Text Datetime
+.. inheritance-diagram:: Doc DocField VectorField ValueField SetField
 
-.. inheritance-diagram:: DocField VectorField ValueField SetField
-
-
-
-
-TODO:
-
-* schema ds doc doit pas etre une key
-* DocField => DocContainer 
-* rename _field => _ftype
-
-clean notebook in progress
 """
 import datetime
 
@@ -145,25 +134,22 @@ class AbstractType(object):
     
     #TODO: est-ce que validate permet le cast, comme c'est pour le moment ? ou return juste True/False ?
     def validate(self, value):
-        """ check if a value is correct (type).
-        Should be override.
+        """ Abstract method, check if a value is correct (type).
+        Should raise :class:`TypeError` if the type the validation fail.
         
-        This method should:
-        * raise :class:`TypeError` if the type 
-        * return the given value, that may have been converted
+        :param value: the value to validate
+        :return: the given value (that may have been converted)
         """
         raise NotImplementedError("This is an abstract class, you should use one of the ")
-        return value
-
 
 class Any(AbstractType):
     """ Any kind of data type, no validation
     """
-    def _init(self, **field_options):
+    def __init__(self, **field_options):
         AbstractType.__init__(self, **field_options)
 
-    def validate(self, anything):
-        return anything
+    def validate(self, value):
+        return value
 
 
 class Numeric(AbstractType):
@@ -637,60 +623,82 @@ class Doc(dict):
     """
     
     def __repr__(self):
-        return "<%s %s %s>" % (self.__class__.__name__, self.schema, 
-            { k: self[k] for k in self.schema.field_names() } )
-    
+        return "<%s %s %s>" % (self.__class__.__name__, self.schema,
+            { k: self[k] for k in self.schema.field_names() }
+        )
+
     def __init__(self, schema, **data):
+        """ Document initialisation
+        
+        .. warning:: a copy of the given schema is stored in the document
+        
+        Simple exemple:
+        
+        >>> doc = Doc(Schema(titre=Text()), titre="Un titre")
+        """
         dict.__init__(self)
-        # schema 
-        self.schema = schema.copy()
-        # Doc should always have a docnum ? YES
+        # set the document schema
+        object.__setattr__(self, 'schema', schema.copy())
+        #    i.e. "self.schema = schema.copy()" but this is forbiden
+        # Doc should always have a docnum !
         if 'docnum' not in self.schema:
-            self.add_field('docnum', Numeric() )
-            if 'docnum' not in self.schema:
-                raise Exception(self.schema, 'docnum'  in self.schema)
+            self.add_field('docnum', Numeric())
         #elf.docnum = data['docnum'] if "docnum" in data else 0# or fail
         # fields value(s)
         for key, ftype in schema.iter_fields():
-            self[key] = DocField.FromType(ftype) 
-            if data and data.has_key(key):
+            self[key] = DocField.FromType(ftype)
+            if data.has_key(key):
+                # explicit getitem needed for ValueField
                 dict.__getitem__(self, key).set(data[key])
-    
+
     def add_field(self, name, ftype, docfield=None):
+        """ Add a field to the document (and to the underlying schema)
+        
+        :param name: name of the new field
+        :type name: str
+        :param ftype: type of the new field
+        :type ftype: subclass of :class:`AbstractType`
+        """
         self.schema.add_field(name, ftype)
         self[name] = docfield or DocField.FromType(ftype)
-    
+
     def __getitem__(self, name):
         return getattr(self, name)
-            
+
     def __getattr__(self, name):
-        if name == 'schema':
-            return object.__getattr__('schema')
+        # this is called if there is no 'real' object attribute of the given name
+        # http://docs.python.org/2/reference/datamodel.html#object.__getattr__s
         try:
             field = dict.__getitem__(self, name)
             if type(field) == ValueField:
                 return field.get_value()
-            return field  
+            else:
+                return field
         except KeyError as err:
-            raise SchemaError("%s is not a Doc field (existing attributes are: %s)" % (err, self.keys()))
+            raise SchemaError("'%s' is not a document field (existing attributes are: %s)" % (err, self.keys()))
 
     def __setitem__(self,name, value):
         setattr(self, name, value)
 
     def __setattr__(self, name, value):
         if name == 'schema':
-            object.__setattr__(self,'schema', value)
+            raise SchemaError("Impossible to replace the schema of a document")
         elif isinstance(value, AbstractType):
+            # the value is a "Type" => creation of a new attribute
             self.add_field(name, value)
         elif isinstance(value, DocField):
+            # the new value is a 'Field', we just add it
             dict.__setitem__(self, name, value)
-        elif not (name in self.schema.field_names()):
-            raise SchemaError("%s is not a Doc field (existing attributes are: %s)" % (name, self.keys()))
+        elif name in self.schema.field_names():
+            # set a value to one field
+            dict.__getitem__(self, name).set(value)
         else:
-            dict.__getitem__(self, name).set( value )
-        
+            raise SchemaError("'%s' is not a document field (existing attributes are: %s)" % (name, self.keys()))
+
     def as_dict(self, exclude=[]):
+        """ returns a dictionary representation of the document
+        """
         doc = { key: getattr(self, key) for key in self.schema \
                         if not key.startswith("_") and key not in exclude }
         return doc 
-            
+
