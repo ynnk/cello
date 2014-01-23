@@ -45,6 +45,10 @@ class AbstractOption(object):
 
     @property
     def name(self):
+        """ Name of the option.
+        
+        An option name can't contain space.
+        """
         return self._name
 
     @name.setter
@@ -55,6 +59,8 @@ class AbstractOption(object):
 
     @property
     def value(self):
+        """ Value of the option
+        """
         return self._value
 
     @value.setter
@@ -65,7 +71,7 @@ class AbstractOption(object):
     def default(self):
         """ Default value of the option
         
-        ..Warning:: changing the default value also change the current value
+        .. warning:: changing the default value also change the current value
         """
         return self._default
 
@@ -78,18 +84,32 @@ class AbstractOption(object):
         """ Raises :class:`ValueError` if the value is not correct, else just
         returns the given value.
 
+        It is called when a new value is setted.
+
         :param value: the value to validate
+        :returns: the value
         """
         raise NotImplementedError
 
     def set(self, value):
+        """ Set the value of the option.
+        
+        One can also set the 'value' property:
+
+        >>> opt = GenericOption("oname", "an option exemple")
+        >>> opt.value = 12
+        
+        :param value: the new value
+        """
         self.value = value
 
     def parse(self, value_str):
-        """ Set the value with a convertion from a string
+        """ Convert the value from a string.
+        Raises :class:`ValueError` if convertion isn't possible.
 
         :param value_str: a potential value for the option
         :type value_str: str
+        :returns: the value converted to the good type
         """
         raise NotImplementedError
 
@@ -102,7 +122,10 @@ class AbstractOption(object):
         self.value = self.parse(value_str)
 
     def as_dict(self):
-        """ returns a dictionary version of the option
+        """ returns a dictionary view of the option
+        
+        :returns: the option converted in a dict
+        :rtype: dict
         """
         opt_info = {}
         opt_info["name"] = self.name
@@ -131,8 +154,6 @@ class GenericOption(AbstractOption):
         return value
 
     def as_dict(self):
-        """ returns a dictionary version of the option
-        """
         opt_info = AbstractOption.as_dict(self)
         opt_info["type"] = "generic"
         return opt_info
@@ -153,8 +174,6 @@ class BooleanOption(AbstractOption):
         return parse_bool(value_str)
 
     def as_dict(self):
-        """ returns a dictionary version of the option
-        """
         opt_info = AbstractOption.as_dict(self)
         opt_info["type"] = "boolean"
         return opt_info
@@ -182,7 +201,7 @@ class EnumOption(GenericOption):
     def as_dict(self):
         """ returns a dictionary version of the option
         """
-        opt_info = AbstractOption.as_dict(self)
+        opt_info = GenericOption.as_dict(self)
         opt_info["type"] = "enum"
         opt_info["enum"] = self._enum
         return opt_info
