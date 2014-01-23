@@ -26,17 +26,20 @@ def _json_text_clean(json_text):
 
 
 def urllib2_json_urlopen(request_url, request_data=None, logger=None):
-    """ Make a request with urllib2 and retrive a JSON
+    """ Make a request with urllib2 and retrive a JSON (in unicode)
     """
-    request_url = request_url.encode('utf8')
+    if isinstance(request_url, unicode):
+        request_url = request_url.encode('utf8')
     
     if logger is not None:
         logger.debug("urllib2: open url = %s" % request_url)
         logger.debug("urllib2: with params = %s" % request_data)
-        
+    
     response = urllib2.urlopen(request_url, request_data)
     json_text = response.read()
     json_text = _json_text_clean(json_text)
+    if isinstance(json_text, str):
+        json_text = json_text.decode('utf8')
     # data are provided in json
     try:
         results = json.loads(json_text)
