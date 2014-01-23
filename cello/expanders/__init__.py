@@ -1,8 +1,24 @@
+""" :mod:`cello.expanders`
+=========================
+
+:copyright: (c) 2013 - 2014 by Yannick Chudy, Emmanuel Navarro.
+:license: ${LICENSE}
+
+Abstract objects used to setup processing pipelines.
+
+SubModules
+----------
+
+.. toctree::
+
+    cello.expanders.basics
+
+Abstract & Noop expanders
+-------------------------
+"""
 
 from cello.pipeline import DocPipelineElmt, OptDocPipelineElmt, DocListPipelineElmt
 
-
-#{ AbstractExpander
 class AbstractExpand(OptDocPipelineElmt):
     """ Expand a list of L{KodexDoc}.
     This is an abstract class, the method
@@ -58,12 +74,9 @@ class AbstractDocListExpand(DocListPipelineElmt):
         """ Close the underlying storage structure
         """
         pass
-#}
-
 
 class Consumer(AbstractExpand):
-    """ No operation expander
-        Consume iterator before returning a list 
+    """ No operation expander, just consume iterator before returning a list.
     """
     def __init__(self):
         AbstractExpand.__init__(self, "Consumer_expander")
@@ -72,8 +85,7 @@ class Consumer(AbstractExpand):
         return [kdoc for kdoc in kdocs]
 
 class NoopExpand(AbstractExpand):
-    """ No operation expander
-        Simply returns the same doc
+    """ No operation expander. Simply returns the same doc.
     """
     def __init__(self):
         AbstractExpand.__init__(self, "noop_expander")

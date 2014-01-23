@@ -6,9 +6,13 @@
 :license: ${LICENSE}
 
 
-.. toctree::
+SubModules
+----------
 
+.. toctree::
     cello.search.base_search
+
+
 """
 
 from cello.search.base_search import AbstractSearch, GraphProxSearch
