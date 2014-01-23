@@ -7,7 +7,7 @@ import urllib
 
 import igraph as ig
 
-from cello import urllib2_json_urlopen
+from cello.utils import urllib2_json_urlopen
 from cello.clustering import ClusteringMethod
 
 class Carrot2Clustering(ClusteringMethod):
