@@ -5,9 +5,17 @@
 :copyright: (c) 2013 - 2014 by Yannick Chudy, Emmanuel Navarro.
 :license: ${LICENSE}
 
-.. inheritance-diagram:: Schema AbstractType Any Numeric Text Datetime
+inheritance diagrams
+--------------------
 
-.. inheritance-diagram:: Doc DocField VectorField ValueField SetField
+.. inheritance-diagram:: Schema 
+.. inheritance-diagram:: AbstractType Any Numeric Text Datetime
+
+.. inheritance-diagram:: Doc
+.. inheritance-diagram:: DocField VectorField ValueField SetField
+
+Class
+-----
 
 """
 import datetime
@@ -141,6 +149,7 @@ class AbstractType(object):
         :return: the given value (that may have been converted)
         """
         raise NotImplementedError("This is an abstract class, you should use one of the ")
+
 
 class Any(AbstractType):
     """ Any kind of data type, no validation

@@ -1,10 +1,18 @@
 #-*- coding:utf-8 -*-
-""" :mod:`cello.expanders`
-=======================
+""" :mod:`cello.expanders.basics`
+=================================
 
 :copyright: (c) 2013 - 2014 by Yannick Chudy, Emmanuel Navarro.
 :license: ${LICENSE}
 
+
+inheritance diagrams
+--------------------
+
+.. inheritance-diagram:: AddFixedScore FieldFilter TermSet
+
+Class
+-----
 """
 
 from cello.pipeline import DocPipelineElmt
@@ -61,13 +69,28 @@ class FieldFilter(DocPipelineElmt):
                 doc.pop(field)
             yield doc
 
+
+
+class DocLength(FieldFilter):
+    """ Counts documents length, (C{terms_df} -> C{dlen})
+    """
+    def __init__(self, terms_tf_field="terms_tf", dlen_field="dlen"):
+        """
+        :param terms_tf_field: name of :class:`Doc` field containing the *term frequenc* list (default: "terms_df")
+        :param dlen_field: name of :class:`Doc` field where the document length will be save (default: "dlen")
+        """
+        FieldFilter.__init__(self, sum, terms_tf_field, dlen_field, keep_original=True)
+
+#XXX ?
 class Merges:
     @staticmethod
     def first(x,y): return y
     @staticmethod
     def sum(x,y): return x+y
+    @staticmethod
     def append(x,y): return x+y
 
+#XXX wtf ??
 class TermSet(VectorField):
     def __init__(self, ts_field, term_field, merges=[], posting=False):
         """
@@ -89,11 +112,10 @@ class TermSet(VectorField):
         self._posting = posting 
         VectorField.__init__(self, Text(attrs={}))
         
-        self.add_attribute('df_rd', Numeric(default=0))        
+        self.add_attribute('df_rd', Numeric(default=0))
         if posting : 
             self.add_attribute('postings', Any(multi=True))
-    
-       
+
     def __repr__(self):
         return "<%s:('%s', '%s') %s>" % ( self.__class__.__name__, self._ts_field, self._term_field, self._attrs.keys())
         
@@ -118,7 +140,6 @@ class TermSet(VectorField):
                 if posting :
                     termset[term].postings.add(doc)
         return docs
-        
 
 
 #{ KodexLU creation or/and retrieve
@@ -237,13 +258,3 @@ class TermSetBuildExpand(AbstractDocListExpand):
         return kdocs
 
 
-
-class DocLength(FieldFilter):
-    """ Counts documents length, (C{terms_df} -> C{dlen})
-    """
-    def __init__(self, terms_tf_field="terms_tf", dlen_field="dlen"):
-        """
-        @param terms_tf_field: name of L{KodexDoc} field containing the B{term frequency} list (default: "terms_df")
-        @param dlen_field: name of L{KodexDoc} field where the document length will be save (default: "dlen")
-        """
-        FieldFilter.__init__(self, sum, terms_tf_field, dlen_field, keep_original=True)

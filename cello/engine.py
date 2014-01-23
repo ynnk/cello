@@ -1,12 +1,15 @@
 #-*- coding:utf-8 -*-
-""" Cello processing system
+"""  :mod:`cello.engine`
+========================
+
+Cello processing system
 """
 
 class Block(object):
     """ A block is a processing step realised by one component.
     
     A component is a callable object that has a *name* attribute,
-    often it is also a :class:`Optionable` object.
+    often it is also a :class:`.Optionable` object.
     
     Block object provides methods to discover and parse components options (if any).
     """

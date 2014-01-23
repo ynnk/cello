@@ -8,8 +8,10 @@ Voir :mod:`cello.pipeline` par exemple, ou meme :class:`cello.pipeline.Optionabl
     cello
     cello.schema
     cello.pipeline
+    cello.engine
     cello.search
-    cello.errors
+    cello.expanders
+    cello.expanders.basics
     cello.utils
 
 
