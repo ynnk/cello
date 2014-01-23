@@ -8,6 +8,7 @@ Voir :mod:`cello.pipeline` par exemple, ou meme :class:`cello.pipeline.Optionabl
     cello
     cello.graphs
     cello.schema
+    cello.optionable
     cello.pipeline
     cello.engine
     cello.search

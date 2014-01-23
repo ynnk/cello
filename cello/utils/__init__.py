@@ -13,12 +13,40 @@
 
 """
 
-#{ urllib2
-
 import re
 import urllib2
 import logging
 import simplejson as json
+
+def parse_bool(value):
+    """ Convert a string to a boolean
+    
+    >>> parse_bool(None)
+    False
+    >>> parse_bool("true")
+    True
+    >>> parse_bool("TRUE")
+    True
+    >>> parse_bool("yes")
+    True
+    >>> parse_bool("1")
+    True
+    >>> parse_bool("false")
+    False
+    >>> parse_bool("sqdf")
+    False
+    >>> parse_bool(False)
+    False
+    >>> parse_bool(True)
+    True
+    """
+    if value is None:
+        return False
+    if value is True or value is False:
+        return value
+    boolean = str(value).strip().lower()
+    return boolean in ['true', 'yes', 'on', '1']
+
 
 JSON_CLEAN_LAST_COMMA = re.compile(",([\s]*\})")
 def _json_text_clean(json_text):
@@ -59,10 +87,10 @@ def urllib2_setup_proxy(proxy=None):
         opener = urllib2.build_opener(proxy_support)
         urllib2.install_opener(opener)
 
-#}
-
 
 def deprecated(new_fct_name, logger=None):
+    """ Decorator to notify that a fct is deprecated
+    """
     if logger is None:
         logger = logging.getLogger("kodex")
     nfct_name = new_fct_name
