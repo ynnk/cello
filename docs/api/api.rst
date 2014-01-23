@@ -6,6 +6,7 @@ Voir :mod:`cello.pipeline` par exemple, ou meme :class:`cello.pipeline.Optionabl
 .. toctree::
 
     cello
+    cello.graphs
     cello.schema
     cello.pipeline
     cello.search
