@@ -99,7 +99,8 @@ class Engine(object):
     """
     """
     
-    def __init__(self):
+    def __init__(self, *blocks):
+        self._blocks = blocks
         pass
 
     def append(self, block):

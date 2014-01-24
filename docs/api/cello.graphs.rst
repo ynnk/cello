@@ -1,5 +1,5 @@
 
-.. automodule:: cello.graphs:
+.. automodule:: cello.graphs
     :show-inheritance:
     :members:
     :undoc-members:
