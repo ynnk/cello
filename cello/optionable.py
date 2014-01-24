@@ -21,21 +21,29 @@ from collections import OrderedDict
 from cello.utils import parse_bool
 
 # ynnk
+# ^^^^
+
 # AbstractOption : why do we need an Abstract where there is a Generic that can be extended
+
 # parse_options :should parse only not be a setter
+
 # default: why setting default also set the value
+
 # set()  :setting value with set is unnecessary the property covers use case perfectly
+
 # cast/parse : cast is an attribute function parse is part of interface
 #         should use cast only or call it parse  but remove one from interface
+
 # set_from_str : if options are given as str , other way are
 #           >>> option.set(string, parse=True)
+
 # validate : we should be able to override validate from __init__
 #    instead of writting a new class to override validate.
 #    validate raises exception catch by caller         
 #    ex: we want an int in range [0:5] 
 #           >>> Option("name", "desc", parse=lambda x : int(x), validate=lamdba x : O if x < 0 else min(4,x) )
 # or create a RangeOption ?
-# first case is fast an easy way but fr reusability 
+# first case is fast an easy way but not intended for reusability 
 
 class AbstractOption(object):
     """ Abstract Option, should not be use directly
