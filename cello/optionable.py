@@ -12,20 +12,20 @@ inheritance diagrams
 --------------------
 
 .. inheritance-diagram:: Optionable
-.. inheritance-diagram:: AbstractOption  GenericOption  BooleanOption EnumOption
+.. inheritance-diagram:: GenericOption  GenericOption  BooleanOption EnumOption
 
 Class
 -----
 """
 from collections import OrderedDict
 from cello.utils import parse_bool
+from cello.optionable import Optionable
 
 # ynnk
 # ^^^^
 
-# AbstractOption : why do we need an Abstract where there is a Generic that can be extended
-
-# parse_options :should parse only not be a setter
+# GenericOption : why do we need an Abstract where there is a Generic that can be extended
+# abstract to generic
 
 # default: why setting default also set the value
 
@@ -34,6 +34,7 @@ from cello.utils import parse_bool
 # cast/parse : cast is an attribute function parse is part of interface
 #         should use cast only or call it parse  but remove one from interface
 
+# parse_options :should parse only not be a setter
 # set_from_str : if options are given as str , other way are
 #           >>> option.set(string, parse=True)
 
@@ -45,10 +46,12 @@ from cello.utils import parse_bool
 # or create a RangeOption ?
 # first case is fast an easy way but not intended for reusability 
 
-class AbstractOption(object):
-    """ Abstract Option, should not be use directly
+
+
+class GenericOption(GenericOption):
+    """ Generic option
     """
-    def __init__(self, name, description, default=None, hidden=False):
+    def __init__(self, name, description, default=None, hidden=False, parse=None, validate=None):
         """
         :param name: option's name
         :type name: str
@@ -61,11 +64,17 @@ class AbstractOption(object):
         
         :param hidden: it True the option will not be discoverable
         :type hidden: bool
+
+        :param parse: function to transform the option value from string to
+             appropriate format
+        :type parse: function
         """
         self.name = name
         self.description = description
-        self.hidden = hidden
-        self.default = default
+        self.hidden = hidden 
+        self.default = default or []
+        self.parse = parse or self.parse
+        self.validate = validate or self.validate
 
     @property
     def name(self):
@@ -113,19 +122,7 @@ class AbstractOption(object):
         :param value: the value to validate
         :returns: the value
         """
-        raise NotImplementedError
-
-    def set(self, value):
-        """ Set the value of the option.
-        
-        One can also set the 'value' property:
-
-        >>> opt = GenericOption("oname", "an option exemple")
-        >>> opt.value = 12
-        
-        :param value: the new value
-        """
-        self.value = value
+        return value
 
     def parse(self, value_str):
         """ Convert the value from a string.
@@ -135,8 +132,21 @@ class AbstractOption(object):
         :type value_str: str
         :returns: the value converted to the good type
         """
-        raise NotImplementedError
+        return str(value_str)
 
+    def set(self, value, parse=False):
+        """ Set the value of the option.
+        
+        One can also set the 'value' property:
+
+        >>> opt = GenericOption("oname", "an option exemple")
+        >>> opt.value = 12
+        
+        :param value: the new value
+        """
+        self.value = self.parse(value) if parse else value
+
+    # XXX to delete
     def set_from_str(self, value_str):
         """ Set the value with a convertion from a string
 
@@ -145,6 +155,7 @@ class AbstractOption(object):
         """
         self.value = self.parse(value_str)
 
+
     def as_dict(self):
         """ returns a dictionary view of the option
         
@@ -152,6 +163,7 @@ class AbstractOption(object):
         :rtype: dict
         """
         opt_info = {}
+        opt_info["type"] = "generic"
         opt_info["name"] = self.name
         opt_info["description"] = self.description
         opt_info["value"] = self.value
@@ -159,35 +171,12 @@ class AbstractOption(object):
         return opt_info
 
 
-class GenericOption(AbstractOption):
-    """ Generic option
-    """
-    def __init__(self, name, description, default=None, cast=None):
-        """
-        :param cast: function to transform the option value from string to
-             appropriate format
-        :type cast: function
-        """
-        AbstractOption.__init__(self, name, description, default)
-        if cast is None:
-            self.parse = lambda val: str(val)
-        else:
-            self.parse = cast
 
-    def validate(self, value):
-        return value
-
-    def as_dict(self):
-        opt_info = AbstractOption.as_dict(self)
-        opt_info["type"] = "generic"
-        return opt_info
-
-
-class BooleanOption(AbstractOption):
+class BooleanOption(GenericOption):
     """ Basic boolean option
     """
     def __init__(self, name, description, default=False):
-        AbstractOption.__init__(self, name, description, default)
+        GenericOption.__init__(self, name, description, default)
 
     def validate(self, value):
         if not isinstance(value, bool):
@@ -198,7 +187,7 @@ class BooleanOption(AbstractOption):
         return parse_bool(value_str)
 
     def as_dict(self):
-        opt_info = AbstractOption.as_dict(self)
+        opt_info = GenericOption.as_dict(self)
         opt_info["type"] = "boolean"
         return opt_info
 
@@ -258,10 +247,10 @@ class Optionable(object):
         """ Add an option to the object
         
         :param option: option name
-        :type option: subclass of :class:`.AbstractOption`
+        :type option: subclass of :class:`.GenericOption`
         """
-        if not isinstance(option, AbstractOption):
-            raise ValueError("The option should be a subclass of AbstractOption")
+        if not isinstance(option, GenericOption):
+            raise ValueError("The option should be a subclass of GenericOption")
         if option.name in self._options:
             raise ValueError("There is already an option with the same name (='%s')" % option.name)
         self._options[option.name] = option
