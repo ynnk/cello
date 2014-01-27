@@ -31,8 +31,8 @@ from cello.utils import parse_bool
 
 # set()  :setting value with set is unnecessary the property covers use case perfectly
 
-# cast/parse : cast is an attribute function parse is part of interface
-#         should use cast only or call it parse  but remove one from interface
+# parse/parse : parse is an attribute function parse is part of interface
+#         should use parse only or call it parse  but remove one from interface
 
 # parse_options :should parse only not be a setter
 # set_from_str : if options are given as str , other way are
@@ -195,16 +195,16 @@ class BooleanOption(GenericOption):
 class EnumOption(GenericOption):
     """ Enumerate option
     """
-    def __init__(self, name, description, enum, default=None, cast=None):
+    def __init__(self, name, description, enum, default=None, parse=None):
         """
-        :param cast: function to transform the option value from string to
+        :param parse: function to transform the option value from string to
              appropriate format
-        :type cast: function
+        :type parse: function
         """
         if default is None:
             default = enum[0]
         self._enum = enum
-        GenericOption.__init__(self, name, description, default=default, cast=cast)
+        GenericOption.__init__(self, name, description, default=default, parse=parse)
 
     def validate(self, value):
         if value not in self._enum:
@@ -257,7 +257,7 @@ class Optionable(object):
         self._options[option.name] = option
 
 
-    def add_generic_option(self, opt_name, default, description, cast=None):
+    def add_value_option(self, opt_name, default, description, parse=None):
         """ Add a generic option
         
         :param opt_name: option name
@@ -269,11 +269,11 @@ class Optionable(object):
         :param description: short description of the option
         :type description: str
         
-        :param cast: function to transform the option value from string to
+        :param parse: function to transform the option value from string to
             appropriate format
-        :type cast: function
+        :type parse: function
         """
-        opt = GenericOption(name=opt_name, default=default, description=description, cast=cast)
+        opt = ValueOption(name=opt_name, default=default, description=description, parse=parse)
         self.add_option(opt)
 
     def add_bool_option(self, opt_name, default, description):
@@ -291,7 +291,7 @@ class Optionable(object):
         opt = BooleanOption(name=opt_name, default=default, description=description)
         self.add_option(opt)
 
-    def add_enum_option(self, opt_name, enum, default, description, cast=None):
+    def add_enum_option(self, opt_name, enum, default, description, parse=None):
         """ Add an option to the object same as add option except enum can be provided  
         
         :param opt_name: option name
@@ -304,11 +304,11 @@ class Optionable(object):
         :param description: short description of the option
         :type description: str
         
-        :param cast: function to transform the option value from string to
+        :param parse: function to transform the option value from string to
              appropriate format
-        :type cast: function
+        :type parse: function
         """
-        opt = EnumOption(name=opt_name, enum=enum, default=default, description=description, cast=cast)
+        opt = EnumOption(name=opt_name, enum=enum, default=default, description=description, parse=parse)
         self.add_option(opt)
 
     def force_option_value(self, opt_name, value):
@@ -367,7 +367,7 @@ class Optionable(object):
             self._options[opt_name].value = value
 
 
-    def set_option_values(self, option_values):
+    def set_options_values(self, option_values):
         """ Set the options from a dict of values (in string).
         
         :param option_values: the values of options (in format `{"opt_name": "new_value"}`)
@@ -377,7 +377,7 @@ class Optionable(object):
             if opt.hidden:
                 continue
             if opt_name in option_values:
-                opt.set_from_str(option_values[name])
+                opt.set_from_str(option_values[opt_name])
 
     def get_options_values(self):
         """ return a dictionary of options values
@@ -399,8 +399,8 @@ class Optionable(object):
         :returns: dictionary of all option values
         :rtype: dict
         """
-        self.set_options_value(option_values)
-        return self.get_options_value()
+        self.set_options_values(option_values)
+        return self.get_options_values()
 
     def get_options(self):
         """

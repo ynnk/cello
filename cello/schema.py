@@ -193,9 +193,9 @@ class Text(AbstractType):
     if not setted default value is an empty string.
     """
     # valid type for text
-    _types_ = [str, unicode]
+    _types_ = [unicode, str]
     
-    def __init__(self, texttype=str, **field_options):
+    def __init__(self, texttype=unicode, **field_options):
         if 'default' not in field_options:
             field_options['default'] = ""
         AbstractType.__init__(self, **field_options)

@@ -15,11 +15,11 @@ class BottomFilter(GraphPipelineElement):
         GraphPipelineElement.__init__(self, name)
         self._logger = logging.getLogger(name)
 
-        self.add_option("top_min",
+        self.add_generic_option("top_min",
             "0", 
             "Removes type=false connected to less than top_min (type=True) vertices",
             int)
-        self.add_option("top_max_ratio",
+        self.add_generic_option("top_max_ratio",
             "1.0",
             "Removes type false vertices connected to more than top_max_ratio percents of the (type=True) vertices",
             float)
