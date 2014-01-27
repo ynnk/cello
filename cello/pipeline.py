@@ -17,60 +17,43 @@ Class
 -----
 """
 
-from optionable import Optionable
+from cello import Composable
+from cello.optionable import Optionable
 
-class Composable:
-    """ Basic composable element
+class Pipeline(Composable, Optionable):
+    """ A Pipeline is a sequence of function called sequentially.
     
-    Composable is abstract, you need to implemented the :meth:`__call__` method
+    It may be create explicitely:
     
-    >>> e1 = Composable()
-    >>> e2 = Composable()
-    >>> e1.__call__ = lambda iterable: (element**2 for element in iterable)
-    >>> e2.__call__ = lambda iterable: (element + 10 for element in iterable)
+    >>> step1 = lambda x: x**2
+    >>> step2 = lambda x: x-1
+    >>> step3 = lambda x: min(x, 22)
+    >>> processing = Pipeline(step1, step2, step3)
+    >>> processing(4)
+    15
+    >>> processing(40)
+    22
+
+    Or it can be created implicitely with the pipe operator (__or__) if the
+    first function is :class:`Composable`:
     
-    Then Composable can be pipelined this way :
+    >>> step1 = composable(step1)
+    >>> processing = step1 | step2 | step3
+    >>> processing(3)
+    8
+    >>> processing(0)
+    -1
 
-    >>> chain = e1 | e2
-
-    So yo got :
     
-    >>> iterable = xrange(0,6,2)
-    >>> for e in chain(iterable):
-    ...     print("result: %s" % e)
-    result: 10
-    result: 14
-    result: 26
-
-    equivalent to :
-
-    >>> iterable = xrange(0,6,2)
-    >>> for e in e2(e1(iterable)):
-    ...     print("result: %s" % e)
-    result: 10
-    result: 14
-    result: 26
     """
 
-    def __init__(self):
-        pass
-
-    def __or__(self, other):
-        if not callable(other):
-            raise Exception("%r is not composable with %r" % (self, other))
-        return ComposableChain(self, other)
-
-    def __call__(self, filename):
-        raise NotImplementedError
-
-
-class ComposableChain(Composable, Optionable):
     def __init__(self, *composables):
         # Composable init
         Composable.__init__(self)
         self.items = []
         for comp in composables:
-            if isinstance(comp, ComposableChain):
+            if isinstance(comp, Pipeline):
+                # if already a composable chain, merge it
                 self.items.extend(comp.items)
             else:
                 self.items.append(comp)
@@ -86,7 +69,6 @@ class ComposableChain(Composable, Optionable):
         # create the "meta" name of the optionable pipeline, and init optionable
         name = "|".join(item.name for item in opt_items)
         Optionable.__init__(self, name)
-        
 
     def __repr__(self):
         return "%s(%s)" % (self.__class__.__name__,
@@ -171,45 +153,3 @@ class ComposableChain(Composable, Optionable):
             if hasattr(item, "close"):
                 item.close()
 
-
-#{ Document Pipeline
-
-class DocPipelineElmt(Composable):
-    """ Basic document pipeline element
-    """
-    def __init__(self):
-        Composable.__init__(self)
-    
-    def __call__(self, kdocs):
-        """
-        :param kdocs: input generator of :class:`KodexDoc`
-        :type kdocs: 
-        
-        :returns: generator of L{Doc}
-        :rtype: (L{Doc}, ...)
-        """
-        raise NotImplementedError
-
-class OptDocPipelineElmt(DocPipelineElmt, Optionable):
-    """ :class:`Optionable` document pipeline element.
-    """
-    def __init__(self, name):
-        DocPipelineElmt.__init__(self)
-        Optionable.__init__(self, name)
-    
-    def __call__(self, kdocs, **kwargs):
-        raise NotImplementedError
-
-class DocListPipelineElmt(OptDocPipelineElmt):
-    """ Excactly as :class:`OptDocPipelineElmt` except than the :func:`__call__`
-    method returns a list and not a generator.
-    """
-    def __call__(self, kdocs):
-        raise NotImplementedError
-
-class GraphPipelineElement(Optionable, Composable):
-    """ 
-    """
-    def __init__(self, name):
-        Optionable.__init__(self, name)
-        Composable.__init__(self)

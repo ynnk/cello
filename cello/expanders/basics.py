@@ -15,16 +15,16 @@ Class
 -----
 """
 
-from cello.pipeline import DocPipelineElmt
-from cello.expanders import  AbstractDocListExpand
+from cello.pipeline import Composable
+from cello.expanders import AbstractDocListExpand
 from cello.schema import VectorField, Text, Numeric, Any
 
 
-class AddFixedScore(DocPipelineElmt):
+class AddFixedScore(Composable):
     """ Add a score field with a fixed value for each term
     """
     def __init__(self, term_field, score_field, value=1., default_value=0.):
-        DocPipelineElmt.__init__(self)
+        Composable.__init__(self)
         self._term_field = term_field
         self._score_field = score_field
         
@@ -39,7 +39,7 @@ class AddFixedScore(DocPipelineElmt):
             yield kdoc
 
 
-class FieldFilter(DocPipelineElmt):
+class FieldFilter(Composable):
     """ Apply an filter function to a given field of the document.
     """
     def __init__(self, filter, field, dest_field=None, keep_original=True):
@@ -51,7 +51,7 @@ class FieldFilter(DocPipelineElmt):
         :param dest_field: if None, the field is changed in place
         :param keep_original: if False the original field is removed
         """
-        DocPipelineElmt.__init__(self)
+        Composable.__init__(self)
         self._filter = filter
         self._field = field
         self._dest_field = dest_field or field

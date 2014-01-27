@@ -11,11 +11,13 @@ import logging
 import igraph as ig
 
 from cello import CelloError
+from cello import Composable
+from cello.schema import Numeric
+
 from cello.clustering.walktrap import walktrap_bigraph
 from cello.graphs import EDGE_WEIGHT_ATTR
 from cello.graphs.transform import GraphProjection
-from cello.pipeline import Optionable, Composable
-from cello.schema import Numeric
+from cello.pipeline import Optionable, 
 
 import clustering_external
 #import link_clustering

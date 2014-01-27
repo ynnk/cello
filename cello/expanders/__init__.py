@@ -17,14 +17,14 @@ Abstract & Noop expanders
 -------------------------
 """
 
-from cello.pipeline import DocPipelineElmt, OptDocPipelineElmt, DocListPipelineElmt
+from cello.optionable import Optionable
 
-class AbstractExpand(OptDocPipelineElmt):
+class AbstractExpand(Optionable):
     """ Expand a list of L{KodexDoc}.
     This is an abstract class, the method
     """
     def __init__(self, name):
-        OptDocPipelineElmt.__init__(self, name)
+        Optionable.__init__(self, name)
 
     def _expand(self, doc, **kargs):
         """ Expand a given document
@@ -52,12 +52,12 @@ class AbstractExpand(OptDocPipelineElmt):
         pass
 
 
-class AbstractDocListExpand(DocListPipelineElmt):
+class AbstractDocListExpand(Optionable):
     """ Expand a list of L{KodexDoc}.
     This is an abstract class, the method 
     """
     def __init__(self, name):
-        DocListPipelineElmt.__init__(self, name)
+        Optionable.__init__(self, name)
 
     def __call__(self, kdocs, **kargs):
         """ Expand each document.

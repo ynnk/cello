@@ -5,7 +5,7 @@
 
 import igraph as ig
 
-from cello.pipeline import GraphPipelineElement
+from cello import Composable
 
 EDGE_WEIGHT_ATTR = "weight"
 
@@ -175,11 +175,10 @@ class GraphBuilder(object):
 
 
 
-
-class AbstractGraphBuilder(GraphPipelineElement, GraphBuilder):
+#TODO: from optionable ?
+class AbstractGraphBuilder(Composable, GraphBuilder):
     def __init__(self, name, directed=False):
-        # Optionable init 
-        GraphPipelineElement.__init__(self, name)
+        Composable.__init__(self, name)
         GraphBuilder.__init__(self, directed)
 
     def __call__(self, docs, *args, **kargs):
