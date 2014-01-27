@@ -61,8 +61,8 @@ class GraphProxSearch(AbstractSearch):
         self._logger = logging.getLogger(__name__)
         self.graph = graph
         
-        self.add_option("nb_results", 30, "Max number of vertices to retrieve", int)
-        self.add_option("l", 3, "lenght of the random walk", int)
+        self.add_value_option("nb_results", 30, "Max number of vertices to retrieve", otype=int)
+        self.add_option("l", 3, "lenght of the random walk", otype=int)
 
     def _query_to_p0(self, query):
         """ Transform the query to a list of initial graph ids

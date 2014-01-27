@@ -14,13 +14,12 @@ class BottomFilter(Optionable):
         Optionable.__init__(self, name)
         self._logger = logging.getLogger(name)
 
-        self.add_value_option("top_min",
+        self.add_value_option("top_min", 0, 
             "Removes type=false vertices connected to less than top_min (type=True) vertices",
-            default=0 , 
-            opt_type=int)
-        self.add_value_option("top_max_ratio",
+            otype=int)
+        self.add_value_option("top_max_ratio", 1, 
             "Removes type=false vertices connected to more than top_max_ratio percents of the (type=True) vertices",
-            opt_type=float)
+            otype=float)
 
     #XXX:kwargs ne sert a rien ?
     def __call__(self, graph, top_min=0, top_max_ratio=1., **kwargs):

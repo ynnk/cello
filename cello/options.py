@@ -182,13 +182,13 @@ class RangeOption(AbstractOption):
         
     def validate(self, value):
         if value < self.min_value or value > self.max_value:
-            raise ValueError( "Value should be in range(%s,%s) " % \    
+            raise ValueError( "Value should be in range(%s,%s) " % \
                 (self.min_value, self.max_value) )
 
 class EnumOption(AbstractOption):
     """ Enumerate option
     """
-    def __init__(self, name, default, desc, enum=None, **kwargs):
+    def __init__(self, name, default, desc, enum, **kwargs):
         """
         :param parse: function to transform the option value from string to
              appropriate format

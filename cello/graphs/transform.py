@@ -18,11 +18,10 @@ class GraphProjection(Optionable):
         
         self._projection_wgt = projection_wgt
         if self._projection_wgt is None:
-            self.add_enum_option("proj_wgt",
+            self.add_enum_option("proj_wgt", "p",
                  "Projection weighting method",
-                 enum=['no', 'count', 'p', 'pmin', 'pmax', 'pavg'],
-                 default="p",
-                 opt_type=str)
+                 ['no', 'count', 'p', 'pmin', 'pmax', 'pavg'],
+                 otype=str)
     
     def __call__(self, graph, proj_wgt="p"):
         # The projection work only because:

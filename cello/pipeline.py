@@ -19,6 +19,7 @@ Class
 import logging
 from collections import OrderedDict
 
+
 def composable(function):
     """ Make a simple function composable
     """
@@ -72,7 +73,7 @@ class Composable:
     def __call__(self, *args):
         raise NotImplementedError
 
-from cello.optionable import *
+from cello.options import *
 
 class Optionable(Composable):
     """ Abstract class for an optionable component
@@ -112,7 +113,7 @@ class Optionable(Composable):
         self._options[option.name] = option
 
 
-    def add_value_option(self, opt_name, description, hidden=False, opt_type=None, default=None, parse=None, validate=None):
+    def add_value_option(self, opt_name, default, description, hidden=False, otype=str, parse=None, validate=None):
         """ Add a generic option
         
         :param opt_name: option name
@@ -120,25 +121,33 @@ class Optionable(Composable):
         
         :param default: default value
         :type default: str
-        
+
         :param description: short description of the option
         :type description: str
+        
+        # XXX
+        :param otype: option type  
+        :type default: str
         
         :param parse: function to transform the option value from string to
             appropriate format
         :type parse: function
+
+        :param validate:  function used to validate the value
+            but not the type of the value, 
+        :type validate: function
         """
-        if opt_type == int:
+        if otype == int:
             parse = int
-        elif opt_type == float:
+        elif otype == float:
             parse= float
-        opt = AbstractOption(name=opt_name, default=default, description=description, parse=parse)
+        opt = ValueOption(opt_name, default, description, parse=parse)
 
             
         self.add_option(opt)
 
-    def add_bool_option(self, opt_name, description, default=False):
-        """ Add a boolean option
+    def add_bool_option(self, opt_name, default, description ):
+        """ Helper to Add a boolean option
         
         :param opt_name: option's name
         :type opt_name: str
@@ -149,11 +158,11 @@ class Optionable(Composable):
         :param description: short description of the option
         :type description: str
         """
-        opt = ValueOption(opt_name, description, 
-                default=default, opt_type=bool)
+        opt = ValueOption(opt_name, default, description, 
+                otype=bool)
         self.add_option(opt)
 
-    def add_enum_option(self, opt_name, desc, enum, **kwargs):
+    def add_enum_option(self, opt_name, default, desc, enum, **kwargs):
         """ Add an option to the object same as add option except enum can be provided  
         
         :param opt_name: option name
@@ -170,7 +179,7 @@ class Optionable(Composable):
              appropriate format
         :type parse: function
         """
-        opt = EnumOption(opt_name, desc, enum=enum, **kwargs)
+        opt = EnumOption(opt_name, default,     desc, enum=enum, **kwargs)
         self.add_option(opt)
 
     def force_option_value(self, opt_name, value):
@@ -239,7 +248,7 @@ class Optionable(Composable):
             if opt.hidden:
                 continue
             if opt_name in option_values:
-                opt.set_from_str(option_values[opt_name])
+                opt.set(option_values[opt_name], parse=True)
 
     def get_options_values(self):
         """ return a dictionary of options values

@@ -66,10 +66,9 @@ class ClusteringMethod(Optionable, Composable):
         Composable.__init__(self)
         self._logger = logging.getLogger(self.__class__.__name__)
         
-        self.add_value_option("min_docs", 
+        self.add_value_option("min_docs", 2,
                 "Minimum number of document per cluster",
-                default = 2, 
-                opt_type=int)
+                otype=int)
 
     ## tools
     def check_graph(self, graph):
@@ -105,10 +104,9 @@ class BigraphClusteringMethod(ClusteringMethod):
     """
     def __init__(self, name):
         ClusteringMethod.__init__(self, name)
-        self.add_value_option("min_terms", 
+        self.add_value_option("min_terms", 0,
             "Minimum number of term per cluster", 
-            default = 0, 
-            opt_type= int)
+            otype= int)
 
     ## tools
     def check_graph(self, graph):
@@ -187,10 +185,8 @@ class MaximalCliques(ClusteringMethod):
     """
     def __init__(self):
         ClusteringMethod.__init__(self, "maximal_cliques")
-        self.add_value_option("min", "Minimum cliques size", 
-            default="0", opt_type=int)
-        self.add_value_option("max","Maximal cliques size", 
-            default="10", opt_type=int)
+        self.add_value_option("min", 0, "Minimum cliques size", otype=int)
+        self.add_value_option("max", 10, "Maximal cliques size", otype=int)
 
     def _clustering(self, graph, min=0, max=10):
         return ig.VertexCover(graph, graph.maximal_cliques(min, max))
@@ -207,7 +203,8 @@ class FormalConceptAnalysis(BigraphClusteringMethod):
         """ Just a wrapper to igraph method
         """
         BigraphClusteringMethod.__init__(self, "formal_concept_analysis")
-        self.add_bool_option("no_trivial", "Remove trivial concepts (i.e. concepts with no objects or no properties)", default=True)
+        self.add_bool_option("no_trivial", True, 
+            "Remove trivial concepts (i.e. concepts with no objects or no properties)")
         if fca_method == "kov_py":
             from cello.graphs.fca import fca_kov
             self.fca_fct = fca_kov.compute_concepts_kov
@@ -234,9 +231,8 @@ class FormalConceptAnalysis(BigraphClusteringMethod):
 class Walktrap(ClusteringMethod):
     def __init__(self):
         ClusteringMethod.__init__(self, "walktrap")
-        self.add_value_option("l", 
-            "lenght of the random walks", 
-            default=4, opt_type=int)
+        self.add_value_option("l", 4, 
+            "lenght of the random walks",  otype=int)
 
     def _clustering(self, graph, l=4):
         vertex_clustering = graph.community_walktrap(weights=EDGE_WEIGHT_ATTR, steps=l)
@@ -253,16 +249,16 @@ class WalktrapBigraph(BigraphClusteringMethod):
     def __init__(self):
         BigraphClusteringMethod.__init__(self, "walktrap_bigraph")
 
-        self.add_value_option("ldoc",
+        self.add_value_option("ldoc", 4, 
             "lenght of the random walks for documents", 
-             default="4", opt_type=int)
-        self.add_value_option("lterms", 
+             otype=int)
+        self.add_value_option("lterms", 5,
             "lenght of the random walks for terms", 
-            default="5", opt_type=int)
-        self.add_enum_option("cut",
+            otype=int)
+        self.add_enum_option("cut", "modularity",
             "method to cut the dendrogramme",
             enum=['modularity', 'max', 'cc', 'fixed', 'fixed_V2'],      
-            default="modularity",opt_type=str)
+            otype=str)
 
     def _clustering(self, bigraph, ldoc=4, lterms=5, cut="modularity"):
         vertex_clustering = walktrap_bigraph(bigraph, ldoc, lterms, EDGE_WEIGHT_ATTR, cut)
