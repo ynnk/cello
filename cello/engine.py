@@ -37,12 +37,14 @@ cellist.configure( request_options )
 # test before running 
 cellist.validate()
 
-cellist.play('boo', boo_args)
+res = cellist.solo('boo', boo_args)
 
+# plays all
+results = cellist.play()
 """
 
 import time 
-
+import logging
 from cello import CelloError
 from cello.optionable import Optionable
 from cello.pipeline import Composable
@@ -70,19 +72,19 @@ class Block(object):
         self.set(*components)
         self.set_options(**options)        
 
-    def clear_selections(self):
-        """ cancel the current selections
-        """
-        # component names list to keep order 
-        self._selected = [] 
-        self._selected_opts = {}
-
     def reset(self):
         """ Removes all the components of the block
         """        
         self.clear_selections()
         self._components = []
         self._components_dict =  {}
+
+    def clear_selections(self):
+        """ cancel the current selections
+        """
+        # component names list to keep order 
+        self._selected = [] 
+        self._selected_opts = {}
 
     def set_options(self, required=False, hidden=False, multiple=False,  defaults=[] ):
         """
@@ -105,8 +107,9 @@ class Block(object):
             for name in defaults:
                 self.select(name, {})
         self.defaults = defaults
+
         # TODO depends         
-        # self.depends = depends # *dependence_block_names
+        # self.depends = depends # *dependence_block_names  
 
     def set(self, *components):
         """ Set the possible components of the block
@@ -173,6 +176,12 @@ class Block(object):
         """
         return self._components_dict.keys()
 
+    def __len__(self):
+        """ returns the count of components of the given name
+        """
+        return len(self._components)
+    
+
     def __getitem__(self, name):
         """ returns the component of the given name
         """
@@ -192,6 +201,8 @@ class Cellist(object):
         self._blocks = {} # 
         self._names = []
         self.time = 0
+        print __name__
+        self._logger = logging.getLogger(__name__)
 
     def requires(self, *names):
         """ declare what will be used in this engine 
@@ -228,7 +239,13 @@ class Cellist(object):
         """ returns the block of the given name
         """
         return self._blocks[name]
-        
+    
+    def __len__(self):
+        """ returns block count
+        """
+        return len(self._blocks)
+
+    
     def names(self):
         """ returns the sequence of block names
         """
@@ -313,7 +330,7 @@ class Cellist(object):
             # given that the args in input are also the returning value
             # This behavior allows to modify the data given in input.
             # actually same arg if given several times 
-            # but is transformed during the process
+            # but may be transformed during the process
             # then finally returned
             results = comp( *args, **options)
 
@@ -322,6 +339,7 @@ class Cellist(object):
             # then append the result of each call to the components __call__
             # and finally returns all computed results
             # >>> results.append( comp(*args, **options) )
+            # >>> return *results
 
         self.time += time.time()-start
 

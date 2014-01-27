@@ -18,8 +18,8 @@ Class
 -----
 """
 from collections import OrderedDict
+import logging
 from cello.utils import parse_bool
-from cello.optionable import Optionable
 
 # ynnk
 # ^^^^
@@ -48,7 +48,7 @@ from cello.optionable import Optionable
 
 
 
-class GenericOption(GenericOption):
+class GenericOption(object):
     """ Generic option
     """
     def __init__(self, name, description, default=None, hidden=False, parse=None, validate=None):
@@ -231,6 +231,7 @@ class Optionable(object):
         """
         self._options = OrderedDict()
         self.name = name
+        self._logger = logging.getLogger(__name__)
 
     @property
     def name(self):
