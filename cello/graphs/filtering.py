@@ -3,36 +3,35 @@
 import logging
 import itertools
 
-from cello.pipeline import GraphPipelineElement 
+from cello import Composable
 
 
-class BottomFilter(GraphPipelineElement):
-    """
-    Removes bottom vertices from a bigraph.
+class BottomFilter(Composable):
+    """ Removes bottom vertices from a bigraph.
     """
     def __init__(self):
         name = self.__class__.__name__
-        GraphPipelineElement.__init__(self, name)
+        Composable.__init__(self, name)
         self._logger = logging.getLogger(name)
 
         self.add_generic_option("top_min",
             "0", 
-            "Removes type=false connected to less than top_min (type=True) vertices",
+            "Removes type=false vertices connected to less than top_min (type=True) vertices",
             int)
         self.add_generic_option("top_max_ratio",
             "1.0",
-            "Removes type false vertices connected to more than top_max_ratio percents of the (type=True) vertices",
+            "Removes type=false vertices connected to more than top_max_ratio percents of the (type=True) vertices",
             float)
-            
-            
+
+    #XXX:kwargs ne sert a rien ?
     def __call__(self, graph, top_min=0, top_max_ratio=1., **kwargs):
-        """
-            remove bottoms (type false) vertices,
-            that are not enought connected or too much connected.
-            :param top_min: <int> 
-                removes v[false] if  degree(g,v[false]) <= top_min  
-            :param top_max_ratio: <float> % of top vertices  
-                removes v[false] if degree(g,v[false]) > top_max_ratio 
+        """remove bottoms (type false) vertices, that are not enought connected
+        or too much connected.
+
+        :param top_min: removes v[false] if degree(g, v[false]) <= top_min
+        :type top_min: int
+        :param top_max_ratio: removes `v` (type=false) if `degree(g, v) >= top_max_ratio * |V_top|`
+        :type top_max_ratio: float
         """
         assert graph.is_bipartite();
         

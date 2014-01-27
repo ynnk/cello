@@ -2,18 +2,18 @@
 #-*- coding:utf-8 -*-
 import logging        
 
-from cello.pipeline import GraphPipelineElement
+from cello import Composable
 from cello.graphs import EDGE_WEIGHT_ATTR
 from cello.graphs.prox import prox_markov_wgt
 
 _logger = logging.getLogger("cello.graphs.transform")
 
 
-class GraphProjection(GraphPipelineElement):
+class GraphProjection(Composable):
     def __init__(self, projection_wgt=None, name="PG"):
         """ Projection of a bipartite graph to a unipartite graph of KodexDoc
         """
-        GraphPipelineElement.__init__(self, name)
+        Composable.__init__(self, name)
         self._logger = logging.getLogger(self.__class__.__name__)
         
         self._projection_wgt = projection_wgt
