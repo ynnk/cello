@@ -2,27 +2,27 @@
 #-*- coding:utf-8 -*-
 import logging        
 
-from cello import Composable
+from cello.pipeline import Optionable
 from cello.graphs import EDGE_WEIGHT_ATTR
 from cello.graphs.prox import prox_markov_wgt
 
 _logger = logging.getLogger("cello.graphs.transform")
 
 
-class GraphProjection(Composable):
+class GraphProjection(Optionable):
     def __init__(self, projection_wgt=None, name="PG"):
         """ Projection of a bipartite graph to a unipartite graph of KodexDoc
         """
-        Composable.__init__(self, name)
+        Optionable.__init__(self, name)
         self._logger = logging.getLogger(self.__class__.__name__)
         
         self._projection_wgt = projection_wgt
         if self._projection_wgt is None:
             self.add_enum_option("proj_wgt",
-                                 ['no', 'count', 'p', 'pmin', 'pmax', 'pavg'],
-                                 "p",
-                                 "Projection weighting method",
-                                 str)
+                 "Projection weighting method",
+                 enum=['no', 'count', 'p', 'pmin', 'pmax', 'pavg'],
+                 default="p",
+                 opt_type=str)
     
     def __call__(self, graph, proj_wgt="p"):
         # The projection work only because:

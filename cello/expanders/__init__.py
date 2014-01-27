@@ -17,7 +17,7 @@ Abstract & Noop expanders
 -------------------------
 """
 
-from cello.optionable import Optionable
+from cello.pipeline import Optionable
 
 class AbstractExpand(Optionable):
     """ Expand a list of L{KodexDoc}.

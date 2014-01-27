@@ -3,25 +3,24 @@
 import logging
 import itertools
 
-from cello import Composable
+from cello.pipeline import Optionable
 
 
-class BottomFilter(Composable):
+class BottomFilter(Optionable):
     """ Removes bottom vertices from a bigraph.
     """
     def __init__(self):
         name = self.__class__.__name__
-        Composable.__init__(self, name)
+        Optionable.__init__(self, name)
         self._logger = logging.getLogger(name)
 
-        self.add_generic_option("top_min",
-            "0", 
+        self.add_value_option("top_min",
             "Removes type=false vertices connected to less than top_min (type=True) vertices",
-            int)
-        self.add_generic_option("top_max_ratio",
-            "1.0",
+            default=0 , 
+            opt_type=int)
+        self.add_value_option("top_max_ratio",
             "Removes type=false vertices connected to more than top_max_ratio percents of the (type=True) vertices",
-            float)
+            opt_type=float)
 
     #XXX:kwargs ne sert a rien ?
     def __call__(self, graph, top_min=0, top_max_ratio=1., **kwargs):
@@ -34,7 +33,7 @@ class BottomFilter(Composable):
         :type top_max_ratio: float
         """
         assert graph.is_bipartite();
-        
+
         top_count = len(graph.vs.select(type=True))
         
         self._logger.info("Before filtering: |V_top docs|=%d, |V_bottom terms|=%d, |E|=%d"\
