@@ -19,7 +19,6 @@ Class
 """
 import logging
 
-from cello.pipeline import Composable
 from cello.utils import parse_bool
 
 # ynnk
@@ -63,20 +62,19 @@ class AbstractOption(object):
         
         :param default: default option value
         :type default: any
+
+        :param parse: function to transform the option value from string to
+             internal appropriate format
+        :type parse: function
         
         :param hidden: it True the option will not be discoverable
         :type hidden: bool
-
-        :param parse: function to transform the option value from string to
-             appropriate format
-        :type parse: function
         """
         self.name = name
-        self.value = None
+        self._value = None
+        self._default = None
         self.description = description
-
         self.opt_type = otype        
-        self.default = default
         self.parse = parse or self.parse
         self.validate = validate or self.validate
         self.hidden = hidden 
@@ -91,7 +89,7 @@ class AbstractOption(object):
         """ Set name of the option.
         An option name can't contain space. """
         if ' ' in name:
-            raise ValueError("Option's name should not contain space '%s'" % self. name)
+            raise ValueError("Option's name should not contain space '%s'" % name)
         self._name = name
 
     @property
@@ -171,11 +169,31 @@ class ValueOption(AbstractOption):
             pass # XXX            
             #kwargs['otype'] = Any
         AbstractOption.__init__(self, name, default, desc, **kwargs)
+        self.default = default
 
+    def as_dict(self):
+        """ returns a dictionary version of the option
+        """
+        opt_info = AbstractOption.as_dict(self)
+        opt_info["type"] = "value"
+        return opt_info
+
+class BooleanOption(AbstractOption):
+    def __init__(self, name, default, desc, **kwargs):
+        AbstractOption.__init__(self, name, default, desc, **kwargs)
+        self.default = default
+
+    def as_dict(self):
+        """ returns a dictionary version of the option
+        """
+        opt_info = AbstractOption.as_dict(self)
+        opt_info["type"] = "boolean"
+        return opt_info
 
 class RangeOption(AbstractOption):
     def __init__(self, name, default, desc, min_value=0, max_value=10,  **kwargs):
         AbstractOption.__init__(self, name, default, desc, **kwargs)
+        self.default = default
         # TODO check for correct value types
         self.min_value = min_value
         self.max_value = max_value
@@ -184,6 +202,14 @@ class RangeOption(AbstractOption):
         if value < self.min_value or value > self.max_value:
             raise ValueError( "Value should be in range(%s,%s) " % \
                 (self.min_value, self.max_value) )
+
+    def as_dict(self):
+        """ returns a dictionary version of the option
+        """
+        opt_info = AbstractOption.as_dict(self)
+        opt_info["type"] = "range"
+        return opt_info
+
 
 class EnumOption(AbstractOption):
     """ Enumerate option
@@ -194,12 +220,12 @@ class EnumOption(AbstractOption):
              appropriate format
         :type parse: function
         """
+        AbstractOption.__init__(self, name, default, desc, **kwargs)
         if not(len(enum)):
             raise ValueError('Empty Enum %s' % enum)
-        if default is None:
-           default = enum[0]
         self._enum = enum
-        AbstractOption.__init__(self, name, default, desc, **kwargs)
+        if default is None:
+           self.default = enum[0]
 
     def validate(self, value):
         if value not in self._enum:

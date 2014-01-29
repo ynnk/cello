@@ -93,7 +93,7 @@ class TestDocFields(unittest.TestCase):
 
     def test_VectorField_base(self):
         # create a simple field
-        v_field = VectorField(Text(
+        v_field = VectorField(Text(texttype=str,
             attrs={
                 'tf': Numeric(default=1),
                 'positions': Numeric(multi=True),
@@ -131,7 +131,7 @@ class TestDocFields(unittest.TestCase):
 
     def test_VectorField_VectorItem(self):
         # create a simple field
-        v_field = VectorField(Text(
+        v_field = VectorField(Text(texttype=str,
             attrs={
                 'tf': Numeric(default=1),
                 'positions': Numeric(multi=True),
@@ -153,7 +153,7 @@ class TestDocFields(unittest.TestCase):
 
     def test_VectorField_VectorAttr(self):
         # create a simple field
-        v_field = VectorField(Text(
+        v_field = VectorField(Text(texttype=str,
             attrs={
                 'tf': Numeric(default=1),
                 'positions': Numeric(multi=True),
@@ -186,7 +186,7 @@ class TestDocFields(unittest.TestCase):
 class TestDoc(unittest.TestCase):
     
     def test_doc(self):
-        schema = Schema(titre = Text())
+        schema = Schema(titre = Text(texttype=str))
         doc = Doc(schema)
         self.assertTrue("titre" in doc.schema)
         # no equal because DocNum added
@@ -222,7 +222,7 @@ class TestDoc(unittest.TestCase):
             doc.add_field("nb_pages", Numeric())
         
         # add a more complex field
-        doc.add_field("authors", Text(multi=True, uniq=True))
+        doc.add_field("authors", Text(multi=True, uniq=True, texttype=str))
         self.assertTrue("authors" in doc)
         doc.authors.add("Jule Rime")
         doc.authors.add("Jule Rime")

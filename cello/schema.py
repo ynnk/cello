@@ -588,7 +588,7 @@ class Doc(dict):
     
     Then we can create the document:
 
-    >>> doc = Doc(schema, docnum=1, text=text)
+    >>> doc = Doc(schema, docnum=1, text=unicode(text), encoding)
     >>> doc.text[:6]
     'i have'
     >>> len(doc.text)

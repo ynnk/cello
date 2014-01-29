@@ -74,7 +74,7 @@ class Composable:
     def __call__(self, *args):
         raise NotImplementedError
 
-from cello.options import *
+from cello.options import AbstractOption ,ValueOption, EnumOption, BooleanOption
 
 class Optionable(Composable):
     """ Abstract class for an optionable component
@@ -87,8 +87,8 @@ class Optionable(Composable):
         """
         Composable.__init__(self)
         self._options = OrderedDict()
-        self.name = name
         self._logger = logging.getLogger(__name__)
+        self.name = name
 
     @property
     def name(self):
@@ -159,7 +159,7 @@ class Optionable(Composable):
         :param description: short description of the option
         :type description: str
         """
-        opt = ValueOption(opt_name, default, description, 
+        opt = BooleanOption(opt_name, default, description, 
                 otype=bool)
         self.add_option(opt)
 

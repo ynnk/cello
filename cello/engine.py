@@ -1,11 +1,11 @@
 #-*- coding:utf-8 -*-
 """  :mod:`cello.engine`
 ========================
-
-Cello processing system
 ^^^^^^^^^^^^^^^^^^^^^^^
 
+Cello processing system
 code sample
+
 ~~~~~~~~~~~
 
 from cello.engine import Cellist
@@ -32,7 +32,7 @@ cellist["boo"].set(one, two, three)
 cellist["boo"].set_options(multiple = True)
 cellist["boo"].defaults = [lab.name for lab in (one, two, three )]
 
-cellist.configure( request_options )
+ cellist.configure( request_options )
 
 # test before running 
 cellist.validate()
