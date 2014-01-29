@@ -30,7 +30,7 @@ def composable(function):
     return cfct
 
 
-class Composable:
+class Composable(object):
     """ Basic composable element
     
     Composable is abstract, you need to implemented the :meth:`__call__` method
@@ -292,7 +292,7 @@ class Optionable(Composable):
 
 
 
-class Pipeline(Composable, Optionable):
+class Pipeline(Optionable):
     """ A Pipeline is a sequence of function called sequentially.
     
     It may be create explicitely:
