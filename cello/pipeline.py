@@ -25,6 +25,7 @@ def composable(function):
     """
     cfct = Composable()
     cfct.__call__ = function
+    cfct.name = function.func_name
     cfct.__doc__ = function.__doc__
     return cfct
 
@@ -37,8 +38,8 @@ class Composable:
     >>> e1 = Composable()
     >>> e2 = Composable()
     >>> e1.__call__ = lambda iterable: (element**2 for element in iterable)
-    >>> e2.__call__ = lambda iterable: (element + 10 for element in iterable)
-    
+    >>> e2.__call__ = lambda iterable: (element + 10 for element in iterable)a
+    boo
     Then Composable can be pipelined this way :
 
     >>> chain = e1 | e2
@@ -204,7 +205,6 @@ class Optionable(Composable):
         
         :param value: new default option value
         """
-        print "change_option_default %s %s" % (opt_name, default_val)
         if opt_name not in self._options:
             raise ValueError("Unknow option name (%s)" % opt_name)
         self._options[opt_name].default = default_val
@@ -321,6 +321,7 @@ class Pipeline(Composable, Optionable):
 
     def __init__(self, *composables):
         # Composable init
+        self._logger = logging.getLogger(__name__)
         Composable.__init__(self)
         self.items = []
         for comp in composables:
@@ -351,10 +352,10 @@ class Pipeline(Composable, Optionable):
         items = self.items
         for item in items:
             item_kwargs = {}
-            if isinstance(item, Optionable):
                 # if Optionable, build kargs
+            if isinstance(item, Optionable):
                 item_kwargs = item.parse_options(kwargs)
-            print item_kwargs
+            self._logger.info("calling %s with %s", item, item_kwargs )
             element_iter = item(element_iter, **item_kwargs)
         return element_iter
 
@@ -398,7 +399,7 @@ class Pipeline(Composable, Optionable):
                     item.force_option_value(opt_name, value)
                     flg  = True
         if not flg :
-            raise KodexValueError, "Unknow option name (%s)" % opt_name
+            raise ValueError, "Unknow option name (%s)" % opt_name
 
     def change_option_default(self, opt_name, default_val):
         flg = False
@@ -408,7 +409,7 @@ class Pipeline(Composable, Optionable):
                     item.change_option_default(opt_name, default_val)
                     flg  = True
         if not flg :
-            raise KodexValueError, "Unknow option name (%s)" % opt_name
+            raise ValueError, "Unknow option name (%s)" % opt_name
 
     def get_default_value(self, opt_name):
         val = None

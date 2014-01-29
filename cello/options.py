@@ -72,26 +72,26 @@ class AbstractOption(object):
         :type parse: function
         """
         self.name = name
+        self.value = None
         self.description = description
 
         self.opt_type = otype        
-        self.default = default or []
+        self.default = default
         self.parse = parse or self.parse
         self.validate = validate or self.validate
         self.hidden = hidden 
 
     @property
     def name(self):
-        """ Name of the option.
-        
-        An option name can't contain space.
-        """
+        """ Name of the option. """
         return self._name
 
     @name.setter
     def name(self, name):
+        """ Set name of the option.
+        An option name can't contain space. """
         if ' ' in name:
-            raise ValueError("The option name souldn't contain space")
+            raise ValueError("Option's name should not contain space '%s'" % self. name)
         self._name = name
 
     @property

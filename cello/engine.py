@@ -46,8 +46,7 @@ results = cellist.play()
 import time 
 import logging
 from cello import CelloError
-from cello.optionable import Optionable
-from cello.pipeline import Composable
+from cello.pipeline import Pipeline, Optionable, Composable
 
 
 class Block(object):
@@ -67,6 +66,7 @@ class Block(object):
         :type name: str
         """
         self._name = name
+        self._logger = logging.getLogger(__name__)
 
         self.reset()        
         self.set(*components)
@@ -116,10 +116,14 @@ class Block(object):
         :param components: components to append Optionables or Composables
         """
         self.reset()
-        for comp in components:
-            if type(comp) in (Optionable,Composable):
-                self.append(comp)
-            else: raise ValueError("component not type of Optionable or Composable")
+        if len(components) == 1:
+            self.append(Pipeline(components[0]))
+        else:
+            for comp in components:
+                self._logger.info("SET %s %s %s", self._name, comp, type(comp) )
+                if isinstance(comp,  (Optionable,Composable)):
+                    self.append(comp)
+                else: raise ValueError("component %s is not type of Optionable or Composable" % comp)
 
     def append(self, component, default=False):
         """ Add one component to the block
@@ -147,20 +151,25 @@ class Block(object):
         :param options: options to set to thhe components
         :type options: dict
         """
-        if not comp_name in self._components_dict:
+        component = self._components_dict.get(comp_name, None)
+        if component == None:
             raise ValueError(" '%s' has no candidate '%s' (%s)"\
                   %(self._name, comp_name, self.component_names()) )
+        # add component as selected, aware of multiple
         if not comp_name in self._selected:
             if len(self._selected)  and not self.multiple:
                 self.clear_selections()
             self._selected.append(comp_name)
         else :
-            # TODO the component has already been selected and is not set as multiple.            
+            # TODO the component has already been selected
+            # and is not set as multiple.            
             pass
-        
+        # component might be a function or any callable 
+        # only Optoinable will get options        
+        if isinstance(component, Optionable):
+            self._selected_opts[comp_name] = component.parse_options(options)
         # XXX NOT implemented
         # TODO implements options parsing
-        self._selected_opts[comp_name] = self._components_dict[comp_name].parse_options(options)
     
 
     def iter_runnables(self):
@@ -169,7 +178,7 @@ class Block(object):
         use KebComponent.select to mark optionables
         """
         for k in self._selected:
-            yield ( self._components_dict[k], self._selected_opts[k])
+            yield ( self._components_dict[k], self._selected_opts.get(k, {}))
 
     def component_names(self):
         """ returns the list of component names
@@ -201,7 +210,6 @@ class Cellist(object):
         self._blocks = {} # 
         self._names = []
         self.time = 0
-        print __name__
         self._logger = logging.getLogger(__name__)
 
     def requires(self, *names):
@@ -213,10 +221,10 @@ class Cellist(object):
             raise ValueError
     
         if self._blocks is not None and len(self._blocks) > 0 :
-            raise CelloError("Method 'declare_types' should be called only once before adding any composant")
+            raise CelloError("Method 'declare_types' should be called only once before adding any composant")   
         if len(names) != len(set(names)):
             raise ValueError("Duplicate block name %s" % names)
-        self._names = names if type(names) == list else [names] 
+        self._names = names if type(names) in (tuple,list) else [names] 
 
     
     def set(self, name, *optionables, **options):
@@ -226,7 +234,7 @@ class Cellist(object):
            @param options : see Block attributes
        """
         assert name in self._names, \
-            "%s is not one of (%s)" % (name, ", ".join(self._names))
+            "%s is not one of (%s)" % (name, ",".join(self._names))
         comp = Block(name, *optionables, **options)
         self._blocks[name] = comp
 
@@ -312,7 +320,7 @@ class Cellist(object):
         @param comp_type: <str> type of component to run
         @param args: all arguments that should be pass to optionables
         """
-        self._logger.info("%s: start"% name)
+        self._logger.info("playing %s with %s args: "% (name, len(args)) )
         start = time.time()
         results = None
         run_comps = {}
@@ -324,7 +332,7 @@ class Cellist(object):
                 #@"%s_args"% name , args, # args too fat
                 "kwargs" : options,
             }
-            self._logger.debug("%s: %s component: %s, args=%s, kwargs=%s" % (name, comp.name, comp, len(args), options))
+            self._logger.info("%s: %s component: %s, args=%s, kwargs=%s" % (name, comp.name, comp, len(args), options))
 
             # !!! Defaut multiple behavior is used as pipeline !!!
             # given that the args in input are also the returning value
