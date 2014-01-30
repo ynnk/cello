@@ -20,16 +20,6 @@ import logging
 from collections import OrderedDict
 
 
-def composable(function):
-    """ Make a simple function composable
-    """
-    cfct = Composable()
-    cfct.__call__ = function
-    cfct.name = function.func_name
-    cfct.__doc__ = function.__doc__
-    return cfct
-
-
 class Composable(object):
     """ Basic composable element
     
@@ -63,8 +53,12 @@ class Composable(object):
     result: 26
     """
 
-    def __init__(self):
-        pass
+    def __init__(self, func=None):
+        if func and callable(func):
+            self._func=func
+            self.name = func.func_name
+            self.__doc__ = func.__doc__
+            
 
     def __or__(self, other):
         if not callable(other):
@@ -72,7 +66,9 @@ class Composable(object):
         return Pipeline(self, other)
 
     def __call__(self, *args):
-        raise NotImplementedError
+        if hasattr(self, "_func"):
+            return self._func(*args)        
+        else: raise NotImplementedError
 
 from cello.options import AbstractOption ,ValueOption, EnumOption, BooleanOption
 
@@ -352,10 +348,12 @@ class Pipeline(Optionable):
         items = self.items
         for item in items:
             item_kwargs = {}
-                # if Optionable, build kargs
+            item_name = ""            
+            # if Optionable, build kargs
             if isinstance(item, Optionable):
                 item_kwargs = item.parse_options(kwargs)
-            self._logger.info("calling %s with %s", item, item_kwargs )
+                item_name = item.name
+            self._logger.info("calling %s '%s' with %s", item,  item_name, item_kwargs )
             element_iter = item(element_iter, **item_kwargs)
         return element_iter
 

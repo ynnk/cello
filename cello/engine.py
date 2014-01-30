@@ -1,11 +1,11 @@
 #-*- coding:utf-8 -*-
 """  :mod:`cello.engine`
 ========================
-^^^^^^^^^^^^^^^^^^^^^^^
 
 Cello processing system
-code sample
+^^^^^^^^^^^^^^^^^^^^^^^
 
+code sample
 ~~~~~~~~~~~
 
 from cello.engine import Cellist
@@ -32,7 +32,7 @@ cellist["boo"].set(one, two, three)
 cellist["boo"].set_options(multiple = True)
 cellist["boo"].defaults = [lab.name for lab in (one, two, three )]
 
- cellist.configure( request_options )
+cellist.configure( request_options )
 
 # test before running 
 cellist.validate()
@@ -71,6 +71,11 @@ class Block(object):
         self.reset()        
         self.set(*components)
         self.set_options(**options)        
+
+        self.has_run = False
+        self.time = 0
+        self.warnings = []
+        self.errors = []
 
     def reset(self):
         """ Removes all the components of the block
@@ -168,17 +173,81 @@ class Block(object):
         # only Optoinable will get options        
         if isinstance(component, Optionable):
             self._selected_opts[comp_name] = component.parse_options(options)
-        # XXX NOT implemented
-        # TODO implements options parsing
-    
 
-    def iter_runnables(self):
-        """ generator of pairs optionable, options
-        yields optionable and options marked as selected
-        use KebComponent.select to mark optionables
-        """
-        for k in self._selected:
-            yield ( self._components_dict[k], self._selected_opts.get(k, {}))
+        # XXX NOT implemented
+        # TODO implements options parsing for options given explicitly 
+            
+
+    def play(self, *args):
+        _break_on_error=True
+        start = time.time()
+        # dict containing block running informations
+        run_comps = {}
+        # components marked selected
+        runnables = ((self._components_dict[k], self._selected_opts.get(k, {}))\
+                        for k in self._selected )
+        # run
+        for comp, options in runnables:
+            # TODO store args and kwargs ?
+            run_comps[comp.name] = {
+                "name": comp.name,
+                "obj" : repr(comp),
+                #@"%s_args"% name , args, # args too fat
+                "kwargs" : options,
+            }
+            self._logger.info("%s: %s component: %s, args=%s, kwargs=%s" % (self._name, comp.name, comp, args, options))
+
+            # !!! Defaut multiple behavior is used as pipeline !!!
+            # given that the args in input are also the returning value
+            # This behavior allows to modify the data given in input.
+            # actually same arg if given several times 
+            # but may be transformed during the process
+            # then finally returned
+            try :            
+                # mulit = False or pipeline
+                results = comp( *args, **options)
+
+                # TODO implements different mode for multiple 
+                # another way would be declaring a list var outside the loop,
+                # then append the result of each call to the components __call__
+                # and finally returns all computed results
+                # >>> results.append( comp(*args, **options) )
+                # >>> return *results
+
+            # TODO catch warnings TODO
+            # warning may be raised for many reasons like:
+            # * options has been modified 
+            # * deprecation
+            # * pipeline inconsistency 
+            # * graph with no edge ... 
+            
+            except Exception as e:
+                # component error handling
+                self.errors.append(e.message) 
+                self.errors.append( "error in component %s %s /n %s"%( comp, comp.name, e.message ) )
+                if _break_on_error:
+                    break
+        
+            # component time
+            now = time.time()
+            tick = now - start
+            start = now
+            self.time += tick
+            run_comps[comp.name]['time'] = tick
+
+            # TODO create a Result object 
+            # will all necessary data ie:
+            # multi mode option(False, pipeline, map)
+            # args
+            # warnings : boolean
+            # errors : boolean
+            # components { name, kwargs,warning, errors, time,  }
+            # time (running/computation time)
+            # results: [] or 
+            
+             
+        return results
+    
 
     def component_names(self):
         """ returns the list of component names
@@ -321,38 +390,9 @@ class Cellist(object):
         @param args: all arguments that should be pass to optionables
         """
         self._logger.info("playing %s with %s args: "% (name, len(args)) )
-        start = time.time()
-        results = None
-        run_comps = {}
-
-        for comp, options in self[name].iter_runnables():
-            # TODO store args and kwargs ?
-            run_comps[comp.name] = {
-                "obj" : repr(comp),
-                #@"%s_args"% name , args, # args too fat
-                "kwargs" : options,
-            }
-            self._logger.info("%s: %s component: %s, args=%s, kwargs=%s" % (name, comp.name, comp, len(args), options))
-
-            # !!! Defaut multiple behavior is used as pipeline !!!
-            # given that the args in input are also the returning value
-            # This behavior allows to modify the data given in input.
-            # actually same arg if given several times 
-            # but may be transformed during the process
-            # then finally returned
-            results = comp( *args, **options)
-
-            # TODO implements different mode for multiple 
-            # another way of doing would be declare a list var outside the loop,
-            # then append the result of each call to the components __call__
-            # and finally returns all computed results
-            # >>> results.append( comp(*args, **options) )
-            # >>> return *results
-
-        self.time += time.time()-start
-
-        return results
-    
+        return  self[name].play(*args)
+        
+        
     def as_dict(self):
         """ dict repr of the components """
         return { 'names' : self._names, 

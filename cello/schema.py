@@ -150,6 +150,9 @@ class AbstractType(object):
         """
         raise NotImplementedError("This is an abstract class, you should use one of the ")
 
+    def parse(self, value):
+        """ parsing from string"""
+        return value
 
 class Any(AbstractType):
     """ Any kind of data type, no validation

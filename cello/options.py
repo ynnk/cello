@@ -62,6 +62,7 @@ class AbstractOption(object):
         
         :param default: default option value
         :type default: any
+na
 
         :param parse: function to transform the option value from string to
              internal appropriate format
@@ -225,7 +226,9 @@ class EnumOption(AbstractOption):
             raise ValueError('Empty Enum %s' % enum)
         self._enum = enum
         if default is None:
-           self.default = enum[0]
+            self.default = enum[0]
+        else :
+            self.default = default
 
     def validate(self, value):
         if value not in self._enum:
