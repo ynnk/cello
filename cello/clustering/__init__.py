@@ -26,7 +26,6 @@ class CelloClusteringError(CelloError):
     pass
 
 
-
 def filter_cover(cover, min_docs, min_terms, logger=None):
     """ Merge too small clusters in a "misc" one.
     """

@@ -19,6 +19,7 @@ Class
 import logging
 from collections import OrderedDict
 
+from cello.options import AbstractOption ,ValueOption, EnumOption, BooleanOption
 
 class Composable(object):
     """ Basic composable element
@@ -58,7 +59,6 @@ class Composable(object):
             self._func=func
             self.name = func.func_name
             self.__doc__ = func.__doc__
-            
 
     def __or__(self, other):
         if not callable(other):
@@ -67,10 +67,9 @@ class Composable(object):
 
     def __call__(self, *args):
         if hasattr(self, "_func"):
-            return self._func(*args)        
+            return self._func(*args)
         else: raise NotImplementedError
 
-from cello.options import AbstractOption ,ValueOption, EnumOption, BooleanOption
 
 class Optionable(Composable):
     """ Abstract class for an optionable component

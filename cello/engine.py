@@ -8,39 +8,45 @@ Cello processing system
 code sample
 ~~~~~~~~~~~
 
-from cello.engine import Cellist
+Here is a simple exemple of Cellist usage. First you need to setup your Cellist::
 
-cellist = Cellist()
-cellist.requires('foo', 'bar', 'boo')
+    from cello.engine import Cellist
 
-# one can make imaginary components
-one, two, three = One(), Two(), Three()| plusOne()
+    cellist = Cellist()
+    cellist.requires('foo', 'bar', 'boo')
 
-foo_comps = [ one, two, three ]
-foo_options = {'default': two.name }
-cellist.set('foo', *foo_comps, **foo_options )
+    # one can make imaginary components
+    one, two, three = One(), Two(), Three()| plusOne()
 
-# or
-cellist['bar'].append(One())
-cellist['bar'].append(Two(), default=True)
-cellist['bar'].append(Three(), default=True)
+    # one can configure a block with this three components:
+    foo_comps = [ one, two, three ]
+    foo_options = {'default': two.name }
+    cellist.set('foo', *foo_comps, **foo_options )
 
-# or 
-# XXX ca c est pas sur du tout que ca marche 
+    # or
+    cellist['bar'].append(One(), default=True)
+    cellist['bar'].append(Two(), default=True)
+    cellist['bar'].append(Three(), default=True)
+    cellist["boo"].set_options(multiple = True)
 
-cellist["boo"].set(one, two, three)
-cellist["boo"].set_options(multiple = True)
-cellist["boo"].defaults = [lab.name for lab in (one, two, three )]
+    # or
+    cellist["boo"].set(one, two, three)
+    cellist["boo"].set_options(multiple = True)
+    cellist["boo"].defaults = [lab.name for lab in (one, two, three )]
 
-cellist.configure( request_options )
 
-# test before running 
-cellist.validate()
+And then you can configure and run it::
 
-res = cellist.solo('boo', boo_args)
+    cellist.configure(request_options)
 
-# plays all
-results = cellist.play()
+    # test before running 
+    cellist.validate()
+
+    res = cellist.solo('boo', boo_args)
+    
+
+    # plays all blocks
+    results = cellist.play()
 """
 
 import time 
@@ -53,7 +59,7 @@ class Block(object):
     """ A block is a processing step realised by one component.
     
     A component is a callable object that has a *name* attribute,
-    often it is also a :class:`.Optionable` object or a pipeline beeing a `.Composable` .
+    often it is also a :class:`.Optionable` object or a pipeline beeing a :class:`.Composable` .
     
     Block object provides methods to discover and parse components options (if any).
     """
@@ -68,9 +74,9 @@ class Block(object):
         self._name = name
         self._logger = logging.getLogger(__name__)
 
-        self.reset()        
+        self.reset()
         self.set(*components)
-        self.set_options(**options)        
+        self.set_options(**options)
 
         self.has_run = False
         self.time = 0
@@ -79,7 +85,7 @@ class Block(object):
 
     def reset(self):
         """ Removes all the components of the block
-        """        
+        """
         self.clear_selections()
         self._components = []
         self._components_dict =  {}
@@ -88,32 +94,37 @@ class Block(object):
         """ cancel the current selections
         """
         # component names list to keep order 
-        self._selected = [] 
+        self._selected = []
         self._selected_opts = {}
 
-    def set_options(self, required=False, hidden=False, multiple=False,  defaults=[] ):
-        """
+    def set_options(self, required=True, hidden=False, multiple=False, defaults=[]):
+        """ Set the options of the block
+        
         :param required: whether the block will be required or not
         :type required: bool
         :param hidden: whether the block will be hidden to the user or not
         :type hidden: bool
-        :param multiple:
+        :param multiple: if True more than one component may be selected (and run)
         :type multiple: bool
-        :param default:
-        :type default: bool
-        """        
+        :param default: names of the selected components
+        :type default: list of str, or str
+        """
         self.required = required
         self.hidden = hidden
         self.multiple = multiple
 
-        if not len(defaults) and len(self._components):
+        if self.required and not len(defaults) and len(self._components):
+            # select the first component by default
             self.select(self._components[0].name, {})
         else:
-            for name in defaults:
-                self.select(name, {})
+            if isinstance(defaults, basestring):
+                # in case only one component is selected by defautl
+                self.select(defaults, {})
+            else:
+                for name in defaults:
+                    self.select(name, {})
         self.defaults = defaults
-
-        # TODO depends         
+        # TODO depends
         # self.depends = depends # *dependence_block_names  
 
     def set(self, *components):
@@ -122,13 +133,16 @@ class Block(object):
         """
         self.reset()
         if len(components) == 1:
-            self.append(Pipeline(components[0]))
+            self.append(Pipeline(components[0])) #XXX: pourquoi l'encapsulation dans Pipeline ?
+            #TODO: si encapsulation dans Pipeline needed il faut le faire dans append
         else:
             for comp in components:
                 self._logger.info("SET %s %s %s", self._name, comp, type(comp) )
-                if isinstance(comp,  (Optionable,Composable)):
+                #TODO: le check sur Composable ne suffit pas ?
+                if isinstance(comp, (Optionable,Composable)):
                     self.append(comp)
-                else: raise ValueError("component %s is not type of Optionable or Composable" % comp)
+                else:
+                    raise ValueError("component '%s' is not type of Optionable or Composable" % comp)
 
     def append(self, component, default=False):
         """ Add one component to the block
@@ -136,50 +150,53 @@ class Block(object):
         :param default: if true this component will be use by default
         :type default: bool
         """
-        #TODO check component is a component...
-        if not component.name in self._components :
+        #TODO check component is a component.
+        if not component.name in self._components:
             self._components_dict[component.name] = component
             self._components.append(component)
-            if default: 
-                self.select(component.name, {} )
-        else :
-            raise ValueError("We already have a component with the name %s" % component.name)
+            if default:
+                self.select(component.name, {})
+        else:
+            raise ValueError("We already have a component with the name '%s'" % component.name)
 
     def select(self, comp_name, options):
-        """ set an component as runnable with given options
-        - Options will be then passed to optionable.parse_options
-        - Use iter_runnables to get all selected optionables
-        and associated options
+        """ set an component as runnable with given options.
+        
+        `options` will be passed to :func:`.Optionable.parse_options` is the
+        component is :class:`Optionable`.
+        
+        You can use :func:`iter_runnables` to get all selected components
+        and associated options, or :func:`play` to run it.
         
         :param name: name of the component to select
         :type comp_name: str
-        :param options: options to set to thhe components
+        :param options: options to set to the components
         :type options: dict
         """
-        component = self._components_dict.get(comp_name, None)
-        if component == None:
-            raise ValueError(" '%s' has no candidate '%s' (%s)"\
+        try:
+            component = self._components_dict[comp_name]
+        except KeyError:
+            raise ValueError("'%s' has no candidate '%s' (%s)"\
                   %(self._name, comp_name, self.component_names()) )
         # add component as selected, aware of multiple
         if not comp_name in self._selected:
-            if len(self._selected)  and not self.multiple:
+            if len(self._selected) and not self.multiple:
                 self.clear_selections()
             self._selected.append(comp_name)
         else :
             # TODO the component has already been selected
-            # and is not set as multiple.            
+            # and is not set as multiple.
             pass
-        # component might be a function or any callable 
-        # only Optoinable will get options        
+        # component might be a function or any callable
+        # only Optionable will get options
         if isinstance(component, Optionable):
             self._selected_opts[comp_name] = component.parse_options(options)
 
-        # XXX NOT implemented
-        # TODO implements options parsing for options given explicitly 
-            
-
     def play(self, *args):
-        _break_on_error=True
+        """ Run the selected component of the block
+        """
+        #TODO encapsulate result in a 'RunResult' or 'BlockResult' (?)
+        _break_on_error = True
         start = time.time()
         # dict containing block running informations
         run_comps = {}
@@ -205,7 +222,7 @@ class Block(object):
             # then finally returned
             try :            
                 # mulit = False or pipeline
-                results = comp( *args, **options)
+                results = comp(*args, **options)
 
                 # TODO implements different mode for multiple 
                 # another way would be declaring a list var outside the loop,
@@ -227,7 +244,7 @@ class Block(object):
                 self.errors.append( "error in component %s %s /n %s"%( comp, comp.name, e.message ) )
                 if _break_on_error:
                     break
-        
+            
             # component time
             now = time.time()
             tick = now - start
@@ -244,10 +261,8 @@ class Block(object):
             # components { name, kwargs,warning, errors, time,  }
             # time (running/computation time)
             # results: [] or 
-            
              
         return results
-    
 
     def component_names(self):
         """ returns the list of component names
@@ -258,7 +273,6 @@ class Block(object):
         """ returns the count of components of the given name
         """
         return len(self._components)
-    
 
     def __getitem__(self, name):
         """ returns the component of the given name
@@ -269,22 +283,25 @@ class Block(object):
         """ returns a dictionary representation of the block and of all
         component options
         """
+        #TODO
         return
 
+
 class Cellist(object):
-    """
-    """
+    """ The Cello engine.
     
-    def __init__(self, ):
-        self._blocks = {} # 
+    """
+    def __init__(self):
+        self._blocks = {}
         self._names = []
         self.time = 0
         self._logger = logging.getLogger(__name__)
 
     def requires(self, *names):
-        """ declare what will be used in this engine 
-            before adding or setting any component
-            Order will be preserved for runnning task
+        """ Declare what block will be used in this engine.
+        
+        It should be call before adding or setting any component.
+        Blocks order will be preserved for runnning task.
         """ 
         if len(names) == 0:
             raise ValueError
@@ -295,12 +312,12 @@ class Cellist(object):
             raise ValueError("Duplicate block name %s" % names)
         self._names = names if type(names) in (tuple,list) else [names] 
 
-    
     def set(self, name, *optionables, **options):
-        """ Set available components
-           @param opt_type : L{str} component type in ('searching', 'expanding', 'graph_building', 'clustering', 'labelling')
-           @param optionables: a list of initialised instance of component
-           @param options : see Block attributes
+        """ Set available components and the options of one block.
+
+       :param name: block name
+       :param optionables: a list of components
+       :param options: options of the block
        """
         assert name in self._names, \
             "%s is not one of (%s)" % (name, ",".join(self._names))
@@ -308,7 +325,7 @@ class Cellist(object):
         self._blocks[name] = comp
 
     def __contains__(self, name):
-        """ returns wether a block of the given name exists
+        """ returns whether a block of the given name exists
         """
         return name in self._blocks
 
@@ -316,13 +333,12 @@ class Cellist(object):
         """ returns the block of the given name
         """
         return self._blocks[name]
-    
+
     def __len__(self):
         """ returns block count
         """
         return len(self._blocks)
 
-    
     def names(self):
         """ returns the sequence of block names
         """
@@ -373,14 +389,14 @@ class Cellist(object):
                         block.select(req_comp_name, req_comp.get("options", {}) )
                     else : 
                         raise ValueError("Config error in '%s' " % block_name)
-    
+
     def validate(self):
         """ Check that the component configuration is ok """
         # TODO implements requires
         for name in self._names:
             if not(name in self) or len(self[name].iter_runnables() ) == 0:
                 raise ValueError("'%s' component is declared but none is set")
-    
+
     def play(self, name, *args):
         """ Run Block  with args
         It runs all component with sam arguments *args,
@@ -389,13 +405,14 @@ class Cellist(object):
         @param comp_type: <str> type of component to run
         @param args: all arguments that should be pass to optionables
         """
-        self._logger.info("playing %s with %s args: "% (name, len(args)) )
-        return  self[name].play(*args)
-        
-        
+        self._logger.info("playing %s with %s args: "% (name, len(args)))
+        return self[name].play(*args)
+
     def as_dict(self):
         """ dict repr of the components """
-        return { 'names' : self._names, 
-                 'components': { name: self[name].as_dict() for name in self._names }
-               }
+        drepr = {
+            'names' : self._names,
+            'components': {name: self[name].as_dict() for name in self._names}
+        }
+        return drepr
 
