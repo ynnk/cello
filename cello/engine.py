@@ -49,8 +49,10 @@ And then you can configure and run it::
     results = cellist.play()
 """
 
-import time 
+import time
 import logging
+from collections import OrderedDict
+
 from cello import CelloError
 from cello.pipeline import Pipeline, Optionable, Composable
 
@@ -87,13 +89,11 @@ class Block(object):
         """ Removes all the components of the block
         """
         self.clear_selections()
-        self._components = []
-        self._components_dict =  {}
+        self._components = OrderedDict()
 
     def clear_selections(self):
         """ cancel the current selections
         """
-        # component names list to keep order 
         self._selected = []
         self._selected_opts = {}
 
@@ -115,7 +115,7 @@ class Block(object):
 
         if self.required and not len(defaults) and len(self._components):
             # select the first component by default
-            self.select(self._components[0].name, {})
+            self.select(self._components.values()[0].name, {})
         else:
             if isinstance(defaults, basestring):
                 # in case only one component is selected by defautl
@@ -152,8 +152,7 @@ class Block(object):
         """
         #TODO check component is a component.
         if not component.name in self._components:
-            self._components_dict[component.name] = component
-            self._components.append(component)
+            self._components[component.name] = component
             if default:
                 self.select(component.name, {})
         else:
@@ -174,7 +173,7 @@ class Block(object):
         :type options: dict
         """
         try:
-            component = self._components_dict[comp_name]
+            component = self._components[comp_name]
         except KeyError:
             raise ValueError("'%s' has no candidate '%s' (%s)"\
                   %(self._name, comp_name, self.component_names()) )
@@ -201,7 +200,7 @@ class Block(object):
         # dict containing block running informations
         run_comps = {}
         # components marked selected
-        runnables = ((self._components_dict[k], self._selected_opts.get(k, {}))\
+        runnables = ((self._components[k], self._selected_opts.get(k, {}))\
                         for k in self._selected )
         # run
         for comp, options in runnables:
@@ -265,9 +264,11 @@ class Block(object):
         return results
 
     def component_names(self):
-        """ returns the list of component names
+        """ returns the list of component names.
+        
+        Component names will have the same order than components
         """
-        return self._components_dict.keys()
+        return self._components.keys()
 
     def __len__(self):
         """ returns the count of components of the given name
@@ -277,7 +278,7 @@ class Block(object):
     def __getitem__(self, name):
         """ returns the component of the given name
         """
-        return self._components_dict[name]
+        return self._components[name]
 
     def as_dict(self):
         """ returns a dictionary representation of the block and of all
