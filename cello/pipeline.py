@@ -54,11 +54,25 @@ class Composable(object):
     result: 26
     """
 
-    def __init__(self, func=None):
+    def __init__(self, func=None, name=None):
+        self._name = None
         if func and callable(func):
             self._func=func
             self.name = func.func_name
             self.__doc__ = func.__doc__
+        if name is not None:
+            self.name = name
+
+    @property
+    def name(self):
+        """Name of the optionable component"""
+        return self._name
+
+    @name.setter
+    def name(self, name):
+        if ' ' in name:
+            raise ValueError("Component name should not contain space")
+        self._name = name
 
     def __or__(self, other):
         if not callable(other):
@@ -77,24 +91,12 @@ class Optionable(Composable):
 
     def __init__(self, name):
         """ 
-        :param name: name of the Optionable component
+        :param name: name of the component
         :type name: str
         """
-        Composable.__init__(self)
+        Composable.__init__(self, name=name)
         self._options = OrderedDict()
         self._logger = logging.getLogger(__name__)
-        self.name = name
-
-    @property
-    def name(self):
-        """Name of the optionable component"""
-        return self._name
-
-    @name.setter
-    def name(self, name):
-        if ' ' in name:
-            raise ValueError("Component name should not contain space")
-        self._name = name
 
     def add_option(self, option):
         """ Add an option to the object
