@@ -68,13 +68,26 @@ class Block(object):
     #TODO: ajout du nom des input/output (needed si automatisation du run)
     #TODO: ajout validation de type sur input/output
 
-    def __init__(self, name, *components, **options ):
+    def __init__(self, name, *components, **options):
         """
         :param name: name of the Block
         :type name: str
         """
-        self._name = name
         self._logger = logging.getLogger(__name__)
+
+        # declare attributs
+        self._name = None
+        self._selected = None
+        self._selected_opts = None
+        self._components = None
+        # name
+        self.name = name
+        # default value for component options
+        self.required = True
+        self.hidden = False
+        self.multiple = False
+        self.defaults = []
+
 
         self.reset()
         self.set(*components)
@@ -85,6 +98,17 @@ class Block(object):
         self.warnings = []
         self.errors = []
 
+    @property
+    def name(self):
+        """Name of the optionable component"""
+        return self._name
+
+    @name.setter
+    def name(self, name):
+        if ' ' in name:
+            raise ValueError("Block name should not contain space")
+        self._name = name
+
     def reset(self):
         """ Removes all the components of the block
         """
@@ -94,11 +118,12 @@ class Block(object):
     def clear_selections(self):
         """ cancel the current selections
         """
-        self._selected = []
+        self._selected = None       #None mean that no component haas been selected yet
         self._selected_opts = {}
 
-    def set_options(self, required=True, hidden=False, multiple=False, defaults=[]):
-        """ Set the options of the block
+    def set_options(self, required=None, hidden=None, multiple=None, defaults=None):
+        """ Set the options of the block.
+        Only the not None given options are setted
         
         :param required: whether the block will be required or not
         :type required: bool
@@ -109,21 +134,16 @@ class Block(object):
         :param default: names of the selected components
         :type default: list of str, or str
         """
-        self.required = required
-        self.hidden = hidden
-        self.multiple = multiple
-
-        if self.required and not len(defaults) and len(self._components):
-            # select the first component by default
-            self.select(self._components.values()[0].name, {})
-        else:
+        if required is not None:
+            self.required = required
+        if hidden is not None:
+            self.hidden = hidden
+        if multiple is not None:
+            self.multiple = multiple
+        if defaults is not None:
             if isinstance(defaults, basestring):
-                # in case only one component is selected by defautl
-                self.select(defaults, {})
-            else:
-                for name in defaults:
-                    self.select(name, {})
-        self.defaults = defaults
+                defaults = [defaults]
+            self.defaults = defaults
         # TODO depends
         # self.depends = depends # *dependence_block_names  
 
@@ -139,7 +159,7 @@ class Block(object):
             for comp in components:
                 self._logger.info("SET %s %s %s", self._name, comp, type(comp) )
                 #TODO: le check sur Composable ne suffit pas ?
-                if isinstance(comp, (Optionable,Composable)):
+                if isinstance(comp, (Optionable, Composable)):
                     self.append(comp)
                 else:
                     raise ValueError("component '%s' is not type of Optionable or Composable" % comp)
@@ -158,7 +178,7 @@ class Block(object):
         else:
             raise ValueError("We already have a component with the name '%s'" % component.name)
 
-    def select(self, comp_name, options):
+    def select(self, comp_name, options=None):
         """ set an component as runnable with given options.
         
         `options` will be passed to :func:`.Optionable.parse_options` is the
@@ -172,16 +192,22 @@ class Block(object):
         :param options: options to set to the components
         :type options: dict
         """
+        if options is None:
+            options = {}
         try:
             component = self._components[comp_name]
         except KeyError:
-            raise ValueError("'%s' has no candidate '%s' (%s)"\
-                  %(self._name, comp_name, self.component_names()) )
+            raise ValueError("'%s' has no component '%s' (components are: %s)"\
+                  %(self._name, comp_name, ", ".join(self.component_names())) )
         # add component as selected, aware of multiple
-        if not comp_name in self._selected:
-            if len(self._selected) and not self.multiple:
-                self.clear_selections()
-            self._selected.append(comp_name)
+        if self._selected is None:
+            self._selected = []
+        if comp_name not in self._selected:
+            if not self.multiple and len(self._selected):
+                assert len(self._selected) == 1
+                self._selected[0] = comp_name
+            else:
+                self._selected.append(comp_name)
         else :
             # TODO the component has already been selected
             # and is not set as multiple.
@@ -191,17 +217,24 @@ class Block(object):
         if isinstance(component, Optionable):
             self._selected_opts[comp_name] = component.parse_options(options)
 
+    def validate(self):
+        """ check that the block can be run
+        """
+        if len(self.selected()) <= 0:
+            raise CelloError("No component selected for block '%s'" % self.name)
+
     def play(self, *args):
         """ Run the selected component of the block
         """
+        self.validate()
         #TODO encapsulate result in a 'RunResult' or 'BlockResult' (?)
         _break_on_error = True
         start = time.time()
         # dict containing block running informations
         run_comps = {}
         # components marked selected
-        runnables = ((self._components[k], self._selected_opts.get(k, {}))\
-                        for k in self._selected )
+        runnables = ((self._components[k], self._selected_opts.get(k, {})) \
+                        for k in self.selected() )
         # run
         for comp, options in runnables:
             # TODO store args and kwargs ?
@@ -237,10 +270,10 @@ class Block(object):
             # * pipeline inconsistency 
             # * graph with no edge ... 
             
-            except Exception as e:
+            except Exception as err:
                 # component error handling
-                self.errors.append(e.message) 
-                self.errors.append( "error in component %s %s /n %s"%( comp, comp.name, e.message ) )
+                self.errors.append(err.message) 
+                self.errors.append("error in component %s %s /n %s" % ( comp, comp.name, err.message ))
                 if _break_on_error:
                     break
             
@@ -270,6 +303,20 @@ class Block(object):
         """
         return self._components.keys()
 
+    def selected(self):
+        """ returns the list of selected component names.
+        
+        if no component selected return the one marked as default.
+        If the block is required and no component where indicated as default,
+        then the first component is selected.
+        """
+        selected = self._selected
+        if self._selected is None: # nothing has been selected yet
+            selected = self.defaults
+            if not len(selected) and self.required and len(self._components):
+                selected = [self._components.values()[0].name]
+        return selected
+
     def __len__(self):
         """ returns the count of components of the given name
         """
@@ -285,7 +332,7 @@ class Block(object):
         component options
         """
         #TODO
-        return
+        return {}
 
 
 class Cellist(object):
@@ -293,8 +340,7 @@ class Cellist(object):
     
     """
     def __init__(self):
-        self._blocks = {}
-        self._names = []
+        self._blocks = OrderedDict()
         self.time = 0
         self._logger = logging.getLogger(__name__)
 
@@ -305,13 +351,14 @@ class Cellist(object):
         Blocks order will be preserved for runnning task.
         """ 
         if len(names) == 0:
-            raise ValueError
+            raise ValueError("You should give at least one block name")
     
         if self._blocks is not None and len(self._blocks) > 0 :
-            raise CelloError("Method 'declare_types' should be called only once before adding any composant")   
+            raise CelloError("Method 'requires' should be called only once before adding any composant")
         if len(names) != len(set(names)):
             raise ValueError("Duplicate block name %s" % names)
-        self._names = names if type(names) in (tuple,list) else [names] 
+        for name in names:
+            self._blocks[name] = Block(name)
 
     def set(self, name, *optionables, **options):
         """ Set available components and the options of one block.
@@ -320,10 +367,10 @@ class Cellist(object):
        :param optionables: a list of components
        :param options: options of the block
        """
-        assert name in self._names, \
-            "%s is not one of (%s)" % (name, ",".join(self._names))
+        assert name in self._blocks, \
+            "%s is not one of (%s)" % (name, ",".join(self._blocks.iterkeys()))
         comp = Block(name, *optionables, **options)
-        self._blocks[name] = comp
+        self._blocks[comp.name] = comp
 
     def __contains__(self, name):
         """ returns whether a block of the given name exists
@@ -343,7 +390,7 @@ class Cellist(object):
     def names(self):
         """ returns the sequence of block names
         """
-        return self._names
+        return self._blocks.keys()
 
     def configure(self, config):
         """ configure all the blocks from an (horible) configuration dictionary
@@ -370,7 +417,7 @@ class Cellist(object):
         """
         self._logger.info("Parsing json, retrieve the components to use")
 
-        for block_name in self._names:
+        for block_name in self._blocks:
             block = self[block_name]
             request_comps = config.get(block_name, []) # request
             # comp not given, check if hidden or not required
@@ -392,11 +439,12 @@ class Cellist(object):
                         raise ValueError("Config error in '%s' " % block_name)
 
     def validate(self):
-        """ Check that the component configuration is ok """
-        # TODO implements requires
-        for name in self._names:
-            if not(name in self) or len(self[name].iter_runnables() ) == 0:
-                raise ValueError("'%s' component is declared but none is set")
+        """ Check that the blocks configuration is ok """
+        if not len(self._blocks):
+            #XXX: better error than CelloError ?
+            raise CelloError("There is no block in this engine")
+        for block in self._blocks.itervalues():
+            block.validate()
 
     def play(self, name, *args):
         """ Run Block  with args
@@ -412,8 +460,8 @@ class Cellist(object):
     def as_dict(self):
         """ dict repr of the components """
         drepr = {
-            'names' : self._names,
-            'components': {name: self[name].as_dict() for name in self._names}
+            'names': self._blocks.keys(),
+            'components': {block.name: block.as_dict() for block in self._blocks.itervalues()}
         }
         return drepr
 
