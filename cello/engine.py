@@ -138,7 +138,7 @@ class Block(object):
         else:
             for comp in components:
                 self._logger.info("SET %s %s %s", self._name, comp, type(comp) )
-                #TODO: le check sur Composable ne suffit pas ?
+                # handle Optionable or Composable function
                 if isinstance(comp, (Optionable,Composable)):
                     self.append(comp)
                 else:
@@ -200,7 +200,7 @@ class Block(object):
         # dict containing block running informations
         run_comps = {}
         # components marked selected
-        runnables = ((self._components[k], self._selected_opts.get(k, {}))\
+        runnables = ((self._components[k], self._selected_opts.get(k, {}))
                         for k in self._selected )
         # run
         for comp, options in runnables:
