@@ -158,13 +158,8 @@ class Block(object):
         else:
             for comp in components:
                 self._logger.info("SET %s %s %s", self._name, comp, type(comp) )
-<<<<<<< HEAD
                 # handle Optionable or Composable function
                 if isinstance(comp, (Optionable,Composable)):
-=======
-                #TODO: le check sur Composable ne suffit pas ?
-                if isinstance(comp, (Optionable, Composable)):
->>>>>>> e9c8b44ad1bdd1193d945a30bcbeb0da10b9f463
                     self.append(comp)
                 else:
                     raise ValueError("component '%s' is not type of Optionable or Composable" % comp)
@@ -238,13 +233,8 @@ class Block(object):
         # dict containing block running informations
         run_comps = {}
         # components marked selected
-<<<<<<< HEAD
         runnables = ((self._components[k], self._selected_opts.get(k, {}))
                         for k in self._selected )
-=======
-        runnables = ((self._components[k], self._selected_opts.get(k, {})) \
-                        for k in self.selected() )
->>>>>>> e9c8b44ad1bdd1193d945a30bcbeb0da10b9f463
         # run
         for comp, options in runnables:
             # TODO store args and kwargs ?
@@ -256,14 +246,14 @@ class Block(object):
             }
             self._logger.info("%s: %s component: %s, args=%s, kwargs=%s" % (self._name, comp.name, comp, args, options))
 
-            # !!! Defaut multiple behavior is used as pipeline !!!
-            # given that the args in input are also the returning value
-            # This behavior allows to modify the data given in input.
-            # actually same arg if given several times 
-            # but may be transformed during the process
-            # then finally returned
             try :            
-                # mulit = False or pipeline
+                # !!! Defaut multiple behavior is used as pipeline !!!
+                # multi = False or pipeline
+                # given that the args in input are also the returning value
+                # This behavior allows to modify the data given in input.
+                # actually same arg if given several times 
+                # but may be transformed during the process
+                # then finally returned
                 results = comp(*args, **options)
 
                 # TODO implements different mode for multiple 
