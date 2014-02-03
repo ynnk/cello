@@ -2,7 +2,9 @@
 #-*- coding:utf-8 -*-
 import unittest
 import cello
-from cello.schema import *
+
+from cello.schema import Schema, SchemaError
+from cello.types import Text, Numeric
 
 class TestFieldTypes(unittest.TestCase):
     def setUp(self):

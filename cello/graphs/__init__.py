@@ -1,6 +1,6 @@
-#!/usr/bin/env python
 #-*- coding:utf-8 -*-
-""" Abstract class, permit to easily build an igraph graph
+""" :mod:`cello.graphs`
+=======================
 """
 
 import igraph as ig

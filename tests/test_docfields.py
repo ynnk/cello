@@ -3,9 +3,9 @@ import unittest
 
 import cello
 from cello.schema import SchemaError
-from cello.schema import Numeric, Text
 from cello.schema import DocField, ValueField, VectorField, SetField, ListField
 from cello.schema import Schema, Doc
+from cello.types import Numeric, Text
 
 class TestDocFields(unittest.TestCase):
     """ test ot DocField subclasses

@@ -17,7 +17,8 @@ Class
 
 from cello.pipeline import Composable
 from cello.expanders import AbstractDocListExpand
-from cello.schema import VectorField, Text, Numeric, Any
+from cello.schema import VectorField
+from cello.types import Text, Numeric, Any
 
 
 class AddFixedScore(Composable):
