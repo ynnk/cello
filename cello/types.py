@@ -19,10 +19,6 @@ import datetime
 from cello.exceptions import SchemaError, ValidationError
 from cello.validators import TypeValidator, MinValueValidator, MaxValueValidator
 
-"""
-Field types to declare in schemas
-*********************************
-"""
 
 class GenericType(object):
     """ Define a type.
@@ -106,6 +102,10 @@ class Numeric(GenericType):
         if max:
             self.validators.append(MaxValueValidator(max))
 
+    def parse(self, value):
+        return self.vtype(value)
+
+
 class Text(GenericType):
     """ Text type (str or unicode)
     
@@ -113,6 +113,7 @@ class Text(GenericType):
     """
     # valid type for text
     _types_ = [unicode, str]
+    default_encoding = "utf8"
     
     def __init__(self, texttype=unicode, **kwargs):
         if "default" not in kwargs and u"default" not in kwargs:
@@ -123,6 +124,17 @@ class Text(GenericType):
         self.vtype = texttype
         self.validators.append(TypeValidator(texttype))
 
+    def parse(self, value):
+        if isinstance(value, self.vtype):
+            parsed = value
+        else:
+            #TODO: meilleuir gestion de l'encoding
+            if self.vtype == unicode:
+                parsed = value.decode(self.default_encoding)
+            else:
+                parsed = value.encode(self.default_encoding)
+        return parsed
+
 
 class Datetime(GenericType):
     """ datetime type
@@ -130,6 +142,9 @@ class Datetime(GenericType):
     def __init__(self, **kwargs):
         super(Datetime, self).__init__(**kwargs)
         self.validators.append(TypeValidator(datetime.datetime))
+
+    def parse(self, value):
+        raise NotImplementedError
 
 # Add more FiledType here
 # ...
