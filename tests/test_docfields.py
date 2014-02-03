@@ -2,7 +2,7 @@
 import unittest
 
 import cello
-from cello.schema import SchemaError
+from cello.exceptions import SchemaError, ValidationError
 from cello.schema import DocField, ValueField, VectorField, SetField, ListField
 from cello.schema import Schema, Doc
 from cello.types import Numeric, Text
@@ -32,7 +32,7 @@ class TestDocFields(unittest.TestCase):
 
     def test_ValueField(self):
         vfield = ValueField(Numeric())
-        self.assertRaises(TypeError, vfield.set, "op")
+        self.assertRaises(ValidationError, vfield.set, "op")
         vfield.set(5)
         self.assertEqual(vfield.get_value(), 5)
 
@@ -58,7 +58,7 @@ class TestDocFields(unittest.TestCase):
         self.assertRaises(SchemaError, set_field.set, 57)
         # > test than the failed set didn't change values
         self.assertEqual(set_field, set([4, 5, 6]))
-        self.assertRaises(TypeError, set_field.add, 'boo')
+        self.assertRaises(ValidationError, set_field.add, 'boo')
 
     def test_ListField(self):
         # affectation with append
@@ -80,7 +80,7 @@ class TestDocFields(unittest.TestCase):
         # add and append
         l_field2.add(55)
         self.assertEqual(l_field2, [0, 1, 2, 3, 4, 55])
-        self.assertRaises(TypeError, l_field2.append, "e")
+        self.assertRaises(ValidationError, l_field2.append, "e")
         # slicing
         l_field[1:3] = [5,6]
         self.assertEqual(l_field, [0, 5, 6, 3, 4])

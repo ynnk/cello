@@ -17,14 +17,8 @@ Class
 -----
 
 """
-from cello.types import AbstractType, Numeric
-
-class SchemaError(Exception):
-    """ Error
-    
-    #TODO: précissé le docstr, c'est quoi quand on a cette erreur exactement ?
-    """
-    pass
+from cello.types import GenericType, Numeric
+from cello.exceptions import SchemaError
 
 
 class Schema(object):
@@ -54,7 +48,7 @@ class Schema(object):
         
         :param name: name of the new field
         :type name: str
-        :param field:  AbstractType instance for the field 
+        :param field:  type instance for the field 
         """
         # testing names 
         if name.startswith("_"):
@@ -63,8 +57,8 @@ class Schema(object):
             raise SchemaError("Field names cannot contain spaces.")
         if name in self._fields:
             raise SchemaError("Schema already has a field named '%s'" % name)
-        if not isinstance(field, AbstractType):
-            raise SchemaError("Wrong AbstractType in schema for field: %s, %s is not a AbstractType" % (name, field))
+        if not isinstance(field, GenericType):
+            raise SchemaError("Wrong type in schema for field: %s, %s is not a GenericType" % (name, field))
         self._fields[name] = field
     
     def remove_field(self, field_name):
@@ -118,9 +112,9 @@ class DocField(object):
     def __init__(self, ftype):
         """
         :param ftype: the type for the field
-        :type ftype: subclass of :class:`AbstractType` 
+        :type ftype: subclass of :class:`.GenericType` 
         """
-        assert isinstance(ftype, AbstractType)
+        assert isinstance(ftype, GenericType)
         self._ftype = ftype
 
     def get_value(self):
@@ -141,7 +135,7 @@ class DocField(object):
         * ``not multi`` => ValueField
         
         :param ftype: the desired type of field
-        :type ftype: subclass of :class:`AbstractType`
+        :type ftype: subclass of :class:`.GenericType`
         """
         if ftype.attrs is not None and len(ftype.attrs):
             return VectorField(ftype)
@@ -212,7 +206,7 @@ class ListField(DocField, list):
 
     def add(self, value):
         """ Adds a value to the list (as append).
-        convenience method, to have the same signature than :class:`SetField` and :class:`VectorField`"""
+        convenience method, to have the same signature than :class:`.SetField` and :class:`.VectorField`"""
         self.append(value)
 
     def get_value(self):
@@ -282,11 +276,11 @@ class VectorField(DocField):
         :param name: name of the new attribute
         :type name: str
         :param ftype: type of the new attribute
-        :type ftype: subclass of :class:`AbstractType`
+        :type ftype: subclass of :class:`.GenericType`
         """
         if name in self._ftype.attrs:
             raise SchemaError("Vector has a attribute named '%s'" % name)
-        # add the attr to the underlying AbstractType
+        # add the attr to the underlying GenericType
         self._ftype.attrs[name] = ftype
         # add the attr it self
         self._attrs[name] = [DocField.FromType(ftype) for _ in xrange(len(self))]
@@ -398,7 +392,7 @@ class VectorField(DocField):
             raise SchemaError("No such attribute '%s' in Vector" % name)
 
 class VectorAttr(object):
-    """ Internal class used to acces an attribute of a :class:`VectorField`
+    """ Internal class used to acces an attribute of a :class:`.VectorField`
     """
     #XXX; maybe it can be a "list" or a collections.Sequence
     # http://docs.python.org/2/library/collections.html#collections-abstract-base-classes
@@ -428,7 +422,7 @@ class VectorAttr(object):
 
 
 class VectorItem(object):
-    """ Internal class used to acces an item (= a value) of a :class:`VectorField`
+    """ Internal class used to acces an item (= a value) of a :class:`.VectorField`
     """
     def __init__(self, vector, key):
         self._vector = vector
@@ -554,7 +548,7 @@ class Doc(dict):
         :param name: name of the new field
         :type name: str
         :param ftype: type of the new field
-        :type ftype: subclass of :class:`AbstractType`
+        :type ftype: subclass of :class:`.GenericType`
         """
         self.schema.add_field(name, ftype)
         self[name] = docfield or DocField.FromType(ftype)
@@ -580,7 +574,7 @@ class Doc(dict):
     def __setattr__(self, name, value):
         if name == 'schema':
             raise SchemaError("Impossible to replace the schema of a document")
-        elif isinstance(value, AbstractType):
+        elif isinstance(value, GenericType):
             # the value is a "Type" => creation of a new attribute
             self.add_field(name, value)
         elif isinstance(value, DocField):
