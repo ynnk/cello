@@ -26,11 +26,9 @@ class Composable(object):
     
     Composable is abstract, you need to implemented the :meth:`__call__` method
     
-    >>> e1 = Composable()
-    >>> e2 = Composable()
-    >>> e1.__call__ = lambda iterable: (element**2 for element in iterable)
-    >>> e2.__call__ = lambda iterable: (element + 10 for element in iterable)a
-    boo
+    >>> e1 = Composable(lambda iterable: (element**2 for element in iterable))
+    >>> e2 = Composable(lambda iterable: (element + 10 for element in iterable))
+    
     Then Composable can be pipelined this way :
 
     >>> chain = e1 | e2
@@ -306,7 +304,7 @@ class Pipeline(Optionable):
     Or it can be created implicitely with the pipe operator (__or__) if the
     first function is :class:`Composable`:
     
-    >>> step1 = composable(step1)
+    >>> step1 = Composable(step1)
     >>> processing = step1 | step2 | step3
     >>> processing(3)
     8
