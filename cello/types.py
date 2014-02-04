@@ -25,7 +25,7 @@ class GenericType(object):
     """
     default_validators = []  # Default set of validators
 
-    def __init__(self, default=None, multi=False, uniq=False, attrs=None,
+    def __init__(self, default=None, description="", multi=False, uniq=False, attrs=None,
         validators=[]):
         """
         :param default: default value for the field
@@ -37,6 +37,7 @@ class GenericType(object):
         :param validators: list of additional validators
         """
         self.default = default
+        self.description = description
         self.multi = multi
         self.uniq = uniq
         self.attrs = attrs
@@ -72,6 +73,21 @@ class GenericType(object):
         """ parsing from string """
         return value
 
+    def as_dict(self):
+        """ returns a dictionary view of the option
+        
+        :returns: the option converted in a dict
+        :rtype: dict
+        """
+        info = {}
+        info["type"] = self.__class__.__name__
+        info["default"] = self.default
+        info["multi"] = self.multi
+        info["uniq"] = self.uniq
+        # TODO appel rec sur les attrs
+        #info["attrs"] = self.attrs
+        return info
+
 
 class Numeric(GenericType):
     """ Numerical type (int or float)
@@ -95,15 +111,22 @@ class Numeric(GenericType):
         self.signed = signed
         if not signed:
             self.validators.append(MinValueValidator(0))
-        self.min_ = min
-        if min:
+        self.min = min
+        if min is not None:
             self.validators.append(MinValueValidator(min))
         self.max = max
-        if max:
+        if max is not None:
             self.validators.append(MaxValueValidator(max))
 
     def parse(self, value):
         return self.vtype(value)
+
+    def as_dict(self):
+        info = super(Numeric, self).as_dict()
+        info["vtype"] = self.vtype
+        info["min"] = self.min
+        info["max"] = self.max
+        info["signed"] = self.signed
 
 
 class Text(GenericType):
@@ -135,6 +158,10 @@ class Text(GenericType):
                 parsed = value.encode(self.default_encoding)
         return parsed
 
+    def as_dict(self):
+        info = super(Numeric, self).as_dict()
+        info["vtype"] = self.vtype
+
 
 class Datetime(GenericType):
     """ datetime type
@@ -145,6 +172,11 @@ class Datetime(GenericType):
 
     def parse(self, value):
         raise NotImplementedError
+
+    def as_dict(self):
+        info = super(Numeric, self).as_dict()
+        info["vtype"] = self.vtype
+
 
 # Add more FiledType here
 # ...

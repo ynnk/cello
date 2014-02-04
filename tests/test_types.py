@@ -52,6 +52,14 @@ class TestFieldTypes(unittest.TestCase):
         self.assertRaises(ValidationError, f.validate, 4.5)
         self.assertRaises(ValidationError, f.validate, -11)
         self.assertRaises(ValidationError, f.validate, 55)
+        
+        
+        # with min and max
+        f = Numeric(numtype=int, min=0, max=4, description="an int")
+        self.assertEqual(f.validate(0), 0)  # ok
+        self.assertEqual(f.validate(4), 4)  # ok
+        self.assertRaises(ValidationError, f.validate, -1)
+        self.assertRaises(ValidationError, f.validate, 8)
 
     def test_text(self):
         # setting wrong types 
