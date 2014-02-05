@@ -19,7 +19,7 @@ Class
 import logging
 from collections import OrderedDict
 
-from cello.options import AbstractOption ,ValueOption, EnumOption, BooleanOption
+from cello.options import ValueOption
 
 class Composable(object):
     """ Basic composable element
@@ -97,87 +97,58 @@ class Optionable(Composable):
         self._options = OrderedDict()
         self._logger = logging.getLogger(__name__)
 
-    def add_option(self, option):
+    def add_option(self, opt_name, otype, hidden=False):
         """ Add an option to the object
         
-        :param option: option name
-        :type option: subclass of :class:`.AbstractOption`
+        :param opt_name: option name
+        :type opt_name: str
+        :param otype: option type
+        :type otype: subclass of :class:`.GenericType`
+        :param hidden: if True the option will be hidden
+        :type hidden: bool
         """
-        if not isinstance(option, AbstractOption):
-            raise ValueError("The option should be a subclass of AbstractOption")
-        if option.name in self._options:
-            raise ValueError("There is already an option with the same name (='%s')" % option.name)
-        self._options[option.name] = option
+        if opt_name in self._options:
+            raise ValueError("The option is already present !")
+        opt = ValueOption.FromType(opt_name, otype)
+        opt.hidden = hidden
+        self._options[opt_name] = opt
 
+    def set_option_value(self, opt_name, value, parse=False):
+        """ Set tthe value of one option.
+        
+        :param opt_name: option name
+        :type opt_name: str
+        :param value: the new value
+        :param parse: if True the value is converted from string to the correct type
+        :type parse: bool
+        """
+        if not opt_name in self._options:
+            raise ValueError("Unknow option name (%s)" % opt_name)
+        self._options[opt_name].set(value, parse=parse)
 
-    def add_value_option(self, opt_name, default, description, hidden=False, otype=str, parse=None, validate=None):
-        """ Add a generic option
+    def get_option_value(self, opt_name):
+        """ Return the value of a given option
         
         :param opt_name: option name
         :type opt_name: str
         
-        :param default: default value
-        :type default: str
-
-        :param description: short description of the option
-        :type description: str
-        
-        # XXX
-        :param otype: option type  
-        :type default: str
-        
-        :param parse: function to transform the option value from string to
-            appropriate format
-        :type parse: function
-
-        :param validate:  function used to validate the value
-            but not the type of the value, 
-        :type validate: function
+        :returns: the value of the option
         """
-        if otype == int:
-            parse = int
-        elif otype == float:
-            parse= float
-        opt = ValueOption(opt_name, default, description, parse=parse)
+        if not opt_name in self._options:
+            raise ValueError("Unknow option name (%s)" % opt_name)
+        return self._options[opt_name].value
 
-            
-        self.add_option(opt)
-
-    def add_bool_option(self, opt_name, default, description ):
-        """ Helper to Add a boolean option
-        
-        :param opt_name: option's name
-        :type opt_name: str
-        
-        :param default: default value of the option
-        :type default: str
-    
-        :param description: short description of the option
-        :type description: str
-        """
-        opt = BooleanOption(opt_name, default, description, 
-                otype=bool)
-        self.add_option(opt)
-
-    def add_enum_option(self, opt_name, default, desc, enum, **kwargs):
-        """ Add an option to the object same as add option except enum can be provided  
+    def change_option_default(self, opt_name, default_val):
+        """ Change the default value of an option
         
         :param opt_name: option name
-        :type opt_items: str
+        :type opt_name: str
         
-        :param enum: list of possible values
-        
-        :param default_val: default value
-        
-        :param description: short description of the option
-        :type description: str
-        
-        :param parse: function to transform the option value from string to
-             appropriate format
-        :type parse: function
+        :param value: new default option value
         """
-        opt = EnumOption(opt_name, default,     desc, enum=enum, **kwargs)
-        self.add_option(opt)
+        if opt_name not in self._options:
+            raise ValueError("Unknow option name (%s)" % opt_name)
+        self._options[opt_name].default = default_val
 
     def force_option_value(self, opt_name, value):
         """ force the (default) value of an option.
@@ -193,19 +164,7 @@ class Optionable(Composable):
         self._options[opt_name].default = value # also change the value
         self._options[opt_name].hidden = True
 
-    def change_option_default(self, opt_name, default_val):
-        """ Change the default value of an option
-        
-        :param opt_name: option name
-        :type opt_name: str
-        
-        :param value: new default option value
-        """
-        if opt_name not in self._options:
-            raise ValueError("Unknow option name (%s)" % opt_name)
-        self._options[opt_name].default = default_val
-
-    def get_default_value(self, opt_name):
+    def get_option_default(self, opt_name):
         """ Return the default value of a given option
         
         :param opt_name: option name
@@ -217,24 +176,7 @@ class Optionable(Composable):
             raise ValueError("Unknow option name (%s)" % opt_name)
         return self._options[opt_name].default
 
-    def set_option_value(self, opt_name, value, from_str=False):
-        """ Set tthe value of one option.
-        
-        :   param opt_name: option name
-        :type opt_name: str
-        :param value: the new value
-        """
-        if not opt_name in self._options:
-            raise ValueError("Unknow option name (%s)" % opt_name)
-        if self._options[opt_name].hidden:
-            raise ValueError("This option is hidden, you can't change the value")
-        if from_str:
-            self._options[opt_name].set_from_str(value)
-        else:
-            self._options[opt_name].value = value
-
-
-    def set_options_values(self, option_values):
+    def set_options_values(self, option_values, parse=True):
         """ Set the options from a dict of values (in string).
         
         :param option_values: the values of options (in format `{"opt_name": "new_value"}`)
@@ -244,7 +186,7 @@ class Optionable(Composable):
             if opt.hidden:
                 continue
             if opt_name in option_values:
-                opt.set(option_values[opt_name], parse=True)
+                opt.set(option_values[opt_name], parse=parse)
 
     def get_options_values(self):
         """ return a dictionary of options values
@@ -258,14 +200,7 @@ class Optionable(Composable):
         return values
 
     def parse_options(self, option_values):
-        """ Set given option values and returns all option values
-        
-        :param option_values: the values of options (in format `{"opt_name": "new_value"}`)
-        :type option_values: dict
-        
-        :returns: dictionary of all option values
-        :rtype: dict
-        """
+        #XXX: doit disparaitre
         self.set_options_values(option_values)
         return self.get_options_values()
 

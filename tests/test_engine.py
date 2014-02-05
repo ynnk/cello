@@ -2,13 +2,14 @@
 import unittest
 
 from cello import CelloError
+from cello.types import Numeric
 from cello.pipeline import Composable, Optionable
 from cello.engine import Block, Cellist
 
 class OptCompExample(Optionable):
     def __init__(self):
-        Optionable.__init__(self, "mult_opt")
-        self.add_value_option("factor", 5, "multipliation factor", parse=int)
+        super(OptCompExample, self).__init__("mult_opt")
+        self.add_option("factor", Numeric(default=5, description="multipliation factor", numtype=int))
 
     def __call__(self, arg, factor=5):
         return arg * factor

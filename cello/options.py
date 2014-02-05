@@ -19,66 +19,59 @@ Class
 """
 import logging
 
-from cello.utils import parse_bool
-
-# ynnk
-# ^^^^
-
-# AbstractOption : why do we need an Abstract where there is a Generic that can be extended
-# abstract to generic
-
-# default: why setting default also set the value
-
-# set()  :setting value with set is unnecessary the property covers use case perfectly
-
-# parse/parse : parse is an attribute function parse is part of interface
-#         should use parse only or call it parse  but remove one from interface
-
-# parse_options :should parse only not be a setter
-# set_from_str : if options are given as str , other way are
-#           >>> option.set(string, parse=True)
-
-# validate : we should be able to override validate from __init__
-#    instead of writting a new class to override validate.
-#    validate raises exception catch by caller         
-#    ex: we want an int in range [0:5] 
-#           >>> Option("name", "desc", parse=lambda x : int(x), validate=lamdba x : O if x < 0 else min(4,x) )
-# or create a RangeOption ?
-# first case is fast an easy way but not intended for reusability 
+from cello.types import GenericType
 
 
-
-
-class AbstractOption(object):
-    """ Abstract option
+class ValueOption(object):
+    """ Single value option
     """
-    def __init__(self, name, default, description, otype=None, parse=None, validate=None, hidden=False):
-        """
-        :param name: option's name
-        :type name: str
-        
-        :param description: short description of the option
-        :type description: str
-        
-        :param default: default option value
-        :type default: any
-na
+    
+    @staticmethod
+    def FromType(name, otype):
+        """ ValueOption subclasses factory, creates a convenient option to store
+        data from a given Type.
 
-        :param parse: function to transform the option value from string to
-             internal appropriate format
-        :type parse: function
+        attribute precedence :
         
-        :param hidden: it True the option will not be discoverable
-        :type hidden: bool
+        * ``|attrs| > 0`` (``multi`` and ``uniq`` are implicit) => VectorField
+        * ``uniq`` (``multi`` is implicit) => SetField 
+        * ``multi`` and ``not uniq`` => ListField 
+        * ``not multi`` => ValueField
+        
+        :param name: Name of the option
+        :type name: str
+        :param otype: the desired type of field
+        :type otype: subclass of :class:`.GenericType`
         """
-        self.name = name
+        if otype.attrs is not None and len(otype.attrs):
+            raise NotImplementedError("for otype, options can't have attributs")
+            #return VectorField(ftype)
+        elif otype.uniq:
+            raise NotImplementedError("for now, options can't be set of values")
+            #return SetField(ftype)
+        elif otype.multi:
+            raise NotImplementedError("for now, options can't have multiple values")
+            #return ListField(ftype)
+        else:
+            return ValueOption(name, otype)
+    
+    def __init__(self, name, otype):
+        """
+        :param name: option name
+        :type name: str
+        :param otype: option type
+        :type otype: subclass of :class:`.GenericType`
+        
+        """
+        assert isinstance(otype, GenericType)
+        # declare attributes with properties
+        self._name = None
         self._value = None
-        self._default = None
-        self.description = description
-        self.opt_type = otype        
-        self.parse = parse or self.parse
-        self.validate = validate or self.validate
-        self.hidden = hidden 
+        #Note default value is stored in the self.otype
+        # set attributs
+        self.name = name
+        self.otype = otype
+        self.hidden = False
 
     @property
     def name(self):
@@ -97,10 +90,14 @@ na
     def value(self):
         """ Value of the option
         """
+        if self._value is None:
+            return self.default
         return self._value
 
     @value.setter
     def value(self, value):
+        if self.hidden:
+            raise ValueError("This option is hidden, you can't change the value")
         self._value = self.validate(value)
 
     @property
@@ -109,33 +106,33 @@ na
         
         .. warning:: changing the default value also change the current value
         """
-        return self._default
+        return self.otype.default
 
     @default.setter
     def default(self, value):
-        self._default = self.validate(value)
+        self.otype.default = self.validate(value)
         self.value = value
 
     def validate(self, value):
-        """ Raises :class:`ValueError` if the value is not correct, else just
-        returns the given value.
+        """ Raises :class:`.ValidationError` if the value is not correct, else
+        just returns the given value.
 
         It is called when a new value is setted.
 
         :param value: the value to validate
         :returns: the value
         """
-        return value
+        print self.otype.validators
+        return self.otype.validate(value)
 
     def parse(self, value_str):
         """ Convert the value from a string.
-        Raises :class:`ValueError` if convertion isn't possible.
 
         :param value_str: a potential value for the option
         :type value_str: str
         :returns: the value converted to the good type
         """
-        return str(value_str)
+        return self.otype.parse(value_str)
 
     def set(self, value, parse=False):
         """ Set the value of the option.
@@ -149,7 +146,6 @@ na
         """
         self.value = self.parse(value) if parse else value
 
-
     def as_dict(self):
         """ returns a dictionary view of the option
         
@@ -157,91 +153,11 @@ na
         :rtype: dict
         """
         opt_info = {}
-        opt_info["type"] = "generic"
-        opt_info["name"] = self.name
-        opt_info["description"] = self.description
-        opt_info["value"] = self.value
-        opt_info["default"] = self.default
-        return opt_info
-
-class ValueOption(AbstractOption):
-    def __init__(self, name, default, desc, **kwargs):
-        if not( kwargs.get("otype", None) ):
-            pass # XXX            
-            #kwargs['otype'] = Any
-        AbstractOption.__init__(self, name, default, desc, **kwargs)
-        self.default = default
-
-    def as_dict(self):
-        """ returns a dictionary version of the option
-        """
-        opt_info = AbstractOption.as_dict(self)
         opt_info["type"] = "value"
+        opt_info["name"] = self.name
+        opt_info["value"] = self.value
+        opt_info["otype"] = self.otype.as_dict()
+        #TODO: est-ce que l'on ne met pas a plat et les attr de otype et ceux de l'option
         return opt_info
-
-class BooleanOption(AbstractOption):
-    def __init__(self, name, default, desc, **kwargs):
-        AbstractOption.__init__(self, name, default, desc, **kwargs)
-        self.default = default
-
-    def as_dict(self):
-        """ returns a dictionary version of the option
-        """
-        opt_info = AbstractOption.as_dict(self)
-        opt_info["type"] = "boolean"
-        return opt_info
-
-class RangeOption(AbstractOption):
-    def __init__(self, name, default, desc, min_value=0, max_value=10,  **kwargs):
-        AbstractOption.__init__(self, name, default, desc, **kwargs)
-        self.default = default
-        # TODO check for correct value types
-        self.min_value = min_value
-        self.max_value = max_value
-        
-    def validate(self, value):
-        if value < self.min_value or value > self.max_value:
-            raise ValueError( "Value should be in range(%s,%s) " % \
-                (self.min_value, self.max_value) )
-
-    def as_dict(self):
-        """ returns a dictionary version of the option
-        """
-        opt_info = AbstractOption.as_dict(self)
-        opt_info["type"] = "range"
-        return opt_info
-
-
-class EnumOption(AbstractOption):
-    """ Enumerate option
-    """
-    def __init__(self, name, default, desc, enum, **kwargs):
-        """
-        :param parse: function to transform the option value from string to
-             appropriate format
-        :type parse: function
-        """
-        AbstractOption.__init__(self, name, default, desc, **kwargs)
-        if not(len(enum)):
-            raise ValueError('Empty Enum %s' % enum)
-        self._enum = enum
-        if default is None:
-            self.default = enum[0]
-        else :
-            self.default = default
-
-    def validate(self, value):
-        if value not in self._enum:
-            raise ValueError("The value '%s' is not in %s" % (value, self._enum))
-        return value
-
-    def as_dict(self):
-        """ returns a dictionary version of the option
-        """
-        opt_info = AbstractOption.as_dict(self)
-        opt_info["type"] = "enum"
-        opt_info["enum"] = self._enum
-        return opt_info
-
 
 

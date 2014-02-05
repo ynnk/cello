@@ -18,7 +18,7 @@ Class
 from cello.pipeline import Composable
 from cello.expanders import AbstractDocListExpand
 from cello.schema import VectorField
-from cello.types import Text, Numeric, Any
+from cello.types import GenericType, Text, Numeric
 
 
 class AddFixedScore(Composable):
@@ -115,7 +115,7 @@ class TermSet(VectorField):
         
         self.add_attribute('df_rd', Numeric(default=0))
         if posting : 
-            self.add_attribute('postings', Any(multi=True))
+            self.add_attribute('postings', GenericType(multi=True))
 
     def __repr__(self):
         return "<%s:('%s', '%s') %s>" % ( self.__class__.__name__, self._ts_field, self._term_field, self._attrs.keys())

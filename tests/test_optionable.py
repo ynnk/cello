@@ -3,71 +3,9 @@ import unittest
 import cello
 
 from datetime import datetime
-from cello.options import AbstractOption, ValueOption, EnumOption
+from cello.exceptions import ValidationError
+from cello.types import GenericType, Numeric, Text
 from cello.pipeline import Optionable
-
-class TestOptions(unittest.TestCase):
-
-    def setUp(self):
-        pass
-
-    def testAbstractOption(self):
-        with self.assertRaises(NotImplementedError):
-            opt = AbstractOption("optname", "chat", "a cool description" )
-
-    def testValueOption(self):
-        opt = ValueOption("optname", "chat", "a cool description" )
-        # set
-        opt.set("chien")
-        self.assertEqual(opt.value, "chien")
-        self.assertEqual(opt.default, "chat")
-        opt.set("girafe", parse=True)
-        self.assertEqual(opt.value, "girafe")
-        self.assertEqual(opt.default, "chat")
-        # invalid name
-        with self.assertRaises(ValueError):
-            opt = ValueOption("opt name", "chat", "a cool description" )
-        # with (stupid) cast
-        opt = ValueOption("optname", "chat", "a cool description" ,
-            parse=lambda val: int(val)*2
-        )
-        opt.set("2", True)
-        self.assertEqual(opt.value, 4)
-        self.assertDictEqual(opt.as_dict(), {
-            'default': 'chat',
-            'description': 'a cool description',
-            'name': 'optname',
-            'type': 'value',
-            'value': 4
-        })
-
-    def testEnumOption(self):
-        opt = EnumOption("name", 2, 
-            "Some enum option",
-            [1, 2, 10],
-            parse=int
-        )
-        self.assertEqual(opt.value, 2)
-        opt.value = 10
-        self.assertEqual(opt.value, 10)
-        opt.set(1)
-        self.assertEqual(opt.value, 1)
-        opt.set(1)
-        self.assertEqual(opt.value, 1)
-        opt.set("10", True)
-        self.assertEqual(opt.value, 10)
-        with self.assertRaises(ValueError):
-            opt.value = 3
-        with self.assertRaises(ValueError):
-            opt.set("3", True)
-
-        opt2 = EnumOption("name", None,"Some enum option",
-            [1, 2, 10],
-            parse=int
-        )
-        self.assertEqual(opt2.value, 1)
-        self.assertEqual(opt2.default, 1)
-
 
 class TestOptionable(unittest.TestCase):
     def setUp(self):
@@ -79,16 +17,71 @@ class TestOptionable(unittest.TestCase):
         comp.name = "nouveau_nom"
         self.assertEqual(comp.name, "nouveau_nom")
         with self.assertRaises(ValueError):
-            print "\n\n", ">>>>>>>>>>>>>>>>>>>>>>>>>><", comp.name, "\n\n"
             comp.name = "nouveau nom"
-            print "\n\n", ">>>>>>>>>>>>>>>>>>>>>>>>>><", comp.name, "\n\n"
 
-    def testOptionableAddOption(self):
+    def testAddOption(self):
         comp = Optionable("composant")
-        comp.add_option(ValueOption("opt", "default", "description"))
-        self.assertTrue("opt" in comp.get_options())
+        comp.add_option("alpha", Numeric())
+        self.assertTrue("alpha" in comp.get_options())
+        comp.add_option("beta", Numeric(), hidden=True)
+        self.assertFalse("beta" in comp.get_options())
 
-    def testBooleanOption(self):
+        with self.assertRaises(ValueError):
+            comp.add_option("alpha", Numeric())
+
+        with self.assertRaises(ValueError):
+            comp.add_option("alpha beta", Numeric())
+
+        # for now, no multiple value
+        with self.assertRaises(NotImplementedError):
+            comp.add_option("gamma", Numeric(multi=True))
+        # for now, no vector value
+        with self.assertRaises(NotImplementedError):
+            comp.add_option("gamma", Numeric(uniq=True))
+        # for now, no attribut value
+        with self.assertRaises(NotImplementedError):
+            comp.add_option("gamma", Numeric(attrs={"a": Numeric()}))
+
+    def testGetSetOption(self):
+        comp = Optionable("composant")
+        comp.add_option("alpha", Numeric(
+                description="A short description",
+                default=2,
+                numtype=int,
+                min=0,
+                max=4,
+            )
+        )
+        comp.add_option("name", Text(
+                description="A text ?",
+                default=u"chat"
+            )
+        )
+        # value
+        self.assertEquals(comp.get_option_value("alpha"), 2)
+        with self.assertRaises(ValidationError):
+            comp.set_option_value("alpha", -1)
+        with self.assertRaises(ValidationError):
+            comp.set_option_value("alpha", 3.21)
+        comp.set_option_value("alpha", 0)
+        self.assertEquals(comp.get_option_value("alpha"), 0)
+        comp.set_option_value("alpha", "4", parse=True)
+        self.assertEquals(comp.get_option_value("alpha"), 4)
+        # value set for text
+        self.assertEquals(comp.get_option_value("name"), u"chat")
+        comp.set_option_value("name", "chien", parse=True)
+        self.assertEquals(comp.get_option_value("name"), u"chien")
+        # default value
+        self.assertEquals(comp.get_option_default("alpha"), 2)
+        with self.assertRaises(ValidationError):
+            comp.change_option_default("alpha", 55)
+        with self.assertRaises(ValueError):
+            comp.change_option_default("beta", 55)
+        comp.change_option_default("alpha", 1)
+        self.assertEquals(comp.get_option_default("alpha"), 1)
+
+
+    def _testBooleanOption(self):
         comp = Optionable("composant")
         comp.add_bool_option("filtering", True, "whether to activate a funcky filter !")
         self.assertDictEqual(comp.get_options(), {
@@ -103,7 +96,7 @@ class TestOptionable(unittest.TestCase):
         comp.force_option_value("filtering", False)
         self.assertDictEqual(comp.get_options(), {})
 
-    def testEnumOption(self):
+    def _testEnumOption(self):
         comp = Optionable("composant")
         comp.add_enum_option("choix", "two", "make the good choice !",["one", "two", "three"])
         self.assertEqual(comp.get_default_value("choix"), "two")
