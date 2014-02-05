@@ -503,7 +503,7 @@ class Engine(object):
         @param comp_type: <str> type of component to run
         @param args: all arguments that should be pass to optionables
         """
-        self._logger.info("\n\n\t\t\t >>>>> PLAYING '%s' with %s args: <<<<<<"% (name, len(args)))
+        self._logger.info("\n\n\t\t\t >>>>> PLAYING '%s' with %s args: <<<<<<\n"% (name, len(args)))
         return self[name].play(*args)
 
     def as_dict(self):

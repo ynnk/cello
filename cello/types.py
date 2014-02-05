@@ -46,7 +46,7 @@ class GenericType(object):
         # self.required = required  # test ds Doc ds le constructeur
         self.validators = self.default_validators + validators
         if choices is not None:
-            TypeValidator((list,set))(choices)
+            TypeValidator((list,set, tuple))(choices)
             for v in choices:
                 self.validate(v)
             self.validators.append(ChoiceValidator(choices))
