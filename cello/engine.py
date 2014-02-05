@@ -190,8 +190,6 @@ class Block(object):
         # TODO depends
         # self.depends = depends # *dependence_block_names  
 
-        
-
     def set(self, *components):
         """ Set the possible components of the block
         :param components: components to append Optionables or Composables
@@ -223,8 +221,6 @@ class Block(object):
                 self.select(component.name, {})
         else:
             raise ValueError("We already have a component with the name '%s'" % component.name)
-
-
 
     def select(self, comp_name, options=None):
         """ set an component as runnable with given options.
@@ -380,7 +376,8 @@ class Block(object):
         """
         #TODO
         return {}
-    
+
+
 class Engine(object):
     """ The Cello engine.
     
@@ -390,7 +387,7 @@ class Engine(object):
         self._blocks = OrderedDict()
         self.time = 0
         self._logger.info("\n\n\t\t\t ** ============= Init engine ============= ** \n")
-        
+
     def requires(self, *names):
         """ Declare what block will be used in this engine.
         
@@ -407,7 +404,7 @@ class Engine(object):
         for name in names:
             self._blocks[name] = Block(name)
         self._logger.info(" ** requires ** %s", names)
-        
+
     def set(self, name, *optionables, **options):
         """ Set available components and the options of one block.
         :param name: block name
@@ -442,16 +439,16 @@ class Engine(object):
         return self._blocks.keys()
 
     def configure(self, config):
-        """ configure all the blocks from an (horible) configuration dictionary
+        """ Configure all the blocks from an (horible) configuration dictionary
         this data are coming from a json client request and has to be parsed 
         
         :param request: dictionary that give the component to use for each step
                and the associated options 
 
-        .warning Values in these dictionnary are strings 
+        .warning:: Values in these dictionnary are strings 
 
-        format
-        ======
+        format ::
+
             { block_name: [{
                     'name' : "name_of_the_comp_to_use"
                     'options' : {
@@ -496,12 +493,12 @@ class Engine(object):
             block.validate()
 
     def play(self, name, *args):
-        """ Run Block  with args
+        """ Run Block with args
         It runs all component with sam arguments *args,
         and the given or defaults options for this optionable
 
-        @param comp_type: <str> type of component to run
-        @param args: all arguments that should be pass to optionables
+        :param comp_type: <str> type of component to run
+        :param args: all arguments that should be pass to optionables
         """
         self._logger.info("\n\n\t\t\t >>>>> PLAYING '%s' with %s args: <<<<<<"% (name, len(args)))
         return self[name].play(*args)

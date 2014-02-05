@@ -31,13 +31,25 @@ class TestDocFields(unittest.TestCase):
         self.assertIsInstance(DocField.FromType(Numeric(attrs={"score": Numeric()})), VectorField)
 
     def test_ValueField(self):
+        with self.assertRaises(SchemaError):
+            vfield = ValueField(Numeric(multi=True))
+        with self.assertRaises(SchemaError):
+            vfield = ValueField(Numeric(multi=True, uniq=True))
+        with self.assertRaises(SchemaError):
+            vfield = ValueField(Numeric(attrs={"size": Numeric()}))
         vfield = ValueField(Numeric())
         self.assertRaises(ValidationError, vfield.set, "op")
         vfield.set(5)
         self.assertEqual(vfield.get_value(), 5)
 
     def test_SetField(self):
-        set_field = SetField(Numeric(default={1,2,3,}))
+        with self.assertRaises(SchemaError):
+            set_field = SetField(Numeric())
+        with self.assertRaises(SchemaError):
+            set_field = SetField(Numeric(multi=True, default={1,2,3,}))
+        with self.assertRaises(SchemaError):
+            set_field = SetField(Numeric(multi=True, uniq=False))
+        set_field = SetField(Numeric(uniq=True, default={1,2,3,}))
         # get_value()
         self.assertEqual(set_field.get_value(), set_field)
         # test default default
@@ -61,15 +73,21 @@ class TestDocFields(unittest.TestCase):
         self.assertRaises(ValidationError, set_field.add, 'boo')
 
     def test_ListField(self):
+        with self.assertRaises(SchemaError):
+            l_field = ListField(Numeric())
+        with self.assertRaises(SchemaError):
+            l_field = ListField(Numeric(uniq=True))
+        with self.assertRaises(SchemaError):
+            l_field = ListField(Numeric(attrs={"size": Numeric()}))
         # affectation with append
-        l_field = ListField(Numeric())
+        l_field = ListField(Numeric(multi=True))
         for x in xrange(5):
             l_field.append(x)
         self.assertEqual(l_field, [0, 1, 2, 3, 4])
         # get_value()
         self.assertEqual(l_field.get_value(), l_field)
         # affectation with set
-        l_field2 = ListField(Numeric())
+        l_field2 = ListField(Numeric(multi=True))
         l_field2.set(xrange(5))
         self.assertEqual(l_field2, list(xrange(5)))
         # affectation fail

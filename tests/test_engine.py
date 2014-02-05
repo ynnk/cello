@@ -6,6 +6,7 @@ from cello.types import Numeric
 from cello.pipeline import Composable, Optionable
 from cello.engine import Block, Engine
 
+
 class OptCompExample(Optionable):
     def __init__(self):
         super(OptCompExample, self).__init__("mult_opt")
@@ -21,6 +22,7 @@ class CompCompExample(Composable):
 
     def __call__(self, arg):
         return arg + 2
+
 
 class TestBlock(unittest.TestCase):
     def setUp(self):

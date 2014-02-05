@@ -151,6 +151,8 @@ class ValueField(DocField):
     """ Stores only one value
     """
     def __init__(self, fieldtype):
+        if fieldtype.multi:
+            raise SchemaError("The type of a ValueField should not be multiple")
         DocField.__init__(self, fieldtype)
         self.value = fieldtype.default
     
@@ -177,6 +179,8 @@ class SetField(DocField, set):
     #XXX; maybe it can use collections.MutableSet
     # http://docs.python.org/2/library/collections.html#collections-abstract-base-classes
     def __init__(self, fieldtype):
+        if not fieldtype.uniq:
+            raise SchemaError("The type of a SetField should be uniq")
         DocField.__init__(self, fieldtype)
         self.set(fieldtype.default or [])
 
@@ -202,6 +206,10 @@ class ListField(DocField, list):
     #XXX; maybe it can use collections.MutableSequence
     # http://docs.python.org/2/library/collections.html#collections-abstract-base-classes
     def __init__(self, fieldtype):
+        if not fieldtype.multi:
+            raise SchemaError("The type of a ListField should be multiple")
+        if fieldtype.uniq:
+            raise SchemaError("The type of a ListField should not be uniq")
         DocField.__init__(self, fieldtype)
 
     def add(self, value):
