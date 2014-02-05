@@ -471,7 +471,7 @@ class Doc(dict):
 
     >>> doc = Doc(schema, docnum=1, text=unicode(text))
     >>> doc.text[:6]
-    'i have'
+    u'i have'
     >>> len(doc.text)
     113
     

@@ -19,7 +19,7 @@ Class
 """
 import logging
 
-from cello.types import GenericType
+from cello.types import GenericType, Numeric
 
 
 class ValueOption(object):
@@ -139,7 +139,7 @@ class ValueOption(object):
         
         One can also set the 'value' property:
 
-        >>> opt = AbstractOption("oname", "an option exemple")
+        >>> opt = ValueOption("oname", Numeric(default=1,help="an option exemple"))
         >>> opt.value = 12
         
         :param value: the new value
