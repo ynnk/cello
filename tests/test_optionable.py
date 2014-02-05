@@ -45,7 +45,7 @@ class TestOptionable(unittest.TestCase):
     def testGetSetOption(self):
         comp = Optionable("composant")
         comp.add_option("alpha", Numeric(
-                description="A short description",
+                help="A short description",
                 default=2,
                 numtype=int,
                 min=0,
@@ -53,7 +53,7 @@ class TestOptionable(unittest.TestCase):
             )
         )
         comp.add_option("name", Text(
-                description="A text ?",
+                help="A text ?",
                 default=u"chat"
             )
         )

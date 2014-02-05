@@ -4,12 +4,12 @@ import unittest
 from cello import CelloError
 from cello.types import Numeric
 from cello.pipeline import Composable, Optionable
-from cello.engine import Block, Cellist
+from cello.engine import Block, Engine
 
 class OptCompExample(Optionable):
     def __init__(self):
         super(OptCompExample, self).__init__("mult_opt")
-        self.add_option("factor", Numeric(default=5, description="multipliation factor", numtype=int))
+        self.add_option("factor", Numeric(default=5, help="multipliation factor", numtype=int))
 
     def __call__(self, arg, factor=5):
         return arg * factor
@@ -69,7 +69,7 @@ class TestBlock(unittest.TestCase):
         pass
 
 
-class TestCellist(unittest.TestCase):
+class TestEngine(unittest.TestCase):
     def setUp(self):
         # setup 3 components
         self.cmpt_mult = OptCompExample()
@@ -79,12 +79,12 @@ class TestCellist(unittest.TestCase):
         self.cmpt_max = Composable(max20)
 
     def test_empty_engine(self):
-        engine = Cellist()
+        engine = Engine()
         with self.assertRaises(CelloError):
             engine.validate()
 
     def test_engine(self):
-        engine = Cellist()
+        engine = Engine()
         engine.requires("op1", "op2", "op3")
         self.assertTrue("op1" in engine)
         self.assertTrue("op2" in engine)

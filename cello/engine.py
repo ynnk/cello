@@ -329,6 +329,8 @@ class Block(object):
             except Exception as err:
                 # component error handling
                 comp_res['errors'].append("error in component %s %s /n %s" % ( comp, comp.name, err.message ))
+                self._logger.error(comp_res['errors'])
+                raise
                 if _break_on_error:
                     break
             
@@ -387,7 +389,8 @@ class Engine(object):
     def __init__(self):
         self._blocks = OrderedDict()
         self.time = 0
-
+        self._logger.info("\n\n\t\t\t ** ============= Init engine ============= ** \n")
+        
     def requires(self, *names):
         """ Declare what block will be used in this engine.
         
@@ -403,7 +406,8 @@ class Engine(object):
             raise ValueError("Duplicate block name %s" % names)
         for name in names:
             self._blocks[name] = Block(name)
-
+        self._logger.info(" ** requires ** %s", names)
+        
     def set(self, name, *optionables, **options):
         """ Set available components and the options of one block.
         :param name: block name

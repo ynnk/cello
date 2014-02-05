@@ -5,7 +5,7 @@ import logging
 from cello.pipeline import Optionable
 from cello.graphs import EDGE_WEIGHT_ATTR
 from cello.graphs.prox import prox_markov_wgt
-
+from cello.types import Text
 _logger = logging.getLogger("cello.graphs.transform")
 
 
@@ -18,10 +18,9 @@ class GraphProjection(Optionable):
         
         self._projection_wgt = projection_wgt
         if self._projection_wgt is None:
-            self.add_enum_option("proj_wgt", "p",
-                 "Projection weighting method",
-                 ['no', 'count', 'p', 'pmin', 'pmax', 'pavg'],
-                 otype=str)
+            self.add_option("proj_wgt", Text(default="p",
+                 help="Projection weighting method",
+                 choices=['no', 'count', 'p', 'pmin', 'pmax', 'pavg']))
     
     def __call__(self, graph, proj_wgt="p"):
         # The projection work only because:

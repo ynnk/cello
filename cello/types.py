@@ -17,7 +17,7 @@ Class
 import datetime
 
 from cello.exceptions import SchemaError, ValidationError
-from cello.validators import TypeValidator, MinValueValidator, MaxValueValidator
+from cello.validators import TypeValidator, MinValueValidator, MaxValueValidator, ChoiceValidator
 
 
 class GenericType(object):
@@ -25,7 +25,7 @@ class GenericType(object):
     """
     default_validators = []  # Default set of validators
 
-    def __init__(self, default=None, description="", multi=False, uniq=False, attrs=None,
+    def __init__(self, default=None, help="", multi=False, uniq=False, choices=None, attrs=None,
         validators=[]):
         """
         :param default: default value for the field
@@ -37,16 +37,22 @@ class GenericType(object):
         :param validators: list of additional validators
         """
         self.default = default
-        self.description = description
+        self.help = help
         self.multi = multi
         self.uniq = uniq
         self.attrs = attrs
         # TODO
         # self.sorted = sorted
         # self.required = required  # test ds Doc ds le constructeur
-        # self.choices = 
         self.validators = self.default_validators + validators
-
+        if choices is not None:
+            TypeValidator((list,set))(choices)
+            for v in choices:
+                self.validate(v)
+            self.validators.append(ChoiceValidator(choices))
+        self.choices = choices
+        
+        
     def __repr__(self):
         temp = "%s(multi=%s, uniq=%s, default=%s, attrs=%s)"
         return temp % (self.__class__.__name__,
@@ -81,9 +87,11 @@ class GenericType(object):
         """
         info = {}
         info["type"] = self.__class__.__name__
+        info["help"] = self.help
         info["default"] = self.default
         info["multi"] = self.multi
         info["uniq"] = self.uniq
+        info["choices"] = self.choices
         # TODO appel rec sur les attrs
         #info["attrs"] = self.attrs
         return info
@@ -94,7 +102,7 @@ class Numeric(GenericType):
     """
     _types_ = [int, float]
     
-    def __init__(self, numtype=int, signed=True, min=None, max=None, **kwargs):
+    def __init__(self, numtype=int, min=None, max=None, **kwargs):
         """
         :param numtype: the type of numbers that can be stored in this field,
             either ``int``, ``float``. 
@@ -108,9 +116,6 @@ class Numeric(GenericType):
             raise SchemaError('Wrong type for Numeric %s' % Numeric._types_ )
         self.vtype = numtype
         self.validators.append(TypeValidator(numtype))
-        self.signed = signed
-        if not signed:
-            self.validators.append(MinValueValidator(0))
         self.min = min
         if min is not None:
             self.validators.append(MinValueValidator(min))
@@ -126,7 +131,6 @@ class Numeric(GenericType):
         info["vtype"] = self.vtype
         info["min"] = self.min
         info["max"] = self.max
-        info["signed"] = self.signed
 
 
 class Text(GenericType):
@@ -159,10 +163,18 @@ class Text(GenericType):
         return parsed
 
     def as_dict(self):
-        info = super(Numeric, self).as_dict()
+        info = super(Text, self).as_dict()
         info["vtype"] = self.vtype
 
 
+class Boolean(GenericType):
+    def __init__(self, **kwargs):
+        super(Boolean, self).__init__(**kwargs)
+        self.validators.append(bool)
+
+    def parse(self, value):
+        return value in ( True, 1, "1", 'yes' )
+        
 class Datetime(GenericType):
     """ datetime type
     """
@@ -174,8 +186,7 @@ class Datetime(GenericType):
         raise NotImplementedError
 
     def as_dict(self):
-        info = super(Numeric, self).as_dict()
-        info["vtype"] = self.vtype
+        info = super(Datetime, self).as_dict()
 
 
 # Add more FiledType here

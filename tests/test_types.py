@@ -35,7 +35,7 @@ class TestFieldTypes(unittest.TestCase):
         self.assertEqual(f.parse("45"), 45.)
 
         # unsigned field
-        f = Numeric(numtype=int, signed=False)
+        f = Numeric(numtype=int, min=0)
         self.assertEqual(f.validate(2), 2)  # ok
         self.assertEqual(f.validate(0), 0)  # ok
         self.assertRaises(ValidationError, f.validate, -1)
@@ -55,7 +55,7 @@ class TestFieldTypes(unittest.TestCase):
         
         
         # with min and max
-        f = Numeric(numtype=int, min=0, max=4, description="an int")
+        f = Numeric(numtype=int, min=0, max=4, help="an int")
         self.assertEqual(f.validate(0), 0)  # ok
         self.assertEqual(f.validate(4), 4)  # ok
         self.assertRaises(ValidationError, f.validate, -1)

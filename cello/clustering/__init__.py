@@ -12,7 +12,7 @@ import igraph as ig
 
 from cello import CelloError
 from cello.pipeline import Composable, Optionable
-from cello.schema import Numeric
+from cello.types import Numeric, Text, Boolean
 
 from cello.clustering.walktrap import walktrap_bigraph
 from cello.graphs import EDGE_WEIGHT_ATTR
@@ -64,9 +64,8 @@ class ClusteringMethod(Optionable):
         Optionable.__init__(self, name)
         self._logger = logging.getLogger(self.__class__.__name__)
         
-        self.add_value_option("min_docs", 2,
-                "Minimum number of document per cluster",
-                otype=int)
+        self.add_option("min_docs", Numeric(default=2,
+                help="Minimum number of document per cluster"))
 
     ## tools
     def check_graph(self, graph):
@@ -102,9 +101,8 @@ class BigraphClusteringMethod(ClusteringMethod):
     """
     def __init__(self, name):
         ClusteringMethod.__init__(self, name)
-        self.add_value_option("min_terms", 0,
-            "Minimum number of term per cluster", 
-            otype= int)
+        self.add_option("min_terms", Numeric( default=0,
+            help="Minimum number of term per cluster"))
 
     ## tools
     def check_graph(self, graph):
@@ -183,8 +181,8 @@ class MaximalCliques(ClusteringMethod):
     """
     def __init__(self):
         ClusteringMethod.__init__(self, "maximal_cliques")
-        self.add_value_option("min", 0, "Minimum cliques size", otype=int)
-        self.add_value_option("max", 10, "Maximal cliques size", otype=int)
+        self.add_option("min", Numeric(default=0, help="Minimum cliques size"))
+        self.add_option("max", Numeric(default=10, help="Maximal cliques size"))
 
     def _clustering(self, graph, min=0, max=10):
         return ig.VertexCover(graph, graph.maximal_cliques(min, max))
@@ -201,8 +199,8 @@ class FormalConceptAnalysis(BigraphClusteringMethod):
         """ Just a wrapper to igraph method
         """
         BigraphClusteringMethod.__init__(self, "formal_concept_analysis")
-        self.add_bool_option("no_trivial", True, 
-            "Remove trivial concepts (i.e. concepts with no objects or no properties)")
+        self.add_option("no_trivial", Boolean(default=True, 
+            help="Remove trivial concepts (i.e. concepts with no objects or no properties)"))
         if fca_method == "kov_py":
             from cello.graphs.fca import fca_kov
             self.fca_fct = fca_kov.compute_concepts_kov
@@ -229,8 +227,7 @@ class FormalConceptAnalysis(BigraphClusteringMethod):
 class Walktrap(ClusteringMethod):
     def __init__(self):
         ClusteringMethod.__init__(self, "walktrap")
-        self.add_value_option("l", 4, 
-            "lenght of the random walks",  otype=int)
+        self.add_option("l", Numeric( default=4, help="lenght of the random walks"))
 
     def _clustering(self, graph, l=4):
         vertex_clustering = graph.community_walktrap(weights=EDGE_WEIGHT_ATTR, steps=l)
@@ -247,16 +244,13 @@ class WalktrapBigraph(BigraphClusteringMethod):
     def __init__(self):
         BigraphClusteringMethod.__init__(self, "walktrap_bigraph")
 
-        self.add_value_option("ldoc", 4, 
-            "lenght of the random walks for documents", 
-             otype=int)
-        self.add_value_option("lterms", 5,
-            "lenght of the random walks for terms", 
-            otype=int)
-        self.add_enum_option("cut", "modularity",
-            "method to cut the dendrogramme",
-            enum=['modularity', 'max', 'cc', 'fixed', 'fixed_V2'],      
-            otype=str)
+        self.add_option("ldoc", Numeric( default=4, 
+                help="lenght of the random walks for documents"))
+        self.add_option("lterms", Numeric( default=5,
+            help="lenght of the random walks for terms"))
+        self.add_option("cut", Text(default="modularity",
+            help="method to cut the dendrogramme",
+            choices=['modularity', 'max', 'cc', 'fixed', 'fixed_V2']))
 
     def _clustering(self, bigraph, ldoc=4, lterms=5, cut="modularity"):
         vertex_clustering = walktrap_bigraph(bigraph, ldoc, lterms, EDGE_WEIGHT_ATTR, cut)

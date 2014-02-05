@@ -4,7 +4,7 @@ import logging
 import itertools
 
 from cello.pipeline import Optionable
-
+from cello.types import Numeric
 
 class BottomFilter(Optionable):
     """ Removes bottom vertices from a bigraph.
@@ -14,12 +14,10 @@ class BottomFilter(Optionable):
         Optionable.__init__(self, name)
         self._logger = logging.getLogger(name)
 
-        self.add_value_option("top_min", 0, 
-            "Removes type=false vertices connected to less than top_min (type=True) vertices",
-            otype=int)
-        self.add_value_option("top_max_ratio", 1, 
-            "Removes type=false vertices connected to more than top_max_ratio percents of the (type=True) vertices",
-            otype=float)
+        self.add_option("top_min", Numeric( default=0, 
+            help="Removes type=false vertices connected to less than top_min (type=True) vertices"))
+        self.add_option("top_max_ratio", Numeric(numtype=float,default=1.,
+            help="Removes type=false vertices connected to more than top_max_ratio percents of the (type=True) vertices"))
 
     #XXX:kwargs ne sert a rien ?
     def __call__(self, graph, top_min=0, top_max_ratio=1., **kwargs):

@@ -122,7 +122,7 @@ class ValueOption(object):
         :param value: the value to validate
         :returns: the value
         """
-        print self.otype.validators
+#        print self.otype.validators
         return self.otype.validate(value)
 
     def parse(self, value_str):

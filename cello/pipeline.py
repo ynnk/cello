@@ -54,7 +54,6 @@ class Composable(object):
 
     def __init__(self, func=None, name=None):
         self._name = None
-#        print "###########################################%s, %s"%(func,name)
         if func and callable(func):
             self._func=func
             self.name = func.func_name
