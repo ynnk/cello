@@ -30,7 +30,6 @@ class TypeValidator(object):
         return value
 
 
-
 class compareValidator(object):
     """ Validate a value by comparing it to a reference value
     """
@@ -49,6 +48,7 @@ class compareValidator(object):
         if self.compare(pvalue, self.ref_value):
             raise ValidationError(self.message, params=params)
         return value
+
 
 class ChoiceValidator(compareValidator):
     compare = lambda self, value, ref: value not in ref

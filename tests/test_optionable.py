@@ -4,10 +4,12 @@ import cello
 
 from datetime import datetime
 from cello.exceptions import ValidationError
-from cello.types import GenericType, Numeric, Text
+from cello.types import GenericType, Numeric, Text, Boolean
 from cello.pipeline import Optionable
 
 class TestOptionable(unittest.TestCase):
+    maxDiff = None
+    
     def setUp(self):
         pass
 
@@ -71,6 +73,7 @@ class TestOptionable(unittest.TestCase):
         self.assertEquals(comp.get_option_value("name"), u"chat")
         comp.set_option_value("name", "chien", parse=True)
         self.assertEquals(comp.get_option_value("name"), u"chien")
+        # 
         # default value
         self.assertEquals(comp.get_option_default("alpha"), 2)
         with self.assertRaises(ValidationError):
@@ -81,20 +84,28 @@ class TestOptionable(unittest.TestCase):
         self.assertEquals(comp.get_option_default("alpha"), 1)
 
 
-    def _testBooleanOption(self):
+    def testBooleanOption(self):
         comp = Optionable("composant")
-        comp.add_bool_option("filtering", True, "whether to activate a funcky filter !")
+        comp.add_option("filtering", Boolean(default=True, help="whether to activate a funcky filter !"))
         self.assertDictEqual(comp.get_options(), {
             'filtering': {
-                    'default': True,
-                    'description': 'whether to activate a funcky filter !',
                     'name': 'filtering',
-                    'type': 'boolean',
-                    'value': True
+                    'value': True,
+                    'type': 'value',
+                    'otype': {
+                        'type': 'Boolean',
+                        'default': True,
+                        'choices': None,
+                        'multi': False,
+                        'uniq': False,
+                        'help': 'whether to activate a funcky filter !',
+                    }
                 }
         })
         comp.force_option_value("filtering", False)
         self.assertDictEqual(comp.get_options(), {})
+        with self.assertRaises(ValueError):
+            comp.set_option_value("filtering", True)
 
     def _testEnumOption(self):
         comp = Optionable("composant")

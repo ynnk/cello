@@ -25,8 +25,8 @@ class GenericType(object):
     """
     default_validators = []  # Default set of validators
 
-    def __init__(self, default=None, help="", multi=False, uniq=False, choices=None, attrs=None,
-        validators=[]):
+    def __init__(self, default=None, help="", multi=None, uniq=None,
+        choices=None, attrs=None, validators=[]):
         """
         :param default: default value for the field
         :param multi: field is a list or a set
@@ -36,28 +36,69 @@ class GenericType(object):
         :param attrs: field attributes, dictionary of `{"name": AbstractType()}`
         :param validators: list of additional validators
         """
-        self.default = default
+        self._default = default
         self.help = help
         self.multi = multi
         self.uniq = uniq
         self.attrs = attrs
-        # TODO
-        # self.sorted = sorted
+        if self.attrs is not None: # will be a vector field
+            if self.multi is None:
+                self.multi = True
+            elif not self.multi:
+                raise SchemaError("If you have attributs you can't have multi=False")
+            if self.uniq is None:
+                self.uniq = True
+            elif not self.uniq:
+                raise SchemaError("If you have attributs you can't have uniq=False")
+        elif self.uniq:
+            if self.multi is None:
+                self.multi = True
+            elif not self.multi:
+                raise SchemaError("If you have uniq=True you can't have multi=False")
+        elif self.multi:
+            if self.uniq is None:
+                self.uniq = False
+        else:
+            self.multi = False
+            self.uniq = False # it is a convention, a uniq value (!multi) is considered as not uniq 
+        # TODO self.sorted = sorted
         # self.required = required  # test ds Doc ds le constructeur
         self.validators = self.default_validators + validators
-        if choices is not None:
-            TypeValidator((list,set, tuple))(choices)
-            for v in choices:
-                self.validate(v)
-            self.validators.append(ChoiceValidator(choices))
         self.choices = choices
-        
-        
+        if choices is not None:
+            self.validators.append(ChoiceValidator(choices))
+        self._init_validation()
+
+    def _init_validation(self):
+        # validate choices
+        if self.choices is not None:
+            TypeValidator((list,set,tuple))(self.choices)
+            for value in self.choices:
+                self.validate(value)
+        # set the default value
+        if self.default is not None:
+            print self.multi
+            if self.multi:
+                for val in self.default:
+                    self.validate(val)
+            else:
+                self.validate(self.default)
+
+    @property
+    def default(self):
+        """ Default value of the type
+        """
+        return self._default
+
+    @default.setter
+    def default(self, value):
+        self._default = self.validate(value)
+
     def __repr__(self):
         temp = "%s(multi=%s, uniq=%s, default=%s, attrs=%s)"
         return temp % (self.__class__.__name__,
                 self.multi, self.uniq, self.default, self.attrs)
-    
+
     def validate(self, value):
         """ Abstract method, check if a value is correct (type).
         Should raise :class:`TypeError` if the type the validation fail.
@@ -122,6 +163,7 @@ class Numeric(GenericType):
         self.max = max
         if max is not None:
             self.validators.append(MaxValueValidator(max))
+        self._init_validation()
 
     def parse(self, value):
         return self.vtype(value)
@@ -150,6 +192,7 @@ class Text(GenericType):
             raise SchemaError('Wrong type for Text %s' % Numeric._types_ )
         self.vtype = texttype
         self.validators.append(TypeValidator(texttype))
+        self._init_validation()
 
     def parse(self, value):
         if isinstance(value, self.vtype):
@@ -160,7 +203,7 @@ class Text(GenericType):
                 parsed = value.decode(self.default_encoding)
             else:
                 parsed = value.encode(self.default_encoding)
-        return parsed
+        return self.validate(parsed)
 
     def as_dict(self):
         info = super(Text, self).as_dict()
@@ -168,19 +211,28 @@ class Text(GenericType):
 
 
 class Boolean(GenericType):
+    default_validators = [TypeValidator(bool)]
+    
+    TRUE_VALUES = set([True, 1, u'1', u'yes', u'oui', u'o', u'true'])
+    
     def __init__(self, **kwargs):
         super(Boolean, self).__init__(**kwargs)
-        self.validators.append(bool)
 
     def parse(self, value):
-        return value in ( True, 1, "1", 'yes' )
-        
+        if isinstance(value, str):
+            value = value.decode("utf8")
+        if isinstance(value, unicode):
+            value = value.lower()
+        return value in Boolean.TRUE_VALUES
+
+
 class Datetime(GenericType):
     """ datetime type
     """
     def __init__(self, **kwargs):
         super(Datetime, self).__init__(**kwargs)
         self.validators.append(TypeValidator(datetime.datetime))
+        self._init_validation()
 
     def parse(self, value):
         raise NotImplementedError

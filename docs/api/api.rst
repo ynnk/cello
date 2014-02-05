@@ -9,6 +9,7 @@ Voir :mod:`cello.pipeline` par exemple, ou meme :class:`cello.pipeline.Optionabl
     cello.optionable
     cello.pipeline
     cello.types
+    cello.validators
     cello.schema
     cello.engine
     cello.search
