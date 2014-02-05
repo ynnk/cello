@@ -54,6 +54,7 @@ class Composable(object):
 
     def __init__(self, func=None, name=None):
         self._name = None
+#        print "###########################################%s, %s"%(func,name)
         if func and callable(func):
             self._func=func
             self.name = func.func_name
@@ -317,7 +318,7 @@ class Pipeline(Optionable):
     def __init__(self, *composables):
         # Composable init
         self._logger = logging.getLogger(__name__)
-        Composable.__init__(self)
+#        Composable.__init__(self)
         self.items = []
         for comp in composables:
             if isinstance(comp, Pipeline):
@@ -352,7 +353,7 @@ class Pipeline(Optionable):
             if isinstance(item, Optionable):
                 item_kwargs = item.parse_options(kwargs)
                 item_name = item.name
-            self._logger.info("calling %s '%s' with %s", item,  item_name, item_kwargs )
+            self._logger.info("\n\tcalling %s '%s' with %s", item,  item_name, item_kwargs )
             element_iter = item(element_iter, **item_kwargs)
         return element_iter
 

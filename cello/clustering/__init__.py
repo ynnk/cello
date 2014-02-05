@@ -57,12 +57,11 @@ def filter_cover(cover, min_docs, min_terms, logger=None):
     return cover
 
 #{
-class ClusteringMethod(Optionable, Composable):
+class ClusteringMethod(Optionable):
     """ Basic abstract clustering method, should work for unipartite or bipartite graphs
     """
     def __init__(self, name):
         Optionable.__init__(self, name)
-        Composable.__init__(self)
         self._logger = logging.getLogger(self.__class__.__name__)
         
         self.add_value_option("min_docs", 2,

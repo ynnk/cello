@@ -44,19 +44,60 @@ And then you can configure and run it::
 
     res = cellist.solo('boo', boo_args)
     
-
+de que j'ai ecri de copié coller dans le notebook !!
     # plays all blocks
     results = cellist.play()
 """
 
 import time
 import logging
+import warnings
+import itertools
 from collections import OrderedDict
 
 from cello import CelloError
 from cello.pipeline import Pipeline, Optionable, Composable
 
-
+def define_logger(init):
+    def wrapinit(self, *args, **kwargs):
+        self._logger = logging.getLogger("%s.%s"%(__name__, self.__class__.__name__))
+        init(self, *args, **kwargs)
+    return wrapinit 
+    
+class Result(object):
+    def __init__(self, block):
+        self.name = block.name        
+        self.multiple = block.multiple
+        self.hidden = block.hidden
+        self.components = {}
+        self.outputs = []
+        
+    def walltime(self):
+        """ Block computation time """
+        return sum(c['time'] for c in self.components)
+    
+    @property
+    def errors(self):
+        """ Views on components errors """
+        errors = (c['errors'] for c in self.components)
+        return list(itertools.chain.from_iterable( errors ))
+    
+    @property
+    def warnings(self):
+        """ Views on components warnings """
+        warnings = (c['warnings'] for c in self.components)
+        return list(itertools.chain.from_iterable( warnings ))
+    
+    @property
+    def has_error(self):
+        """ wether any error happened in component  """
+        return len(self.errors)
+    
+    @property
+    def has_warning(self):
+        return len(self.warnings)
+    
+     
 class Block(object):
     """ A block is a processing step realised by one component.
     
@@ -67,18 +108,16 @@ class Block(object):
     """
     #TODO: ajout du nom des input/output (needed si automatisation du run)
     #TODO: ajout validation de type sur input/output
-
+    @define_logger
     def __init__(self, name, *components, **options):
         """
         :param name: name of the Block
         :type name: str
         """
-        self._logger = logging.getLogger(__name__)
-
         # declare attributs
-        self._name = None
-        self._selected = None
-        self._selected_opts = None
+        self._name = None 
+        self._selected = []
+        self._selected_opts = {}
         self._components = None
         # name
         self.name = name
@@ -87,16 +126,19 @@ class Block(object):
         self.hidden = False
         self.multiple = False
         self.defaults = []
-
+        #handle results meta
+        self.meta = Result(self)
 
         self.reset()
-        self.set(*components)
-        self.set_options(**options)
+        if len(components):
+            self.set(*components)
+        if len(options):
+            self.set_options(**options)
 
+        # Attrs used to build a result object
         self.has_run = False
-        self.time = 0
-        self.warnings = []
-        self.errors = []
+        
+        
 
     @property
     def name(self):
@@ -116,20 +158,20 @@ class Block(object):
         self._components = OrderedDict()
 
     def clear_selections(self):
-        """ cancel the current selections
+        """ reset the current selections
         """
-        self._selected = None       #None mean that no component haas been selected yet
+        self._selected = [] 
         self._selected_opts = {}
 
     def set_options(self, required=None, hidden=None, multiple=None, defaults=None):
         """ Set the options of the block.
-        Only the not None given options are setted
+        Only the not None given options are set
         
         :param required: whether the block will be required or not
         :type required: bool
         :param hidden: whether the block will be hidden to the user or not
         :type hidden: bool
-        :param multiple: if True more than one component may be selected (and run)
+        :param multiple: if True more than one component may be selected/ run) 
         :type multiple: bool
         :param default: names of the selected components
         :type default: list of str, or str
@@ -144,23 +186,25 @@ class Block(object):
             if isinstance(defaults, basestring):
                 defaults = [defaults]
             self.defaults = defaults
+
         # TODO depends
         # self.depends = depends # *dependence_block_names  
+
+        
 
     def set(self, *components):
         """ Set the possible components of the block
         :param components: components to append Optionables or Composables
         """
+        self._logger.info(" Set '%s': \n\t%s", self.name, "\n\t".join(( "%s %s"%(e.name, e) for e in components)))
         self.reset()
         if len(components) == 1:
-            self.append(Pipeline(components[0])) #XXX: pourquoi l'encapsulation dans Pipeline ?
-            #TODO: si encapsulation dans Pipeline needed il faut le faire dans append
+            self.append(components[0], default=True)
         else:
-            for comp in components:
-                self._logger.info("SET %s %s %s", self._name, comp, type(comp) )
+            for _i, comp in enumerate(components):
                 # handle Optionable or Composable function
-                if isinstance(comp, (Optionable,Composable)):
-                    self.append(comp)
+                if isinstance(comp, Composable):
+                    self.append(comp , default=_i==0)
                 else:
                     raise ValueError("component '%s' is not type of Optionable or Composable" % comp)
 
@@ -171,12 +215,16 @@ class Block(object):
         :type default: bool
         """
         #TODO check component is a component.
+        if len(self._components) == 0:
+            component = Pipeline(component)
         if not component.name in self._components:
             self._components[component.name] = component
             if default:
                 self.select(component.name, {})
         else:
             raise ValueError("We already have a component with the name '%s'" % component.name)
+
+
 
     def select(self, comp_name, options=None):
         """ set an component as runnable with given options.
@@ -220,46 +268,54 @@ class Block(object):
     def validate(self):
         """ check that the block can be run
         """
-        if len(self.selected()) <= 0:
+        if self.required and len(self.selected()) == 0:
             raise CelloError("No component selected for block '%s'" % self.name)
 
     def play(self, *args):
-        """ Run the selected component of the block
+        """ Run the selected components of the block
+        !!! Defaut multiple behavior is used as *pipeline* !!!
         """
+        # TODO 
+        # multi mode option(False, pipeline, map)
+        
+        # TODO what if validate fails
         self.validate()
-        #TODO encapsulate result in a 'RunResult' or 'BlockResult' (?)
+        
         _break_on_error = True
         start = time.time()
-        # dict containing block running informations
-        run_comps = {}
+        
         # components marked selected
-        runnables = ((self._components[k], self._selected_opts.get(k, {}))
+        runnables = ( (self._components[k], self._selected_opts.get(k, {}))
                         for k in self._selected )
+        results = []
         # run
         for comp, options in runnables:
             # TODO store args and kwargs ?
-            run_comps[comp.name] = {
+            comp_res = {
                 "name": comp.name,
                 "obj" : repr(comp),
                 #@"%s_args"% name , args, # args too fat
                 "kwargs" : options,
+                "errors" : [],
+                "warnings" : [],
+                "time" : 0
             }
-            self._logger.info("%s: %s component: %s, args=%s, kwargs=%s" % (self._name, comp.name, comp, args, options))
+            self._logger.info(" playing '%s': %s \n\tcomponent: %s,\n\targs=%s[...], \n\tkwargs=%s" % (self._name, comp.name, comp, str(args)[:100].replace('\n',''), options))
 
             try :            
-                # !!! Defaut multiple behavior is used as pipeline !!!
                 # multi = False or pipeline
                 # given that the args in input are also the returning value
                 # This behavior allows to modify the data given in input.
                 # actually same arg if given several times 
                 # but may be transformed during the process
                 # then finally returned
-                results = comp(*args, **options)
+                results.append( comp(*args, **options) )
 
                 # TODO implements different mode for multiple 
                 # another way would be declaring a list var outside the loop,
-                # then append the result of each call to the components __call__
+                # then append result of each call to the components __call__
                 # and finally returns all computed results
+                #   map( lambda x : x(*arg), *components )
                 # >>> results.append( comp(*args, **options) )
                 # >>> return *results
 
@@ -269,32 +325,21 @@ class Block(object):
             # * deprecation
             # * pipeline inconsistency 
             # * graph with no edge ... 
-            
+
             except Exception as err:
                 # component error handling
-                self.errors.append(err.message) 
-                self.errors.append("error in component %s %s /n %s" % ( comp, comp.name, err.message ))
+                comp_res['errors'].append("error in component %s %s /n %s" % ( comp, comp.name, err.message ))
                 if _break_on_error:
                     break
             
             # component time
             now = time.time()
-            tick = now - start
+            comp_res['time'] = now - start
             start = now
-            self.time += tick
-            run_comps[comp.name]['time'] = tick
+            self.meta.components[comp.name] = comp_res
 
-            # TODO create a Result object 
-            # will all necessary data ie:
-            # multi mode option(False, pipeline, map)
-            # args
-            # warnings : boolean
-            # errors : boolean
-            # components { name, kwargs,warning, errors, time,  }
-            # time (running/computation time)
-            # results: [] or 
-             
-        return results
+        # XXX may return more than one value with multi=map 
+        return results[0]
 
     def component_names(self):
         """ returns the list of component names.
@@ -333,16 +378,15 @@ class Block(object):
         """
         #TODO
         return {}
-
-
-class Cellist(object):
+    
+class Engine(object):
     """ The Cello engine.
     
     """
+    @define_logger
     def __init__(self):
         self._blocks = OrderedDict()
         self.time = 0
-        self._logger = logging.getLogger(__name__)
 
     def requires(self, *names):
         """ Declare what block will be used in this engine.
@@ -362,11 +406,12 @@ class Cellist(object):
 
     def set(self, name, *optionables, **options):
         """ Set available components and the options of one block.
+        :param name: block name
+        :param optionables: a list of components
+        :param options: options of the block
+        """
+        self._logger.info(" ** SET ** '%s' "% name)
 
-       :param name: block name
-       :param optionables: a list of components
-       :param options: options of the block
-       """
         assert name in self._blocks, \
             "%s is not one of (%s)" % (name, ",".join(self._blocks.iterkeys()))
         comp = Block(name, *optionables, **options)
@@ -454,7 +499,7 @@ class Cellist(object):
         @param comp_type: <str> type of component to run
         @param args: all arguments that should be pass to optionables
         """
-        self._logger.info("playing %s with %s args: "% (name, len(args)))
+        self._logger.info("\n\n\t\t\t >>>>> PLAYING '%s' with %s args: <<<<<<"% (name, len(args)))
         return self[name].play(*args)
 
     def as_dict(self):
