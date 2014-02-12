@@ -113,7 +113,7 @@ class Optionable(Composable):
         self._options[opt_name] = opt
 
     def set_option_value(self, opt_name, value, parse=False):
-        """ Set tthe value of one option.
+        """ Set the value of one option.
         
         :param opt_name: option name
         :type opt_name: str
@@ -175,12 +175,23 @@ class Optionable(Composable):
             raise ValueError("Unknow option name (%s)" % opt_name)
         return self._options[opt_name].default
 
-    def set_options_values(self, option_values, parse=True):
+    def set_options_values(self, option_values, parse=True, strict=False):
         """ Set the options from a dict of values (in string).
         
         :param option_values: the values of options (in format `{"opt_name": "new_value"}`)
         :type option_values: dict
+        :param parse: whether to parse the given value
+        :type parse: bool
+        :param strict: if True the given `option_values` dict should only 
+        contains existing options (no other key)
+        :type strict: bool
         """
+        if strict:
+            for opt_name in option_values.iterkeys():
+                if opt_name not in self._options:
+                    raise ValueError("'%s' is not a option of the component" % opt_name)
+                elif self._options[opt_name].hidden:
+                    raise ValueError("'%s' is hidden, you can't set it" % opt_name)
         for opt_name, opt in self._options.iteritems():
             if opt.hidden:
                 continue
@@ -220,6 +231,16 @@ class Optionable(Composable):
                         for opt_name, opt in self._options.iteritems() \
                         if not opt.hidden]
 
+    @staticmethod
+    def check(call_fct):
+        """ Decorator for optionable __call__ method
+        It check the given option values
+        """
+        def checked_call(self, *args, **kwargs):
+            self.set_options_values(kwargs, parse=False, strict=True)
+            options_values = self.get_options_values()
+            return call_fct(self, *args, **options_values)
+        return checked_call
 
 
 class Pipeline(Optionable):

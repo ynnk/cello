@@ -7,6 +7,17 @@ from cello.exceptions import ValidationError
 from cello.types import GenericType, Numeric, Text, Boolean
 from cello.pipeline import Optionable
 
+class MyOptionable(Optionable):
+    def __init__(self):
+        super(MyOptionable, self).__init__("testOptionableName")
+        self.add_option("alpha", Numeric(default=4, min=1, max=20))
+        self.add_option("name", Text(default=u"un", choices=[u"un", u"deux"]))
+
+    @Optionable.check
+    def __call__(self, alpha=None, name=None):
+        return alpha, name
+
+
 class TestOptionable(unittest.TestCase):
     maxDiff = None
     
@@ -20,6 +31,22 @@ class TestOptionable(unittest.TestCase):
         self.assertEqual(comp.name, "nouveau_nom")
         with self.assertRaises(ValueError):
             comp.name = "nouveau nom"
+
+    def testCheckDecorator(self):
+        comp = MyOptionable()
+        alpha, name = comp()
+        self.assertEqual(alpha, 4)
+        self.assertEqual(name, u"un")
+        alpha, name = comp(alpha=2, name=u"deux")
+        self.assertEqual(alpha, 2)
+        self.assertEqual(name, u"deux")
+        with self.assertRaises(ValueError):
+            alpha, name = comp(beta=2)
+        comp.force_option_value("alpha", 10)
+        with self.assertRaises(ValueError):
+            alpha, name = comp(alpha=5)
+        alpha, name = comp()
+        self.assertEqual(alpha, 10)
 
     def testAddOption(self):
         comp = Optionable("composant")
