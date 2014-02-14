@@ -67,6 +67,20 @@ class TestFieldTypes(unittest.TestCase):
         self.assertEqual(f.validate(4), 4)  # ok
         self.assertRaises(ValidationError, f.validate, -1)
         self.assertRaises(ValidationError, f.validate, 8)
+        
+        # as dict
+        self.assertDictEqual(f.as_dict(), {
+                        'vtype': int,
+                        'default': None,
+                        'multi': False,
+                        'uniq': False,
+                        'choices': None,
+                        'help': 'an int',
+                        'max': 4,
+                        'min': 0,
+                        'type': 'Numeric',
+            }
+        )
 
     def test_text(self):
         # setting wrong types 
@@ -144,5 +158,15 @@ class TestFieldTypes(unittest.TestCase):
         self.assertRaises(ValidationError, f.validate, "45")
         self.assertEqual(f.validate(datetime(year=2013, month=11, day=4)), \
                 datetime(year=2013, month=11, day=4))
+        # as dict
+        self.assertDictEqual(f.as_dict(), {
+                        'type': 'Datetime',
+                        'choices': None,
+                        'default': None,
+                        'help': '',
+                        'multi': False,
+                        'uniq': False,
+            }
+        )
 
 

@@ -8,7 +8,7 @@
 inheritance diagrams
 --------------------
 
-.. inheritance-diagram:: AbstractType Any Numeric Text Datetime
+.. inheritance-diagram:: GenericType Numeric Text Datetime
 
 Class
 -----
@@ -176,7 +176,7 @@ class Numeric(GenericType):
         info["vtype"] = self.vtype
         info["min"] = self.min
         info["max"] = self.max
-
+        return info
 
 class Text(GenericType):
     """ Text type (str or unicode)
@@ -242,7 +242,7 @@ class Datetime(GenericType):
 
     def as_dict(self):
         info = super(Datetime, self).as_dict()
-
+        return info
 
 # Add more FiledType here
 # ...
