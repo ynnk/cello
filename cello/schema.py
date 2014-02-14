@@ -122,6 +122,8 @@ class DocField(object):
         """
         raise NotImplementedError
 
+    
+
     @staticmethod
     def FromType(ftype):
         """ DocField subclasses factory, creates a convenient field to store
@@ -161,7 +163,6 @@ class ValueField(DocField):
     
     def set(self, value): 
         self.value = self._ftype.validate(value)
-
 
 class SetField(DocField, set):
     """ Document field for a set of values (i.e. the fieldtype is "multi" and "uniq")
@@ -520,7 +521,7 @@ class Doc(dict):
     #TODO: la valeur de docnum doit être passer en argument de __init__
     """
     
-    def __repr__(self):
+    def __str__(self):
         return "<%s %s %s>" % (self.__class__.__name__, self.schema,
             { k: self[k] for k in self.schema.field_names() }
         )

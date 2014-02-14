@@ -213,8 +213,8 @@ class Block(object):
         :type default: bool
         """
         #TODO check component is a component.
-        if len(self._components) == 0:
-            component = Pipeline(component)
+#        if len(self._components) == 0:
+#            component = Pipeline(component)
         if not component.name in self._components:
             self._components[component.name] = component
             if default:
@@ -287,16 +287,17 @@ class Block(object):
         # run
         for comp, options in runnables:
             # TODO store args and kwargs ?
+            argstr = [ str(a)[:100].replace('\n','') for a in args ]
             comp_res = {
                 "name": comp.name,
                 "obj" : repr(comp),
-                #@"%s_args"% name , args, # args too fat
+                "args" : "".join(argstr),
                 "kwargs" : options,
                 "errors" : [],
                 "warnings" : [],
                 "time" : 0
             }
-            self._logger.info(" playing '%s': %s \n\tcomponent: %s,\n\targs=%s[...], \n\tkwargs=%s" % (self._name, comp.name, comp, str(args)[:100].replace('\n',''), options))
+            self._logger.info(" playing '%s': %s \n\tcomponent: %s,\n\targs=%s[...], \n\tkwargs=%s" % (self._name, comp.name, comp, "\n\t\t".join(argstr), options))
 
             try :            
                 # multi = False or pipeline
@@ -305,7 +306,7 @@ class Block(object):
                 # actually same arg if given several times 
                 # but may be transformed during the process
                 # then finally returned
-                results.append( comp(*args, **options) )
+                results = comp(*args, **options)
 
                 # TODO implements different mode for multiple 
                 # another way would be declaring a list var outside the loop,
@@ -337,7 +338,7 @@ class Block(object):
             self.meta.components[comp.name] = comp_res
 
         # XXX may return more than one value with multi=map 
-        return results[0]
+        return results
 
     def component_names(self):
         """ returns the list of component names.

@@ -65,7 +65,7 @@ class ClusteringMethod(Optionable):
         self._logger = logging.getLogger(self.__class__.__name__)
         
         self.add_option("min_docs", Numeric(default=2,
-                help="Minimum number of document per cluster"))
+                help=u"Minimum number of document per cluster"))
 
     ## tools
     def check_graph(self, graph):
@@ -102,7 +102,7 @@ class BigraphClusteringMethod(ClusteringMethod):
     def __init__(self, name):
         ClusteringMethod.__init__(self, name)
         self.add_option("min_terms", Numeric( default=0,
-            help="Minimum number of term per cluster"))
+            help=u"Minimum number of term per cluster"))
 
     ## tools
     def check_graph(self, graph):
@@ -134,7 +134,7 @@ class OneCluster(BigraphClusteringMethod):
     """ All vertices are in one cluster
     """
     def __init__(self):
-        BigraphClusteringMethod.__init__(self, "one_cluster")
+        BigraphClusteringMethod.__init__(self, u"one_cluster")
 
     def _clustering(self, bigraph):
         cover = [[vtx.index for vtx in bigraph.vs]]
@@ -169,7 +169,7 @@ class ConnectedComponents(ClusteringMethod):
     """ Simple clustering: clusters are connected components
     """
     def __init__(self):
-        ClusteringMethod.__init__(self, "connected_components")
+        ClusteringMethod.__init__(self, u"connected_components")
 
     def _clustering(self, graph):
         vertex_clustering = graph.clusters()
@@ -181,8 +181,8 @@ class MaximalCliques(ClusteringMethod):
     """
     def __init__(self):
         ClusteringMethod.__init__(self, "maximal_cliques")
-        self.add_option("min", Numeric(default=0, help="Minimum cliques size"))
-        self.add_option("max", Numeric(default=10, help="Maximal cliques size"))
+        self.add_option("min", Numeric(default=0, help=u"Minimum cliques size"))
+        self.add_option("max", Numeric(default=10, help=u"Maximal cliques size"))
 
     def _clustering(self, graph, min=0, max=10):
         return ig.VertexCover(graph, graph.maximal_cliques(min, max))
@@ -198,7 +198,7 @@ class FormalConceptAnalysis(BigraphClusteringMethod):
     def __init__(self, fca_method="fcbo"):
         """ Just a wrapper to igraph method
         """
-        BigraphClusteringMethod.__init__(self, "formal_concept_analysis")
+        BigraphClusteringMethod.__init__(self, u"formal_concept_analysis")
         self.add_option("no_trivial", Boolean(default=True, 
             help="Remove trivial concepts (i.e. concepts with no objects or no properties)"))
         if fca_method == "kov_py":
@@ -226,7 +226,7 @@ class FormalConceptAnalysis(BigraphClusteringMethod):
 #{ Walktrap
 class Walktrap(ClusteringMethod):
     def __init__(self):
-        ClusteringMethod.__init__(self, "walktrap")
+        ClusteringMethod.__init__(self, u"walktrap")
         self.add_option("l", Numeric( default=4, help="lenght of the random walks"))
 
     def _clustering(self, graph, l=4):
@@ -235,22 +235,22 @@ class Walktrap(ClusteringMethod):
 
 def WalktrapPG():
     cluster_fct = GraphProjection(projection_wgt=None) | Walktrap()
-    cluster_fct.name = "walktrap_PG"
+    cluster_fct.name = u"walktrap_PG"
     return cluster_fct
 
 class WalktrapBigraph(BigraphClusteringMethod):
     """ Walktrap adaptation on bigraph
     """
     def __init__(self):
-        BigraphClusteringMethod.__init__(self, "walktrap_bigraph")
+        BigraphClusteringMethod.__init__(self, u"walktrap_bigraph")
 
         self.add_option("ldoc", Numeric( default=4, 
-                help="lenght of the random walks for documents"))
+                help=u"lenght of the random walks for documents"))
         self.add_option("lterms", Numeric( default=5,
-            help="lenght of the random walks for terms"))
-        self.add_option("cut", Text(default="modularity",
-            help="method to cut the dendrogramme",
-            choices=['modularity', 'max', 'cc', 'fixed', 'fixed_V2']))
+            help=u"lenght of the random walks for terms"))
+        self.add_option("cut", Text(default=u"modularity",
+            help=u"method to cut the dendrogramme",
+            choices=[u'modularity', u'max', u'cc', u'fixed', u'fixed_V2']))
 
     def _clustering(self, bigraph, ldoc=4, lterms=5, cut="modularity"):
         vertex_clustering = walktrap_bigraph(bigraph, ldoc, lterms, EDGE_WEIGHT_ATTR, cut)
@@ -262,7 +262,7 @@ class WalktrapBigraph(BigraphClusteringMethod):
 #{ Infomap
 class Infomap(ClusteringMethod):
     def __init__(self):
-        ClusteringMethod.__init__(self, "infomap")
+        ClusteringMethod.__init__(self, u"infomap")
 
     def _clustering(self, bigraph):
         vertex_clustering = bigraph.community_infomap(edge_weights=EDGE_WEIGHT_ATTR)
@@ -270,7 +270,7 @@ class Infomap(ClusteringMethod):
 
 def InfomapPG():
     cluster_fct = GraphProjection(projection_wgt=None) | Infomap()
-    cluster_fct.name = "infomap_PG"
+    cluster_fct.name = u"infomap_PG"
     return cluster_fct
 
 #{ Modularity optimization methods
@@ -278,7 +278,7 @@ class Louvain(ClusteringMethod):
     """ Louvain method (modularity optimization)
     """
     def __init__(self):
-        ClusteringMethod.__init__(self, "louvain")
+        ClusteringMethod.__init__(self, u"louvain")
 
     def _clustering(self, graph):
         vertex_clustering = graph.community_multilevel(weights=EDGE_WEIGHT_ATTR, return_levels=False)
@@ -289,10 +289,10 @@ class Fastgreedy(ClusteringMethod):
     """ Fastgreedy method (modularity optimization)
     """
     def __init__(self):
-        ClusteringMethod.__init__(self, "fastgreedy")
+        ClusteringMethod.__init__(self, u"fastgreedy")
 
     def _clustering(self, graph):
-        vertex_clustering = graph.community_fastgreedy(weights=EDGE_WEIGHT_ATTR).as_clustering()
+        vertex_clustering = graph.community_fastgreedyu(weights=EDGE_WEIGHT_ATTR).as_clustering()
         return vertex_clustering.as_cover()
 
 class EdgeBetweenness(ClusteringMethod):
@@ -300,7 +300,7 @@ class EdgeBetweenness(ClusteringMethod):
     Note: work only for unweighted modularity, graph's weight are ignored
     """
     def __init__(self):
-        ClusteringMethod.__init__(self, "edge_betweenness")
+        ClusteringMethod.__init__(self, u"edge_betweenness")
 
     def _clustering(self, graph):
         vertex_clustering = graph.community_edge_betweenness(clusters=None, directed=False).as_clustering()
@@ -312,7 +312,7 @@ class OptimalModulartity(ClusteringMethod):
     Note: work only for unweighted modularity, graph's weight are ignored
     """
     def __init__(self):
-        ClusteringMethod.__init__(self, "optimodularity")
+        ClusteringMethod.__init__(self, u"optimodularity")
 
     def _clustering(self, graph):
         vertex_clustering = graph.community_optimal_modularity()
@@ -327,7 +327,7 @@ class LabelPropagation(ClusteringMethod):
     """ Label propagation on the projection graph
     """
     def __init__(self):
-        ClusteringMethod.__init__(self, "label_propagation")
+        ClusteringMethod.__init__(self, u"label_propagation")
 
     def _clustering(self, graph):
         vertex_clustering = graph.community_label_propagation(weights=EDGE_WEIGHT_ATTR, initial=None, fixed=None)
@@ -336,7 +336,7 @@ class LabelPropagation(ClusteringMethod):
 
 def LabelPropagationPG():
     cluster_fct = GraphProjection(projection_wgt=None) | LabelPropagation()
-    cluster_fct.name = "label_propagation_PG"
+    cluster_fct.name = u"label_propagation_PG"
     return cluster_fct
 #}
 
@@ -346,7 +346,7 @@ class Oslom(ClusteringMethod):
     """ OSLMOM
     """
     def __init__(self):
-        ClusteringMethod.__init__(self, "oslom")
+        ClusteringMethod.__init__(self, u"oslom")
         if not clustering_external.check_oslom():
             raise ImportError("OSLOM executables can't be found (see misc/clustering)")
 
@@ -361,7 +361,7 @@ class Oslom(ClusteringMethod):
 
 def OslomPG():
     cluster_fct = GraphProjection(projection_wgt=None) | Oslom()
-    cluster_fct.name = "oslom_PG"
+    cluster_fct.name = u"oslom_PG"
     return cluster_fct
 #}
 
@@ -406,7 +406,7 @@ def bipartite_clustering_methods():
 
 from cello.utils import deprecated
 
-@deprecated("This mehtod 'get_basic_clustering_methods' should be updated")
+@deprecated("This method 'get_basic_clustering_methods' should be updated")
 def get_basic_clustering_methods():
     """ Return a list of all clustering method (instance)
     i.e. MaximalCliques and ConnectedComponents

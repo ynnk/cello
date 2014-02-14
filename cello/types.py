@@ -77,7 +77,7 @@ class GenericType(object):
                 self.validate(value)
         # set the default value
         if self.default is not None:
-            print self.multi
+#            print self.multi
             if self.multi:
                 for val in self.default:
                     self.validate(val)

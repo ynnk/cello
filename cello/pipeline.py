@@ -57,7 +57,6 @@ class Composable(object):
         if func and callable(func):
             self._func=func
             self.name = func.func_name
-            self.__doc__ = func.__doc__
         if name is not None:
             self.name = name
 
@@ -82,6 +81,11 @@ class Composable(object):
             return self._func(*args)
         else: raise NotImplementedError
 
+    def __str__(self):
+        if hasattr(self, '_func'):
+            return u"<function %s>" % self.name
+        
+        return u"<%s.%s>" % (self.__class__.__module__, self.__class__.__name__)
 
 class Optionable(Composable):
     """ Abstract class for an optionable component
@@ -220,6 +224,8 @@ class Optionable(Composable):
                         for opt_name, opt in self._options.iteritems() \
                         if not opt.hidden]
 
+    def __str__(self):
+        return u"<%s.%s>" % (self.__class__.__module__, self.__class__.__name__)
 
 
 class Pipeline(Optionable):
@@ -277,19 +283,25 @@ class Pipeline(Optionable):
         return "%s(%s)" % (self.__class__.__name__,
                            ", ".join(repr(item) for item in self.items))
 
-    def __call__(self, element_iter, **kwargs):
+    def __call__(self, *args, **kwargs):
         
         items = self.items
         for item in items:
             item_kwargs = {}
             item_name = ""            
             # if Optionable, build kargs
+            item_name = item.name if hasattr(item, 'name') else ""
             if isinstance(item, Optionable):
                 item_kwargs = item.parse_options(kwargs)
-                item_name = item.name
             self._logger.info("\n\tcalling %s '%s' with %s", item,  item_name, item_kwargs )
-            element_iter = item(element_iter, **item_kwargs)
-        return element_iter
+            # XXX 
+            # comment on gere les retours multiple si il y a
+            # pour les passer au composant suivant ?
+            # le cas se pose pour un pipeline multi i/o
+            # si 2 args en input combien en sortie ?
+            # Ca parait complqué d avoir de multiple output     XXX
+            args = [item(*args, **item_kwargs)]
+        return args[0] # expect only one output XXX
 
     def __getitem__(self, item):
         return self.items.__getitem__(item)

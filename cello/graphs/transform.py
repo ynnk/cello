@@ -18,9 +18,9 @@ class GraphProjection(Optionable):
         
         self._projection_wgt = projection_wgt
         if self._projection_wgt is None:
-            self.add_option("proj_wgt", Text(default="p",
-                 help="Projection weighting method",
-                 choices=['no', 'count', 'p', 'pmin', 'pmax', 'pavg']))
+            self.add_option("proj_wgt", Text(default=u"p",
+                 help=u"Projection weighting method",
+                 choices=[u'no', u'count', u'p', u'pmin', u'pmax', u'pavg']))
     
     def __call__(self, graph, proj_wgt="p"):
         # The projection work only because:
