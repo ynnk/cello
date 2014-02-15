@@ -110,7 +110,7 @@ class Optionable(Composable):
         :param name: name of the component
         :type name: str
         """
-        Composable.__init__(self, name=name)
+        super(Optionable, self).__init__(name=name)
         self._options = OrderedDict()
         self._logger = logging.getLogger(__name__)
 
@@ -226,39 +226,46 @@ class Optionable(Composable):
             if opt_name in option_values:
                 opt.set(option_values[opt_name], parse=parse)
 
-    def get_options_values(self):
+    def get_options_values(self, hidden=False):
         """ return a dictionary of options values
         
+        :param hidden: whether to return hidden options
+        :type hidden: bool
         :returns: dictionary of all option values
         :rtype: dict
         """
         values = {}
         for opt_name, opt in self._options.iteritems():
-            values[opt_name] = opt.value
+            if hidden or not opt.hidden:
+                values[opt_name] = opt.value
         return values
 
     def parse_options(self, option_values):
         """ Set the options (with parsing) and returns a dict of all options values
         """
         self.set_options_values(option_values)
-        return self.get_options_values()
+        return self.get_options_values(hidden=False)
 
-    def get_options(self):
+    def get_options(self, hidden=False):
         """
+        :param hidden: whether to return hidden options
+        :type hidden: bool
         :returns: dictionary of all options (with option's information)
         :rtype: dict
         """
-        return dict(self.get_ordered_options())
+        return dict(self.get_ordered_options(hidden=hidden))
 
-    def get_ordered_options(self):
+    def get_ordered_options(self, hidden=False):
         """
+        :param hidden: whether to return hidden option
+        :type hidden: bool
         :returns: **ordered** list of all options (with option's information)
         :rtype: list ::
             [(<opt_name>, opt_dict)]
         """
         return [(opt_name, opt.as_dict()) \
                         for opt_name, opt in self._options.iteritems() \
-                        if not opt.hidden]
+                        if hidden or (not opt.hidden)]
 
     @staticmethod
     def check(call_fct):
@@ -267,7 +274,7 @@ class Optionable(Composable):
         """
         def checked_call(self, *args, **kwargs):
             self.set_options_values(kwargs, parse=False, strict=True)
-            options_values = self.get_options_values()
+            options_values = self.get_options_values(hidden=True)
             return call_fct(self, *args, **options_values)
         return checked_call
 
@@ -375,16 +382,16 @@ class OptionableSequence(Optionable):
             # on passe strict a false car le check a deja été fait
             item.set_options_values(option_values, parse=parse, strict=False)
 
-    def get_options_values(self):
+    def get_options_values(self, hidden=False):
         values = {}
         for item in self.opt_items:
-            values.update(item.get_options_values())
+            values.update(item.get_options_values(hidden=hidden))
         return values
 
-    def get_ordered_options(self):
+    def get_ordered_options(self, hidden=False):
         opts = []
         for item in self.opt_items:
-            opts += item.get_ordered_options()
+            opts += item.get_ordered_options(hidden=hidden)
         return opts
 
 

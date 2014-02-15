@@ -222,9 +222,13 @@ class TestOptionableSequence(unittest.TestCase):
             "alpha": "3"
         }
         comp.set_options_values(vals, parse=True, strict=True)
-        self.assertDictEqual(comp.get_options_values(), {
+        self.assertDictEqual(comp.get_options_values(hidden=True), {
             "filtering": False,
             "name": u"deux",
+            "alpha": 3
+        })
+        self.assertDictEqual(comp.get_options_values(hidden=False), {
+            "filtering": False,
             "alpha": 3
         })
         # get otpions
