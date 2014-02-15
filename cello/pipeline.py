@@ -82,9 +82,6 @@ class Composable(object):
         """Name of the optionable component"""
         return self._name
 
-    def __repr__(self):
-        return "%s(%s)" % (self.__class__.__name__, self.name)
-
     @name.setter
     def name(self, name):
         if ' ' in name:
@@ -100,12 +97,15 @@ class Composable(object):
         if hasattr(self, "_func"):
             return self._func(*args, **kwargs)
         else:
-            raise NotImplemented
+            raise NotImplementedError
 
     def __str__(self):
         if hasattr(self, '_func'):
             return u"<function %s>" % self.name
         return u"<%s.%s>" % (self.__class__.__module__, self.__class__.__name__)
+
+    def __repr__(self):
+        return "%s(%s)" % (self.__class__.__name__, self.name)
 
 
 class Optionable(Composable):
@@ -399,17 +399,16 @@ class OptionableSequence(Optionable):
         for item in self.opt_items:
             opts += item.get_ordered_options(hidden=hidden)
         return opts
-    
+
     def call_item(self, item, *args, **kwargs):
         item_kwargs = {}
-        item_name = ""            
         # if Optionable, build kargs
         item_name = item.name if hasattr(item, 'name') else ""
         if isinstance(item, Optionable):
-            item_kwargs = item.parse_options(kwargs)
-        self._logger.info("\n\tcalling %s '%s' with %s", item,  item_name, item_kwargs )
+            item.set_options_values(kwargs, strict=False, parse=False)
+            item_kwargs = item.get_options_values()
+        self._logger.info("calling %s '%s' with %s", item, item_name, item_kwargs)
         return item(*args, **item_kwargs)
-        
 
 
 class Pipeline(OptionableSequence):
@@ -442,6 +441,7 @@ class Pipeline(OptionableSequence):
         name = "|".join(item.name for item in self.opt_items)
         self.name = name
 
+    @OptionableSequence.check
     def __call__(self, *args, **kwargs):
         for item in self.items:
             args = [self.call_item(item, *args, **kwargs)]
@@ -450,10 +450,13 @@ class Pipeline(OptionableSequence):
 
 class MapSeq(OptionableSequence):
     """ Map implentation for components
-        >>> mapseq = MapSeq( lambda x: x+1, lambda x: x+2, lambda x: x+3 )
-        >>> sum(mapseq( 10 ))
-        36
+    
+    >>> mapseq = MapSeq( lambda x: x+1, lambda x: x+2, lambda x: x+3 )
+    >>> sum(mapseq( 10 ))
+    36
     """
+    @OptionableSequence.check
     def __call__(self, *args, **kwargs):
-        return map(lambda item: self.call_item(item, *args, **kwargs) , self.items) 
+        return [self.call_item(item, *args, **kwargs) for item in self.items]
+
 
