@@ -100,7 +100,7 @@ class Composable(object):
         if hasattr(self, "_func"):
             return self._func(*args, **kwargs)
         else:
-            raise NotImplemented
+            raise NotImplementedError
 
     def __str__(self):
         if hasattr(self, '_func'):
@@ -451,9 +451,19 @@ class Pipeline(OptionableSequence):
 class MapSeq(OptionableSequence):
     """ Map implentation for components
         >>> mapseq = MapSeq( lambda x: x+1, lambda x: x+2, lambda x: x+3 )
+        >>> mapseq( 10 )
+        [11, 12, 13]
         >>> sum(mapseq( 10 ))
         36
     """
     def __call__(self, *args, **kwargs):
         return map(lambda item: self.call_item(item, *args, **kwargs) , self.items) 
 
+
+class MapReduce(OptionableSequence):
+    def __init__(self, *composables):
+        super(MapReduce, self).__init__(*composables)
+        # create the "meta" name of the optionable pipeline, and init optionable
+        name = "|".join(item.name for item in self.opt_items)
+        self.name = name
+        
