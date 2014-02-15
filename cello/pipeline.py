@@ -5,8 +5,6 @@
 :copyright: (c) 2013 - 2014 by Yannick Chudy, Emmanuel Navarro.
 :license: ${LICENSE}
 
-Abstract objects used to setup processing pipelines.
-
 
 inheritance diagrams
 --------------------
@@ -53,17 +51,39 @@ class Composable(object):
     """
 
     def __init__(self, func=None, name=None):
+        """ You can create a :class:`Composable` from a simple function:
+        
+        >>> def square(val, pow=2): \
+                return val ** pow
+        >>> cfct = Composable(square)
+        >>> cfct.name
+        'square'
+        >>> cfct(2)
+        4
+        >>> cfct(3, 3)
+        27
+        """
         self._name = None
         if func and callable(func):
-            self._func=func
-            self.name = func.func_name
-        if name is not None:
+            self._func = func
+            if name is None:
+                self.name = func.func_name
+            else:
+                self.name = name
+            self.__doc__ = func.__doc__
+        elif name is None:
+            self.name = self.__class__.__name__
+        else:
             self.name = name
+        self._logger = logging.getLogger(__name__)
 
     @property
     def name(self):
         """Name of the optionable component"""
         return self._name
+
+    def __repr__(self):
+        return "%s(%s)" % (self.__class__.__name__, self.name)
 
     @name.setter
     def name(self, name):
@@ -73,32 +93,32 @@ class Composable(object):
 
     def __or__(self, other):
         if not callable(other):
-            raise Exception("%r is not composable with %r" % (self, other))
+            raise ValueError("%r is not composable with %r" % (self, other))
         return Pipeline(self, other)
 
-    def __call__(self, *args):
+    def __call__(self, *args, **kwargs):
         if hasattr(self, "_func"):
-            return self._func(*args)
-        else: raise NotImplementedError
+            return self._func(*args, **kwargs)
+        else:
+            raise NotImplemented
 
     def __str__(self):
         if hasattr(self, '_func'):
             return u"<function %s>" % self.name
-        
         return u"<%s.%s>" % (self.__class__.__module__, self.__class__.__name__)
+
 
 class Optionable(Composable):
     """ Abstract class for an optionable component
     """
 
-    def __init__(self, name):
+    def __init__(self, name=None):
         """ 
         :param name: name of the component
         :type name: str
         """
         Composable.__init__(self, name=name)
         self._options = OrderedDict()
-        self._logger = logging.getLogger(__name__)
 
     def add_option(self, opt_name, otype, hidden=False):
         """ Add an option to the object
@@ -110,14 +130,24 @@ class Optionable(Composable):
         :param hidden: if True the option will be hidden
         :type hidden: bool
         """
-        if opt_name in self._options:
+        if self.has_option(opt_name):
             raise ValueError("The option is already present !")
         opt = ValueOption.FromType(opt_name, otype)
         opt.hidden = hidden
         self._options[opt_name] = opt
 
+    def has_option(self, opt_name):
+        """ Whether the  component have a given option
+        """
+        return opt_name in self._options
+
+    def option_is_hidden(self, opt_name):
+        """ Whether the given option is hidden
+        """
+        return self._options[opt_name].hidden
+
     def set_option_value(self, opt_name, value, parse=False):
-        """ Set tthe value of one option.
+        """ Set the value of one option.
         
         :param opt_name: option name
         :type opt_name: str
@@ -125,7 +155,7 @@ class Optionable(Composable):
         :param parse: if True the value is converted from string to the correct type
         :type parse: bool
         """
-        if not opt_name in self._options:
+        if not self.has_option(opt_name):
             raise ValueError("Unknow option name (%s)" % opt_name)
         self._options[opt_name].set(value, parse=parse)
 
@@ -137,7 +167,7 @@ class Optionable(Composable):
         
         :returns: the value of the option
         """
-        if not opt_name in self._options:
+        if not self.has_option(opt_name):
             raise ValueError("Unknow option name (%s)" % opt_name)
         return self._options[opt_name].value
 
@@ -149,7 +179,7 @@ class Optionable(Composable):
         
         :param value: new default option value
         """
-        if opt_name not in self._options:
+        if not self.has_option(opt_name):
             raise ValueError("Unknow option name (%s)" % opt_name)
         self._options[opt_name].default = default_val
 
@@ -162,7 +192,7 @@ class Optionable(Composable):
         
         :param value: option value
         """
-        if not opt_name in self._options:
+        if not self.has_option(opt_name):
             raise ValueError("Unknow option name (%s)" % opt_name)
         self._options[opt_name].default = value # also change the value
         self._options[opt_name].hidden = True
@@ -175,16 +205,27 @@ class Optionable(Composable):
         
         :returns: the default value of the option
         """
-        if not opt_name in self._options:
+        if not self.has_option(opt_name):
             raise ValueError("Unknow option name (%s)" % opt_name)
         return self._options[opt_name].default
 
-    def set_options_values(self, option_values, parse=True):
+    def set_options_values(self, option_values, parse=True, strict=False):
         """ Set the options from a dict of values (in string).
         
         :param option_values: the values of options (in format `{"opt_name": "new_value"}`)
         :type option_values: dict
+        :param parse: whether to parse the given value
+        :type parse: bool
+        :param strict: if True the given `option_values` dict should only 
+         contains existing options (no other key)
+        :type strict: bool
         """
+        if strict:
+            for opt_name in option_values.iterkeys():
+                if not self.has_option(opt_name):
+                    raise ValueError("'%s' is not a option of the component" % opt_name)
+                elif self.option_is_hidden(opt_name):
+                    raise ValueError("'%s' is hidden, you can't set it" % opt_name)
         for opt_name, opt in self._options.iteritems():
             if opt.hidden:
                 continue
@@ -203,7 +244,8 @@ class Optionable(Composable):
         return values
 
     def parse_options(self, option_values):
-        #XXX: doit disparaitre
+        """ Set the options (with parsing) and returns a dict of all options values
+        """
         self.set_options_values(option_values)
         return self.get_options_values()
 
@@ -224,11 +266,146 @@ class Optionable(Composable):
                         for opt_name, opt in self._options.iteritems() \
                         if not opt.hidden]
 
-    def __str__(self):
-        return u"<%s.%s>" % (self.__class__.__module__, self.__class__.__name__)
+    @staticmethod
+    def check(call_fct):
+        """ Decorator for optionable __call__ method
+        It check the given option values
+        """
+        def checked_call(self, *args, **kwargs):
+            self.set_options_values(kwargs, parse=False, strict=True)
+            options_values = self.get_options_values()
+            return call_fct(self, *args, **options_values)
+        return checked_call
 
 
-class Pipeline(Optionable):
+class OptionableSequence(Optionable):
+    """ Abstract class to manage a composant made of a sequence of callable
+    (Optionable or not).
+    
+    This object is an Optionable witch as all the options of it composants
+    """
+    def __init__(self, *composants):
+        # Composable init
+        super(OptionableSequence, self).__init__()
+        self.items = []
+        for comp in composants:
+            if not isinstance(comp, Composable):
+                comp = Composable(comp)
+            # merge ONLY if the composant is same class than "self"
+            if isinstance(comp, self.__class__):
+                self.items.extend(comp.items)
+            else:
+                self.items.append(comp)
+        # Optionable init
+        self.opt_items = [item for item in self.items if isinstance(item, Optionable)]
+        # Check than a given options is not in two items
+        all_opt_names = {}
+        for item in self.opt_items:
+            opt_names = item.get_options().keys()
+            for opt_name in opt_names:
+                assert not opt_name in all_opt_names, "Option '%s' present both in %s and in %s" % (opt_name, item, all_opt_names[opt_name])
+                all_opt_names[opt_name] = item
+        name = "+".join(item.name for item in self.items)
+        self.name = name
+
+    def __call__(self, *args, **kwargs):
+        raise NotImplementedError
+    
+
+    def __repr__(self):
+        return "%s(%s)" % (self.__class__.__name__,
+                           ", ".join(repr(item) for item in self.items))
+
+    def __getitem__(self, item):
+        return self.items.__getitem__(item)
+
+    def __len__(self):
+        return len(self.items)
+
+    def __eq__(self, other):
+        return (other
+                and self.__class__ is other.__class__
+                and self.items == other.items)
+
+    def close(self):
+        """ Close all the neested components
+        """
+        for item in self.items:
+            if hasattr(item, "close"):
+                item.close()
+
+    def add_option(self, opt_name, otype, hidden=False):
+        raise NotImplementedError("You can't add option on a OptionableSequence")
+
+    def has_option(self, opt_name):
+        return any(item.has_option(opt_name) for item in self.opt_items)
+
+    def _item_from_option(self, opt_name):
+        for item in self.opt_items:
+            if item.has_option(opt_name):
+                return item
+        raise ValueError("'%s' is not an existing option" % opt_name)
+
+    def option_is_hidden(self, opt_name):
+        item = self._item_from_option(opt_name)
+        return item.option_is_hidden(opt_name)
+
+    def set_option_value(self, opt_name, value, parse=False):
+        item = self._item_from_option(opt_name)
+        item.set_option_value(opt_name, value, parse=parse)
+
+    def get_option_value(self, opt_name):
+        item = self._item_from_option(opt_name)
+        return item.get_option_value(opt_name)
+
+    def change_option_default(self, opt_name, default_val):
+        item = self._item_from_option(opt_name)
+        item.change_option_default(opt_name, default_val)
+
+    def force_option_value(self, opt_name, value):
+        item = self._item_from_option(opt_name)
+        item.force_option_value(opt_name, value)
+
+    def get_option_default(self, opt_name):
+        item = self._item_from_option(opt_name)
+        return item.get_option_default(opt_name)
+
+    def set_options_values(self, option_values, parse=True, strict=False):
+        if strict:
+            for opt_name in option_values.iterkeys():
+                if not self.has_option(opt_name):
+                    raise ValueError("'%s' is not a option of the component" % opt_name)
+                elif self.option_is_hidden(opt_name):
+                    raise ValueError("'%s' is hidden, you can't set it" % opt_name)
+        for item in self.opt_items:
+            # on passe strict a false car le check a deja été fait
+            item.set_options_values(option_values, parse=parse, strict=False)
+
+    def get_options_values(self):
+        values = {}
+        for item in self.opt_items:
+            values.update(item.get_options_values())
+        return values
+
+    def get_ordered_options(self):
+        opts = []
+        for item in self.opt_items:
+            opts += item.get_ordered_options()
+        return opts
+    
+    def call_item(self, item, *args, **kwargs):
+        item_kwargs = {}
+        item_name = ""            
+        # if Optionable, build kargs
+        item_name = item.name if hasattr(item, 'name') else ""
+        if isinstance(item, Optionable):
+            item_kwargs = item.parse_options(kwargs)
+        self._logger.info("\n\tcalling %s '%s' with %s", item,  item_name, item_kwargs )
+        return item(*args, **item_kwargs)
+        
+
+
+class Pipeline(OptionableSequence):
     """ A Pipeline is a sequence of function called sequentially.
     
     It may be create explicitely:
@@ -251,124 +428,25 @@ class Pipeline(Optionable):
     8
     >>> processing(0)
     -1
-
-    
     """
-
     def __init__(self, *composables):
-        # Composable init
-        self._logger = logging.getLogger(__name__)
-#        Composable.__init__(self)
-        self.items = []
-        for comp in composables:
-            if isinstance(comp, Pipeline):
-                # if already a composable chain, merge it
-                self.items.extend(comp.items)
-            else:
-                self.items.append(comp)
-        # Optionable init
-        opt_items = [item for item in self.items if isinstance(item, Optionable)]
-        # Check than a given options is not in two items
-        all_opt_names = {}
-        for item in opt_items:
-            opt_names = item.get_options().keys()
-            for opt_name in opt_names:
-                assert not opt_name in all_opt_names, "Option '%s' present both in %s and in %s" % (opt_name, item, all_opt_names[opt_name])
-                all_opt_names[opt_name] = item
+        super(Pipeline, self).__init__(*composables)
         # create the "meta" name of the optionable pipeline, and init optionable
-        name = "|".join(item.name for item in opt_items)
-        Optionable.__init__(self, name)
-
-    def __repr__(self):
-        return "%s(%s)" % (self.__class__.__name__,
-                           ", ".join(repr(item) for item in self.items))
+        name = "|".join(item.name for item in self.opt_items)
+        self.name = name
 
     def __call__(self, *args, **kwargs):
-        
-        items = self.items
-        for item in items:
-            item_kwargs = {}
-            item_name = ""            
-            # if Optionable, build kargs
-            item_name = item.name if hasattr(item, 'name') else ""
-            if isinstance(item, Optionable):
-                item_kwargs = item.parse_options(kwargs)
-            self._logger.info("\n\tcalling %s '%s' with %s", item,  item_name, item_kwargs )
-            # XXX 
-            # comment on gere les retours multiple si il y a
-            # pour les passer au composant suivant ?
-            # le cas se pose pour un pipeline multi i/o
-            # si 2 args en input combien en sortie ?
-            # Ca parait complqué d avoir de multiple output     XXX
-            args = [item(*args, **item_kwargs)]
+        for item in self.items:
+            args = [self.call_item(item, *args, **kwargs)]
         return args[0] # expect only one output XXX
 
-    def __getitem__(self, item):
-        return self.items.__getitem__(item)
 
-    def __len__(self):
-        return len(self.items)
-
-    def __eq__(self, other):
-        return (other
-                and self.__class__ is other.__class__
-                and self.items == other.items)
-
-    def parse_options(self, options):
-        opt = {}
-        for item in self.items:
-            if isinstance(item, Optionable):
-                opt.update(item.parse_options(options))
-        return opt
-
-    def get_options(self):
-        opt = {}
-        for item in self.items:
-            if isinstance(item, Optionable):
-                opt.update(item.get_options())
-        return opt
-
-    def get_ordered_options(self):
-        opts = []
-        for item in self.items:
-            if isinstance(item, Optionable):
-                opts += item.get_ordered_options()
-        return opts
-
-    def force_option_value(self, opt_name, value):
-        flg = False
-        for item in self.items:
-            if isinstance(item, Optionable):
-                if opt_name in item.get_options():
-                    item.force_option_value(opt_name, value)
-                    flg  = True
-        if not flg :
-            raise ValueError, "Unknow option name (%s)" % opt_name
-
-    def change_option_default(self, opt_name, default_val):
-        flg = False
-        for item in self.items:
-            if isinstance(item, Optionable):
-                if opt_name in item.get_options():
-                    item.change_option_default(opt_name, default_val)
-                    flg  = True
-        if not flg :
-            raise ValueError, "Unknow option name (%s)" % opt_name
-
-    def get_default_value(self, opt_name):
-        val = None
-        for item in self.items:
-            if isinstance(item, Optionable):
-                if opt_name in item.get_options():
-                    val = item.get_default_value(opt_name)
-        if val is None:
-            raise ValueError("'%s' is not an existing option" % opt_name)
-        return val
-
-    def close(self):
-        """ Close all the element of the pipeline
-        """
-        for item in self.items:
-            if hasattr(item, "close"):
-                item.close()
+class MapSeq(OptionableSequence):
+    """ Map implentation for components
+        >>> mapseq = MapSeq( lambda x: x+1, lambda x: x+2, lambda x: x+3 )
+        >>> sum(mapseq( 10 ))
+        36
+    """
+    def __call__(self, *args, **kwargs):
+        return map(lambda item: self.call_item(item, *args, **kwargs) , self.items) 
 

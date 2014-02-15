@@ -257,9 +257,9 @@ class VectorField(DocField):
     >>> doc.terms['chat'].tf = 12
     >>> doc.terms['chat'].tf
     12
-    >>> doc['boo'] = Text(default="boo")
+    >>> doc['boo'] = Text(default=u"boo")
     >>> doc.boo
-    'boo'
+    u'boo'
     >>> doc.terms.add_attribute('foo', Numeric(default=42))
     >>> doc.terms.foo.values()
     [42]

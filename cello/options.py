@@ -1,18 +1,17 @@
 #-*- coding:utf-8 -*-
-""" :mod:`cello.optionable`
-==========================
+""" :mod:`cello.option`
+=======================
 
 :copyright: (c) 2013 - 2014 by Yannick Chudy, Emmanuel Navarro.
 :license: ${LICENSE}
 
-Management of optionable processing component.
+Option objects used in :class:`.Optionable`.
 
 
 inheritance diagrams
 --------------------
 
-.. inheritance-diagram:: Optionable
-.. inheritance-diagram:: AbstractOption  AbstractOption  BooleanOption EnumOption
+.. inheritance-diagram:: ValueOption
 
 Class
 -----
@@ -33,10 +32,10 @@ class ValueOption(object):
 
         attribute precedence :
         
-        * ``|attrs| > 0`` (``multi`` and ``uniq`` are implicit) => VectorField
-        * ``uniq`` (``multi`` is implicit) => SetField 
-        * ``multi`` and ``not uniq`` => ListField 
-        * ``not multi`` => ValueField
+        * ``|attrs| > 0`` (``multi`` and ``uniq`` are implicit) => NotImplementedError
+        * ``uniq`` (``multi`` is implicit) => NotImplementedError
+        * ``multi`` and ``not uniq`` => NotImplementedError
+        * ``not multi`` => ValueOption
         
         :param name: Name of the option
         :type name: str

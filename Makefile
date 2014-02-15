@@ -16,8 +16,8 @@ clean-doc:
 	rm -rf docs/_build/ docs/_static/ docs/_templates/
 
 doc:
-	ipython nbconvert --to rst notebooks/Cello*.ipynb
-	mv Cello*.rst ./docs
+	#ipython nbconvert --to rst notebooks/Cello*.ipynb
+	#mv Cello*.rst ./docs
 	make -C ./docs html
 	#py.test -v ./docs
 
@@ -28,10 +28,10 @@ testlib:
 	py.test -v ./cello
 
 testall: 
-	py.test  -v
+	py.test -v ./tests ./cello --doctest-module --cov cello --cov-report html
 
 testcov:
-	py.test --cov cello --cov-report term-missing 
+	py.test --cov cello --cov-report term-missing
 
 clean:
 	# removing .pyc filesin

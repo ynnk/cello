@@ -6,9 +6,9 @@ Voir :mod:`cello.pipeline` par exemple, ou meme :class:`cello.pipeline.Optionabl
 .. toctree::
 
     cello
-    cello.optionable
     cello.pipeline
     cello.types
+    cello.options
     cello.validators
     cello.schema
     cello.engine
