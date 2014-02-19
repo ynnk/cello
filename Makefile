@@ -21,6 +21,14 @@ doc:
 	make -C ./docs html
 	#py.test -v ./docs
 
+publish-doc:
+	#ipython nbconvert --to rst notebooks/Cello*.ipynb
+	#mv Cello*.rst ./docs
+	make -C ./docs html
+	scp -r ./docs/_build/html/* 192.168.122.99:/var-hdd/www-proxteam/doc/cello/
+	#py.test -v ./docs
+
+
 test:
 	py.test -v ./tests --cov cello --cov-report html
 
