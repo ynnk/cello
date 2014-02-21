@@ -22,6 +22,7 @@ doc:
 	#py.test -v ./docs
 
 publish-doc:
+	rm -rf ./doc/_build/
 	#ipython nbconvert --to rst notebooks/Cello*.ipynb
 	#mv Cello*.rst ./docs
 	make -C ./docs html
