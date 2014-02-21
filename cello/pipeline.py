@@ -16,6 +16,7 @@ Class
 """
 import logging
 from collections import OrderedDict
+from functools import wraps
 
 from cello.options import ValueOption
 
@@ -278,6 +279,7 @@ class Optionable(Composable):
         """ Decorator for optionable __call__ method
         It check the given option values
         """
+        @wraps(call_fct)
         def checked_call(self, *args, **kwargs):
             self.set_options_values(kwargs, parse=False, strict=True)
             options_values = self.get_options_values(hidden=True)
@@ -450,11 +452,12 @@ class Pipeline(OptionableSequence):
 
 class MapSeq(OptionableSequence):
     """ Map implentation for components
-        >>> mapseq = MapSeq( lambda x: x+1, lambda x: x+2, lambda x: x+3 )
-        >>> mapseq( 10 )
-        [11, 12, 13]
-        >>> sum(mapseq( 10 ))
-        36
+    
+    >>> mapseq = MapSeq( lambda x: x+1, lambda x: x+2, lambda x: x+3 )
+    >>> mapseq( 10 )
+    [11, 12, 13]
+    >>> sum(mapseq( 10 ))
+    36
     """
     @OptionableSequence.check
     def __call__(self, *args, **kwargs):
@@ -465,21 +468,23 @@ class MapSeq(OptionableSequence):
 
 class MapReduce(MapSeq):
     """ MapReduce implentation for components
-        One can  pass a simple function
-        >>> mapseq = MapReduce( sum, lambda x: x+1, lambda x: x+2, lambda x: x+3)
-        >>> mapseq( 10 )
-        36
-        
-        Or implements sub class of MapReduce
-        >>> class MyReduce(MapReduce):
-        ...     def __init__(self, *composables):
-        ...         super(MyReduce, self).__init__(None, *composables)
-        ...     def reduce(self, array, *args, **kwargs):
-        ...         return  list(args) + [sum(array)]
-        >>> mapreduce = MyReduce(lambda x: x+1, lambda x: x+2, lambda x: x+3)
-        >>> mapreduce(10)
-        [10, 36]
-        
+
+    One can  pass a simple function:
+    
+    >>> mapseq = MapReduce(sum, lambda x: x+1, lambda x: x+2, lambda x: x+3)
+    >>> mapseq(10)
+    36
+    
+    Or implements sub class of MapReduce:
+    
+    >>> class MyReduce(MapReduce):
+    ...     def __init__(self, *composables):
+    ...         super(MyReduce, self).__init__(None, *composables)
+    ...     def reduce(self, array, *args, **kwargs):
+    ...         return  list(args) + [sum(array)]
+    >>> mapreduce = MyReduce(lambda x: x+1, lambda x: x+2, lambda x: x+3)
+    >>> mapreduce(10)
+    [10, 36]
     """
     def __init__(self, reduce, *composables):
         super(MapReduce, self).__init__(*composables)
@@ -495,4 +500,4 @@ class MapReduce(MapSeq):
     
     def reduce(self, array, *args,  **kwargs):
         return NotImplementedError
-        
+
