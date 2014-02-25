@@ -28,9 +28,9 @@ class TestFieldTypes(unittest.TestCase):
 
     def test_numeric(self):
         # Numeric Field (int or float)
-        f = Numeric(numtype=float)
+        f = Numeric(vtype=float)
         self.assertNotEqual(repr(f), "")
-        self.assertRaises(SchemaError, lambda: Numeric(numtype=any) )
+        self.assertRaises(SchemaError, lambda: Numeric(vtype=any) )
         self.assertEqual(f.validate(2.), 2.)  # ok
         self.assertEqual(f.validate(-2.2), -2.2)  # ok
         self.assertEqual(f.validate(-5e0), -5.)  # ok
@@ -43,7 +43,7 @@ class TestFieldTypes(unittest.TestCase):
         self.assertEqual(f.parse("45"), 45.)
 
         # unsigned field
-        f = Numeric(numtype=int, min=0)
+        f = Numeric(vtype=int, min=0)
         self.assertEqual(f.validate(2), 2)  # ok
         self.assertEqual(f.validate(0), 0)  # ok
         self.assertRaises(ValidationError, f.validate, -1)
@@ -51,7 +51,7 @@ class TestFieldTypes(unittest.TestCase):
         self.assertEqual(f.parse("45"), 45)
         
         # with min and max
-        f = Numeric(numtype=int, min=-10, max=45)
+        f = Numeric(vtype=int, min=-10, max=45)
         self.assertEqual(f.validate(-10), -10)  # ok
         self.assertEqual(f.validate(0), 0)  # ok
         self.assertEqual(f.validate(2), 2)  # ok
@@ -62,7 +62,7 @@ class TestFieldTypes(unittest.TestCase):
         self.assertRaises(ValidationError, f.validate, 55)
         
         # with min and max
-        f = Numeric(numtype=int, min=0, max=4, help="an int")
+        f = Numeric(vtype=int, min=0, max=4, help="an int")
         self.assertEqual(f.validate(0), 0)  # ok
         self.assertEqual(f.validate(4), 4)  # ok
         self.assertRaises(ValidationError, f.validate, -1)
@@ -70,7 +70,7 @@ class TestFieldTypes(unittest.TestCase):
         
         # as dict
         self.assertDictEqual(f.as_dict(), {
-                        'vtype': int,
+                        'vtype': 'int',
                         'default': None,
                         'multi': False,
                         'uniq': False,
@@ -84,10 +84,10 @@ class TestFieldTypes(unittest.TestCase):
 
     def test_text(self):
         # setting wrong types 
-        self.assertRaises(SchemaError, lambda: Text(texttype=any))
+        self.assertRaises(SchemaError, lambda: Text(vtype=any))
         
         # check unicode
-        f_unicode = Text(texttype=unicode)
+        f_unicode = Text(vtype=unicode)
         self.assertNotEqual(repr(f_unicode), "")
         # good type
         self.assertEqual(f_unicode.validate(u"boé"), u'boé')
@@ -98,7 +98,7 @@ class TestFieldTypes(unittest.TestCase):
         self.assertEqual(f_unicode.parse(u"boé"), u'boé')
 
         # check str
-        f_str = Text(texttype=str)
+        f_str = Text(vtype=str)
         self.assertNotEqual(repr(f_str), "")
         # good type
         self.assertEqual(f_str.validate("boé"), 'boé')
@@ -111,7 +111,7 @@ class TestFieldTypes(unittest.TestCase):
 
     def test_choices(self):
         with self.assertRaises(ValidationError):
-            choice = Text(texttype=str, default="a", choices=["b", "c", "d"])
+            choice = Text(vtype=str, default="a", choices=["b", "c", "d"])
         with self.assertRaises(ValidationError):
             #unicode needed
             choice = Text(default="a", choices=["a", "b", "c", "d"])

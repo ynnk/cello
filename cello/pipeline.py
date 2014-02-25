@@ -190,7 +190,6 @@ class Optionable(Composable):
         
         :param opt_name: option name
         :type opt_name: str
-        
         :param value: option value
         """
         if not self.has_option(opt_name):
@@ -210,7 +209,7 @@ class Optionable(Composable):
             raise ValueError("Unknow option name (%s)" % opt_name)
         return self._options[opt_name].default
 
-    def set_options_values(self, option_values, parse=True, strict=False):
+    def set_options_values(self, option_values, parse=False, strict=False):
         """ Set the options from a dict of values (in string).
         
         :param option_values: the values of options (in format `{"opt_name": "new_value"}`)
@@ -250,7 +249,7 @@ class Optionable(Composable):
     def parse_options(self, option_values):
         """ Set the options (with parsing) and returns a dict of all options values
         """
-        self.set_options_values(option_values)
+        self.set_options_values(option_values, parse=True)
         return self.get_options_values(hidden=False)
 
     def get_options(self, hidden=False):
@@ -260,7 +259,7 @@ class Optionable(Composable):
         :returns: dictionary of all options (with option's information)
         :rtype: dict
         """
-        return dict(self.get_ordered_options(hidden=hidden))
+        return dict((opt['name'], opt) for opt in self.get_ordered_options(hidden=hidden))
 
     def get_ordered_options(self, hidden=False):
         """
@@ -270,9 +269,8 @@ class Optionable(Composable):
         :rtype: list ::
             [(<opt_name>, opt_dict)]
         """
-        return [(opt_name, opt.as_dict()) \
-                        for opt_name, opt in self._options.iteritems() \
-                        if hidden or (not opt.hidden)]
+        return [opt.as_dict() for opt in self._options.itervalues() \
+                                            if hidden or (not opt.hidden)]
 
     @staticmethod
     def check(call_fct):

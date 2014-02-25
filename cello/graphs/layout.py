@@ -17,7 +17,7 @@ import numpy as np
 
 from matplotlib.mlab import PCA
 
-from cello import CelloError
+from cello.exceptions import CelloError
 from cello.graphs import prox
 from cello.pipeline import Optionable
 

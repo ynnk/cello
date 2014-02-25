@@ -10,6 +10,13 @@ Class
 
 """
 
+class CelloError(Exception):
+    """Basic cello error"""
+
+class CelloValueError(CelloError, ValueError):
+    """Cello value error: one value (attribute) was wrong"""
+
+
 class SchemaError(Exception):
     """ Error
     

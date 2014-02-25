@@ -98,7 +98,7 @@ class TestOptionable(unittest.TestCase):
         comp.add_option("alpha", Numeric(
                 help="A short description",
                 default=2,
-                numtype=int,
+                vtype=int,
                 min=0,
                 max=4,
             )
@@ -234,37 +234,35 @@ class TestOptionableSequence(unittest.TestCase):
         # get otpions
         self.assertListEqual(comp.get_ordered_options(),
             [
-                ('alpha', {
-                        'name': 'alpha',
-                        'otype': {
-                            'vtype': int,
-                            'default': 4,
-                            'multi': False,
-                            'uniq': False,
-                            'choices': None,
-                            'help': '',
-                            'max': 20,
-                            'min': 1,
-                            'type': 'Numeric',
-                        },
-                        'type': 'value',
-                        'value': 3
-                    }
-                ),
-                ('filtering', {
-                        'name': 'filtering',
-                        'otype': {
-                            'choices': None,
-                            'default': False,
-                            'help': 'whether to activate a funcky filter !',
-                            'multi': False,
-                            'type': 'Boolean',
-                            'uniq': False
-                        },
-                        'type': 'value',
-                        'value': False
-                    }
-                )
+                {
+                    'name': 'alpha',
+                    'otype': {
+                        'vtype': 'int',
+                        'default': 4,
+                        'multi': False,
+                        'uniq': False,
+                        'choices': None,
+                        'help': '',
+                        'max': 20,
+                        'min': 1,
+                        'type': 'Numeric',
+                    },
+                    'type': 'value',
+                    'value': 3
+                },
+                {
+                    'name': 'filtering',
+                    'otype': {
+                        'choices': None,
+                        'default': False,
+                        'help': 'whether to activate a funcky filter !',
+                        'multi': False,
+                        'type': 'Boolean',
+                        'uniq': False
+                    },
+                    'type': 'value',
+                    'value': False
+                }
             ]
         ) 
 

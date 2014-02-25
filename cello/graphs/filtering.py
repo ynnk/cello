@@ -14,9 +14,9 @@ class BottomFilter(Optionable):
         Optionable.__init__(self, name)
         self._logger = logging.getLogger(name)
 
-        self.add_option("top_min", Numeric( default=0, 
+        self.add_option("top_min", Numeric(default=0, 
             help="Removes type=false vertices connected to less than top_min (type=True) vertices"))
-        self.add_option("top_max_ratio", Numeric(numtype=float,default=1.,
+        self.add_option("top_max_ratio", Numeric(vtype=float, default=1.,
             help="Removes type=false vertices connected to more than top_max_ratio percents of the (type=True) vertices"))
 
     #XXX:kwargs ne sert a rien ?

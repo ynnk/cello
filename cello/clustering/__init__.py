@@ -10,7 +10,7 @@ import logging
 
 import igraph as ig
 
-from cello import CelloError
+from cello.exceptions import CelloError
 from cello.pipeline import Composable, Optionable
 from cello.types import Numeric, Text, Boolean
 

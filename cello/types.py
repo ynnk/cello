@@ -26,7 +26,7 @@ class GenericType(object):
     default_validators = []  # Default set of validators
 
     def __init__(self, default=None, help="", multi=None, uniq=None,
-        choices=None, attrs=None, validators=[]):
+        choices=None, attrs=None, validators=[], parse=None):
         """
         :param default: default value for the field
         :param help: description of what the data is
@@ -39,6 +39,7 @@ class GenericType(object):
         :type choices: list
         :param attrs: field attributes, dictionary of `{"name": AbstractType()}`
         :param validators: list of additional validators
+        :param parse: a parsing function
         """
         self._default = default
         self.help = help
@@ -68,6 +69,7 @@ class GenericType(object):
         # TODO self.sorted = sorted
         # self.required = required  # test ds Doc ds le constructeur
         self.validators = self.default_validators + validators
+        self._parse = parse
         self.choices = choices
         if choices is not None:
             self.validators.append(ChoiceValidator(choices))
@@ -121,7 +123,10 @@ class GenericType(object):
 
     def parse(self, value):
         """ parsing from string """
-        return value
+        if self._parse is not None:
+            return self._parse(value)
+        else:
+            return value
 
     def as_dict(self):
         """ returns a dictionary view of the option
@@ -146,9 +151,9 @@ class Numeric(GenericType):
     """
     _types_ = [int, float]
     
-    def __init__(self, numtype=int, min=None, max=None, **kwargs):
+    def __init__(self, vtype=int, min=None, max=None, **kwargs):
         """
-        :param numtype: the type of numbers that can be stored in this field,
+        :param vtype: the type of numbers that can be stored in this field,
             either ``int``, ``float``. 
         :param signed: if the value may be negatif (True by default)
         :type signed: bool
@@ -156,10 +161,10 @@ class Numeric(GenericType):
         :param max: if not None, the maximal possible value
         """
         super(Numeric, self).__init__(**kwargs)
-        if numtype not in Numeric._types_:
+        if vtype not in Numeric._types_:
             raise SchemaError('Wrong type for Numeric %s' % Numeric._types_ )
-        self.vtype = numtype
-        self.validators.append(TypeValidator(numtype))
+        self.vtype = vtype
+        self.validators.append(TypeValidator(vtype))
         self.min = min
         if min is not None:
             self.validators.append(MinValueValidator(min))
@@ -173,7 +178,7 @@ class Numeric(GenericType):
 
     def as_dict(self):
         info = super(Numeric, self).as_dict()
-        info["vtype"] = self.vtype
+        info["vtype"] = 'int' if self.vtype == int else 'float'
         info["min"] = self.min
         info["max"] = self.max
         return info
@@ -187,14 +192,16 @@ class Text(GenericType):
     _types_ = [unicode, str]
     default_encoding = "utf8"
     
-    def __init__(self, texttype=unicode, **kwargs):
+    def __init__(self, vtype=unicode, encoding=None, **kwargs):
         if "default" not in kwargs and u"default" not in kwargs:
-            kwargs["default"] = texttype("")
+            kwargs["default"] = vtype("")
         super(Text, self).__init__(**kwargs)
-        if texttype not in Text._types_:
+        if encoding is not None:
+            self.default_encoding = encoding
+        if vtype not in Text._types_:
             raise SchemaError('Wrong type for Text %s' % Numeric._types_ )
-        self.vtype = texttype
-        self.validators.append(TypeValidator(texttype))
+        self.vtype = vtype
+        self.validators.append(TypeValidator(vtype))
         self._init_validation()
 
     def parse(self, value):
@@ -210,7 +217,9 @@ class Text(GenericType):
 
     def as_dict(self):
         info = super(Text, self).as_dict()
-        info["vtype"] = self.vtype
+        info["vtype"] = 'unicode' if self.vtype == unicode else 'str'
+        if self.vtype is str:
+            info["encoding"] = self.default_encoding
 
 
 class Boolean(GenericType):
