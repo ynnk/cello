@@ -624,7 +624,8 @@ class Engine(object):
         drepr = {
             'blocks': [
                 block.as_dict() for block in self
-            ]
+            ],
+            'in_name': self.in_name
         }
         return drepr
 

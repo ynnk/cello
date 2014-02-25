@@ -21,6 +21,8 @@ class OptProductEx(Optionable):
 
 
 class TestCelloFlaskView(unittest.TestCase):
+    maxDiff = None
+
     def setUp(self):
         self.engine = Engine("op1", "op2")
         self.engine.op1.setup(in_name="in")
@@ -45,7 +47,9 @@ class TestCelloFlaskView(unittest.TestCase):
         resp = self.app.get('api/options')
         data = json.loads(resp.data)
         # check we have the same than in engine
-        self.assertDictEqual(data, self.engine.as_dict())
+        self.assertListEqual(data["blocks"], self.engine.as_dict()["blocks"])
+        self.assertEqual(data["in_name"], "in")
+        self.assertListEqual(data["out_names"], ["out"])
 
     def test_play_simple(self):
         # prepare query

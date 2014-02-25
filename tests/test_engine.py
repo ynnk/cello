@@ -295,6 +295,7 @@ class TestEngine(unittest.TestCase):
         self.assertEqual(engine.op1.play(5), 50)
         
         self.assertDictEqual(engine.as_dict(), {
+            'in_name': None,
             'blocks': [
                 {
                     'components': [
@@ -352,8 +353,7 @@ class TestEngine(unittest.TestCase):
                  'required': True
              }
         ]
-    }
-)
+    })
 
     def test_engine_named_inout_pipeline(self):
         engine = Engine("op1", "op2", "op3")

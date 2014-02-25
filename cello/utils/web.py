@@ -42,7 +42,9 @@ class CelloFlaskView(Blueprint):
         self._outputs.append((out_name, serializer))
 
     def options(self):
-        return jsonify(self.engine.as_dict())
+        conf = self.engine.as_dict()
+        conf["out_names"] = [oname for oname, _ in self._outputs]
+        return jsonify(conf)
 
     def play(self):
         if not request.headers['Content-Type'] == 'application/json':
@@ -60,7 +62,6 @@ class CelloFlaskView(Blueprint):
         ### parse input (and validate)
         input_data = self._in_type.parse(data[self.engine.in_name])
         self._in_type.validate(input_data)
-        
         ### run the engine
         raw_res = self.engine.play(input_data)
         ### prepare outputs
