@@ -56,6 +56,7 @@ def _json_text_clean(json_text):
 def urllib2_json_urlopen(request_url, request_data=None, logger=None):
     """ Make a request with urllib2 and retrive a JSON (in unicode)
     """
+    #TODO use requests
     if isinstance(request_url, unicode):
         request_url = request_url.encode('utf8')
     
@@ -108,3 +109,39 @@ def deprecated(new_fct_name, logger=None):
         newFunc.__dict__.update(func.__dict__)
         return newFunc
     return aux_deprecated
+
+def engine_shema(engine, out_names=None):
+    """ Build a graphviz schema 
+    
+    :param engine:
+    :type engine: :class:`.Engine`
+    """
+    import pygraphviz as pgv
+    engine.validate()
+    dg = pgv.AGraph(strict=False, directed=True)
+    input_node_name = "in"
+    output_node_name = "out"
+    dg.add_node(input_node_name, label=input_node_name, shape="ellipse")
+    block_source = {} # witch block is the source for witch data
+    block_source[engine.in_name] = input_node_name
+    # creation des sommets
+    for block in engine:
+        dg.add_node(block.name, label=' %s ' % block.name, shape="box")
+    # creation des liens
+    for block in engine:
+        dg.add_edge(block_source[block.in_name], block.name,
+            label=" %s " % block.in_name,
+            fontsize=10,
+        )
+        block_source[block.out_name] = block.name
+    if out_names is not None:
+        dg.add_node(output_node_name, label=' %s ' % output_node_name, shape="ellipse")
+        for out_name in out_names:
+            if out_name not in block_source:
+                raise ValueError("'%s' is not a generated data" % out_name)
+            dg.add_edge(block_source[out_name], output_node_name,
+                label=" %s " % out_name,
+                fontsize=10,
+            )
+    return dg
+
