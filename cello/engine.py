@@ -12,7 +12,7 @@ Here is a simple exemple of Cellist usage. First you need to setup your Cellist:
 
     from cello.engine import Cellist
 
-    cellist = Cellist()
+    cellist = Engine()
     cellist.requires('foo', 'bar', 'boo')
 
     # one can make imaginary components
@@ -236,8 +236,8 @@ class Block(object):
                 'name': self.name,
                 'required': self.required,
                 'multiple': self.multiple,
-                'in_name': self.in_name,
-                'out_name': self.out_name,
+                'args': self.in_name,
+                'returns': self.out_name,
                 'components': comps
             }
         return rdict
@@ -451,7 +451,7 @@ class Engine(object):
 
     def requires(self, *names):
         """ Declare what block will be used in this engine.
-        
+    
         It should be call before adding or setting any component.
         Blocks order will be preserved for runnning task.
         """
@@ -564,7 +564,8 @@ class Engine(object):
                 if 'name' not in req_comp:
                     raise ValueError("Config error in '%s' " % block.name)
                 if req_comp['name'] not in block:
-                    raise ValueError("Invalid component (%s) for block '%s' " % (req_comp['name'], block.name))
+                    raise ValueError("Invalid component (%s) for block '%s' "
+                        % (req_comp['name'], block.name))
 
         # configures the bloks
         for block_name, request_comps in config.iteritems():
@@ -623,9 +624,9 @@ class Engine(object):
         """ dict repr of the components """
         drepr = {
             'blocks': [
-                block.as_dict() for block in self
+                block.as_dict() for block in self if block.hidden == False
             ],
-            'in_name': self.in_name
+            'args': self.in_name
         }
         return drepr
 

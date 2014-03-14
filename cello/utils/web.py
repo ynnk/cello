@@ -1,6 +1,7 @@
 #-*- coding:utf-8 -*-
 
 import sys
+import json
 
 from flask import Flask
 from flask import Blueprint
@@ -22,7 +23,7 @@ class CelloFlaskView(Blueprint):
         
         # bind entry points
         self.add_url_rule('/options', 'options', self.options)
-        self.add_url_rule('/', 'play', self.play)
+        self.add_url_rule('/play', 'play', self.play,  methods= ["POST", "GET"] )
 
     def set_input_type(self, type_or_parse):
         """ Set the input type
@@ -43,12 +44,12 @@ class CelloFlaskView(Blueprint):
 
     def options(self):
         conf = self.engine.as_dict()
-        conf["out_names"] = [oname for oname, _ in self._outputs]
+        conf["returns"] = [oname for oname, _ in self._outputs]
         return jsonify(conf)
 
     def play(self):
-        if not request.headers['Content-Type'] == 'application/json':
-            abort(415)
+        #if not request.headers['Content-Type'] == 'application/json':
+            #abort(415)
         ### get data
         data = request.json
         ### check commun errors
