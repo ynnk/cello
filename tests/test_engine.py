@@ -69,8 +69,8 @@ class TestBlock(unittest.TestCase):
         self.assertEquals(len(block), 3)
         self.assertDictEqual(block.as_dict(), {
             'name': 'foo',
-            'in_name': None,
-            'out_name': 'foo',
+            'args': None,
+            'returns': 'foo',
             'multiple': False,
             'required': True,
             'components': [
@@ -295,7 +295,7 @@ class TestEngine(unittest.TestCase):
         self.assertEqual(engine.op1.play(5), 50)
         
         self.assertDictEqual(engine.as_dict(), {
-            'in_name': None,
+            'args': None,
             'blocks': [
                 {
                     'components': [
@@ -332,10 +332,10 @@ class TestEngine(unittest.TestCase):
                             'options': None
                         }
                  ],
-                 'in_name': None,
+                 'args': None,
                  'multiple': False,
                  'name': 'op1',
-                 'out_name': 'op1',
+                 'returns': 'op1',
                  'required': True
             },
             {
@@ -346,10 +346,10 @@ class TestEngine(unittest.TestCase):
                          'options': None
                      }
                  ],
-                 'in_name': None,
+                 'args': None,
                  'multiple': False,
                  'name': 'op2',
-                 'out_name': 'op2',
+                 'returns': 'op2',
                  'required': True
              }
         ]

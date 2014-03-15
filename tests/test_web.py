@@ -48,14 +48,14 @@ class TestCelloFlaskView(unittest.TestCase):
         data = json.loads(resp.data)
         # check we have the same than in engine
         self.assertListEqual(data["blocks"], self.engine.as_dict()["blocks"])
-        self.assertEqual(data["in_name"], "in")
-        self.assertListEqual(data["out_names"], ["out"])
+        self.assertEqual(data["args"], "in")
+        self.assertListEqual(data["returns"], ["out"])
 
     def test_play_simple(self):
         # prepare query
         rdata = {'in': 2}
         json_data = json.dumps(rdata)
-        resp = self.app.get('api/', data=json_data, content_type='application/json')
+        resp = self.app.get('api/play', data=json_data, content_type='application/json')
         # load the results
         resp_data = json.loads(resp.data)
         # check it
@@ -68,14 +68,14 @@ class TestCelloFlaskView(unittest.TestCase):
     def test_play_fail(self):
         json_data = json.dumps({'in': 10})
         with self.assertRaises(ValidationError):
-            resp = self.app.get('api/', data=json_data, content_type='application/json')
+            resp = self.app.get('api/play', data=json_data, content_type='application/json')
 
         json_data = json.dumps({'in': "chat"})
         with self.assertRaises(ValueError):
-            resp = self.app.get('api/', data=json_data, content_type='application/json')
+            resp = self.app.get('api/play', data=json_data, content_type='application/json')
 
         json_data = json.dumps({'in': 1})
-        resp = self.app.get('api/', data=json_data)
+        resp = self.app.get('api/play', data=json_data)
         # error 415 "Unsupported Media Type" see:
         # http://en.wikipedia.org/wiki/List_of_HTTP_status_codes#4xx_Client_Error
         self.assertEquals(resp.status_code, 415)
@@ -92,7 +92,7 @@ class TestCelloFlaskView(unittest.TestCase):
             }]
         }
         json_data = json.dumps(rdata)
-        resp = self.app.get('api/', data=json_data, content_type='application/json')
+        resp = self.app.get('api/play', data=json_data, content_type='application/json')
         # load the results
         resp_data = json.loads(resp.data)
         # check it

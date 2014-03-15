@@ -48,10 +48,11 @@ class CelloFlaskView(Blueprint):
         return jsonify(conf)
 
     def play(self):
-        #if not request.headers['Content-Type'] == 'application/json':
-            #abort(415)
+        if not request.headers['Content-Type'] == 'application/json':
+            abort(415)
         ### get data
         data = request.json
+        assert data is not None
         ### check commun errors
         if self.engine.in_name not in data:
             #XXX ERROR should be handle
