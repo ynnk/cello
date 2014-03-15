@@ -220,6 +220,7 @@ class Text(GenericType):
         info["vtype"] = 'unicode' if self.vtype == unicode else 'str'
         if self.vtype is str:
             info["encoding"] = self.default_encoding
+        return info
 
 
 class Boolean(GenericType):
