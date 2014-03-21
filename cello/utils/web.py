@@ -79,5 +79,6 @@ class CelloFlaskView(Blueprint):
         ### prepare result json
         outputs = {}
         outputs["results"] = results
+        outputs['meta'] = self.engine.get_play_trace()
         return jsonify(outputs)
 

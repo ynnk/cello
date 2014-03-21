@@ -619,6 +619,9 @@ class Engine(object):
             last_output_name = block.out_name
         return results
 
+    def get_play_trace(self):
+        return { block.name:block.meta.components for block in self }
+            
 
     def as_dict(self):
         """ dict repr of the components """

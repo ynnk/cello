@@ -1,12 +1,12 @@
 #-*- coding:utf-8 -*-
 from cello.schema import Doc, Numeric
 
-def prepare_docs(kdocs, exclude=[]):
+def export_docs(kdocs, exclude=[]):
     """ Transform the list of kdoc
 
     remove all the attributes of KodexDoc that are not fields (of elements) or elements attributes
     """
-    return {'docs': [doc.as_dict(exclude=exclude) for doc in kdocs] }
+    return [doc.as_dict(exclude=exclude) for doc in kdocs]
 
 def prepare_clustering(vertex_cover, docs, graph):
     """ Run the clustering method on the graph
@@ -66,7 +66,7 @@ def prepare_clustering(vertex_cover, docs, graph):
 
     return clustering
 
-def prepare_graph(graph, layout):
+def export_graph(graph, layout):
     """ Transform a graph (igraph graph) to a dictionary
     to send it to template (or json)
 
@@ -74,12 +74,12 @@ def prepare_graph(graph, layout):
     graph_dict = {}
     graph_dict['vs'] = []
     graph_dict['es'] = []
-    graph_dict['extras'] = {}
+    graph_dict['attributes'] = {}
     import igraph
     if isinstance(graph, igraph.Graph) == False :  return graph_dict
 
-    graph_dict['extras']['directed'] = graph.is_directed()
-    graph_dict['extras']['bipartite'] = 'type' in graph.vs and graph.is_bipartite() 
+    graph_dict['attributes']['directed'] = graph.is_directed()
+    graph_dict['attributes']['bipartite'] = 'type' in graph.vs and graph.is_bipartite() 
     for vtx in graph.vs:
         vertex = vtx.attributes()
         # colors still needs some conversion to r;g;b 255

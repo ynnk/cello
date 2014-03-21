@@ -150,11 +150,18 @@ class Optionable(Composable):
     def set_option_value(self, opt_name, value, parse=False):
         """ Set the value of one option.
         
+        # TODO/FIXME 
+            * add force/hide argument
+            * add default argument
+            * remove methods force option value
+            * remove change_option_default
+            
         :param opt_name: option name
         :type opt_name: str
         :param value: the new value
         :param parse: if True the value is converted from string to the correct type
         :type parse: bool
+        
         """
         if not self.has_option(opt_name):
             raise ValueError("Unknow option name (%s)" % opt_name)
@@ -290,6 +297,7 @@ class OptionableSequence(Optionable):
     (Optionable or not).
     
     This object is an Optionable witch as all the options of it composants
+    
     """
     def __init__(self, *composants):
         # Composable init
@@ -414,7 +422,7 @@ class OptionableSequence(Optionable):
 class Pipeline(OptionableSequence):
     """ A Pipeline is a sequence of function called sequentially.
     
-    It may be create explicitely:
+    It may be created explicitely:
     
     >>> step1 = lambda x: x**2
     >>> step2 = lambda x: x-1

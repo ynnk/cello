@@ -293,6 +293,9 @@ class VectorField(DocField):
         self._ftype.attrs[name] = ftype
         # add the attr it self
         self._attrs[name] = [DocField.FromType(ftype) for _ in xrange(len(self))]
+    
+    def get_attribute(self, name): 
+        return getattr(self, name)
 
     def clear_attributes(self):
         """ removes all attributes
@@ -335,10 +338,10 @@ class VectorField(DocField):
 
     def as_dict(self):
         #XXX: TODO ?
-        d = {}
-        for k in self._keys():
-            for attr in self._attrs:
-                pass
+        d = {'keys': self.keys()}
+        for name in self._attrs.keys():
+            d[name] = self.get_attribute(name).values()
+        return d
 
     def add(self, key):
         """ Add a key to the vector, do nothing if the key is already present """
@@ -598,7 +601,19 @@ class Doc(dict):
     def as_dict(self, exclude=[]):
         """ returns a dictionary representation of the document
         """
-        doc = { key: getattr(self, key) for key in self.schema \
-                        if not key.startswith("_") and key not in exclude }
+        print self.schema
+        
+        def value(x):
+            if type(x) == ValueField: 
+                return x.get_value()
+            elif isinstance(x, DocField): 
+                return x.as_dict()
+            else:
+                return x
+        
+        gen = ( (key, getattr(self, key)) for key in self.schema
+            if not key.startswith("_") and key not in exclude )
+        
+        doc = { key:value(val) for key, val in gen}
         return doc 
 

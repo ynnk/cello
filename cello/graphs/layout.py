@@ -20,6 +20,7 @@ from matplotlib.mlab import PCA
 from cello.exceptions import CelloError
 from cello.graphs import prox
 from cello.pipeline import Optionable
+from cello.types import Boolean, Numeric, Text
 
 _logger = logging.getLogger("cello.graphs.layout")
 
@@ -81,6 +82,20 @@ def pca(mat_input, out_dim):
             else :
                 result = pca(np.identity(len(mat_input)).tolist(), out_dim)
     return result
+
+def random_proj(coords, out_dim):
+    """calcul des coordonnées effectué selon a méthode Random Projection (3D) """
+    import scipy as sc
+    mat_r = sc.rand(len(coords), out_dim)
+    proj=[]
+    for coord in coords:
+        x = y = z = 0
+        for i,v in enumerate(coord):
+            x += v * mat_r[i][0] 
+            y += v * mat_r[i][1]
+            z += v * mat_r[i][2]
+        proj.append([x, y, z])
+    return proj
 
 def to_layout(coords, dimensions=3, shaking=False):
     """ Transform a list of positions (list) into an igraph layout
@@ -229,7 +244,10 @@ class ProxLayout(AbstractLayout):
         self.dimensions = dimensions
         self._kgraph = kgraph
         self.prox_func=prox_func
-        self.add_bool_option("shake", True, "'Shake' the layout to ensure no overlaping vertices")
+        self.add_option(
+            "shake", 
+            Boolean(default=True, 
+                    help=u"'Shake' the layout to ensure no overlaping vertices"))
 
     def __call__(self, graph, shake=False, **kwargs):
         """Compute a n-dimention layout for the given subgraph according to the
@@ -266,14 +284,13 @@ class ProxLayout(AbstractLayout):
 class ProxMarkovLayout(ProxLayout):
     def __init__(self, kgraph=None, dimensions=3, name='prox_markov_layout' ):
         ProxLayout.__init__(self, prox.prox_markov, kgraph=kgraph, dimensions=dimensions, name=name)
-        self.add_option("l", 3, "Random walk length", int )
+        self.add_option("l", Numeric(default=3, help="Random walk length"))
 
 class ProxMonteCarloLayout(ProxMarkovLayout):
     def __init__(self, kgraph=None, name='prox_monte_carlo_layout'):
         ProxLayout.__init__(self, prox.prox_markov_mtcl,  kgraph=kgraph, name=name )
-        self.add_option("nb_throw", 10, "The number of throws in montecarlo process", int )
-
-
+        self.add_option("nb_throw", Numeric(default=10, 
+                        help="The number of throws in montecarlo process") )
 
 class ProxMarkovLayoutPCA(ProxMarkovLayout):
     """ Layout prox + PCA 3D
@@ -295,9 +312,9 @@ class ProxMarkovLayoutPCA(ProxMarkovLayout):
         coords = pca(coords, self.dimensions)
         return coords
 
-
 def ProxMarkovLayoutPCA2D():
     return ProxMarkovLayoutPCA(kgraph=None, dimensions=2, name="ProxMarkovLayoutPCA2D")
+
 
 class ProxConfLayoutPCA(ProxMarkovLayoutPCA):
     """ Layout prox + PCA 3D
@@ -307,7 +324,7 @@ class ProxConfLayoutPCA(ProxMarkovLayoutPCA):
     """
     def __init__(self, kgraph=None, dimensions=3, name="ProxConflLayoutPCA"):
         ProxLayout.__init__(self, prox.confluence, kgraph=kgraph, dimensions=dimensions, name=name)
-        self.add_option("l", 3, "Random walk length", int )
+        self.add_option("l", Numeric(default=3, help="Random walk length") )
 
 
 
@@ -342,6 +359,27 @@ class ProxBigraphLayoutPCA(ProxLayout):
         print layout.coords
         layout.colors = [ "#AAA000" if v['type'] else "#FF0000" for v in graph.vs ]
         return layout
+
+class ProxMarkovLayoutRandomProj(ProxMarkovLayout):
+    """ Layout prox * random 3D
+
+    Compute a layout by using prox (ProxMarkov) and then by reducing
+    the "prox matrix" dimention using a random matrix.
+    """
+    def __init__(self, kgraph=None, dimensions=3, name="ProxMarkovLayoutRandomProj"):
+        ProxMarkovLayout.__init__(self, kgraph=kgraph, dimensions=dimensions, name=name)
+
+
+    def _layout(self, subgraph, l=3, **kwargs):
+        """Compute a n-dimention layout for the given subgraph according to the
+        result of random walks in the given graph.
+        """
+        # prox geometry computation (layout in n>3 dimension), and color
+        coords = ProxMarkovLayout._layout(self, subgraph, l=l)
+        # reduction de dimension
+        coords = random_proj(coords, self.dimensions)
+        return coords
+
 
 
 class KamadaKawai3DLayout(AbstractLayout):
@@ -386,18 +424,12 @@ class Random3DLayout(AbstractLayout):
 class Grid3DLayout(AbstractLayout):
     def __init__(self, name="grid_3D"):
         AbstractLayout.__init__(self, name)
-        self.add_option(
-                "width",
-                "0",
-                """the number of vertices in a single row of the layout. Zero means that the height should be determined automatically.""",
-                int
-            )
-        self.add_option(
-                "height",
-                "0",
-                """the number of vertices in a single column of the layout. Zero means that the height should be determined automatically.""",
-                int
-            )
+        self.add_option("width", Numeric(default=0, 
+            help="""the number of vertices in a single row of the layout. 
+            Zero means that the height should be determined automatically."""))
+        self.add_option("height", Numeric(default=0,
+            help="""the number of vertices in a single column of the layout. 
+            Zero means that the height should be determined automatically."""))
 
     def __call__(self, graph, width=0, height=0):
         layout = graph.layout_grid(width=width, height=height, dim=3)
