@@ -67,7 +67,7 @@ class FieldSetGraph(AbstractSetGraph):
             doc_gid = self.add_get_vertex( (True, doc.docnum) )
             self.set_vattr(doc_gid, "_doc", doc)
             self.set_vattr(doc_gid, "type", True)            
-            self.set_vattr(doc_gid, "color", "#00F")
+            self.set_vattr(doc_gid, "color", (255,0,0) )
             self.set_vattr(doc_gid, "label", doc.title[:10])
             for k in copy_tops:
                 self.set_vattr(doc_gid, k, doc[k])
@@ -79,7 +79,7 @@ class FieldSetGraph(AbstractSetGraph):
                 for term in termset:
                     term_gid = self.add_get_vertex((False, term))
                     self.set_vattr(term_gid, "type", False)
-                    self.set_vattr(term_gid, "color", "#F00")
+                    self.set_vattr(term_gid, "color", (0,0,255))
                     self.set_vattr(term_gid, "label", term)
                     for k in copy_bottoms:
                         self.set_vattr(term_gid, k, term[k])
