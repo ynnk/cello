@@ -93,6 +93,11 @@ class Composable(object):
         if not callable(other):
             raise ValueError("%r is not composable with %r" % (self, other))
         return Pipeline(self, other)
+    
+    def __and__(self, other):
+        if not callable(other):
+            raise ValueError("%r is not composable with %r" % (self, other))
+        return MapSeq(self, other)
 
     def __call__(self, *args, **kwargs):
         if hasattr(self, "_func"):

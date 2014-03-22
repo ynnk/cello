@@ -93,8 +93,12 @@ def random_proj(coords, out_dim):
         for i,v in enumerate(coord):
             x += v * mat_r[i][0] 
             y += v * mat_r[i][1]
-            z += v * mat_r[i][2]
-        proj.append([x, y, z])
+            if out_dim > 2:
+                z += v * mat_r[i][2]
+        if out_dim == 2:
+            proj.append([x, y])
+        else:
+            proj.append([x, y, z])
     return proj
 
 def to_layout(coords, dimensions=3, shaking=False):

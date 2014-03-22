@@ -16,6 +16,11 @@ inheritance diagrams
 Class
 -----
 
+
+
+    FIXME: manque de coherence entre les get_value, values, as_dict
+
+
 """
 from cello.types import GenericType, Numeric
 from cello.exceptions import SchemaError
@@ -601,8 +606,6 @@ class Doc(dict):
     def as_dict(self, exclude=[]):
         """ returns a dictionary representation of the document
         """
-        print self.schema
-        
         def value(x):
             if type(x) == ValueField: 
                 return x.get_value()
