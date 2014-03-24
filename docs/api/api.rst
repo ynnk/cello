@@ -17,7 +17,6 @@ Voir :mod:`cello.pipeline` par exemple, ou meme :class:`cello.pipeline.Optionabl
     cello.expanders.basics
     cello.graphs
     cello.layout
-    cello.layout.transform
     cello.clustering
     cello.utils
 
