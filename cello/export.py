@@ -1,4 +1,7 @@
 #-*- coding:utf-8 -*-
+""" :mod:`cello.export`
+========================
+"""
 from cello.schema import Doc, Numeric
 
 def export_docs(kdocs, exclude=[]):
@@ -8,20 +11,28 @@ def export_docs(kdocs, exclude=[]):
     """
     return [doc.as_dict(exclude=exclude) for doc in kdocs]
 
+
 def export_graph(graph):
     """ Transform a graph (igraph graph) to a dictionary
     to send it to template (or json)
 
+
+    :param graph: the graph to transform
+    :type graph: :class:`igraph.Graph`
     """
+    import igraph
+    # create the graph dict
     graph_dict = {}
     graph_dict['vs'] = []
     graph_dict['es'] = []
     graph_dict['attributes'] = {}
-    import igraph
-    if isinstance(graph, igraph.Graph) == False :  return graph_dict
-
+    # check argument
+    if not isinstance(graph, igraph.Graph):
+        return graph_dict
+    # default graph attrs
     graph_dict['attributes']['directed'] = graph.is_directed()
     graph_dict['attributes']['bipartite'] = 'type' in graph.vs and graph.is_bipartite() 
+    # vertices
     for vtx in graph.vs:
         vertex = vtx.attributes()
         # colors still needs some conversion to r;g;b 255
@@ -41,28 +52,66 @@ def export_graph(graph):
             #~ del vertex["kodex_LU"]
         #~ else:
             #~ vertex["klu_form"] = None
-            
         graph_dict['vs'].append(vertex)
+    # edges
     for edg in graph.es:
+        #TODO pourquoi pas partir de edg.attributes()
         edge = {}
         edge["s"] = edg.source
         edge["t"] = edg.target
-        edge["w"] = edg["weight"] #TODO: recopier tous les attributs
-        edge.update({ k:edg[k] for k in graph.es.attribute_names() })
+        edge["w"] = edg["weight"]
+        # recopier tous les attributs
+        edge.update({
+            attr_name: edg[attr_name] for attr_name in graph.es.attribute_names()
+        })
+        #TODO check il n'y a pas de 's' 't' ou 'w' dans attr
         graph_dict['es'].append(edge)
     return graph_dict
 
 
-def export_layout(layout):
-    return {'desc': str(layout),
-            'coords':[ coord for coord in layout ]
-        }
 
+def export_clustering(vertex_cover):
+    """ Build a dictionary view of a vertex cover (a clustering)
+    
+    .. Note:: for each cluster 'docnums' are extracted from vertices that have a
+    (not None) '_doc' attribute
+    
+    .. code-block:: js
+
+        [
+            {
+                'gids': [1, 3, 5, 8],
+                'docnums': []
+                'misc': False,
+            }
+        ]
+    
+    :param vertex_cover: the vertex cover to convert
+    :type vertex_cover: :class:`igraph.VertexCover`
+    """
+    clusters = []
+    if hasattr(vertex_cover, "misc_cluster") : # "misc" cluster id
+        misc_cluster = vertex_cover.misc_cluster
+    else: # pas de "misc"
+        misc_cluster = -1
+
+    if hasattr(vertex_cover, 'graph') and '_doc' in vertex_cover.graph.vs.attributes():
+        gid_to_doc = vertex_cover.graph.vs['_doc']
+
+    for cnum, gids in enumerate(vertex_cover):
+        # is misc ?
+        cluster['misc'] = cnum == misc_cluster
+        cluster['gids'] = gids
+        # add the cluster
+        clusters.append(cluster)
+
+    return clusters
 
 def prepare_clustering(vertex_cover, docs, graph):
     """ Run the clustering method on the graph
-    @note: arguments should be setted according to the clustering object options.
-    @see: L{cello.clustering}
+    
+    .. note:: arguments should be setted according to the clustering object options.
+    .. seealso:: L{cello.clustering}
     """
     # clusters = {cluster_id:{"docs":[KodexDoc, ...], "terms":[KodexLU, ...]}, ...}
     clusters = {}

@@ -244,9 +244,10 @@ div.viewcode-block:target {
     border-bottom: 1px solid #ac9;
 }
 
-/* -- API element styles ---------------------------------------------------- */
+/* -- custom API element styles --------------------------------------------- */
 
-dl.class>dt{
+dl.class>dt,
+dl.function>dt{
     background-color: #eee;
     font-size: 1.4em;
     padding: 3px;
