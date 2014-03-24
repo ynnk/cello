@@ -125,7 +125,6 @@ class Shaker(Composable):
     >>> layout.coords
     [[-0.6666666666666666, -0.33333333333333337], [0.33333333333333337, 0.6666666666666666], [0.33333333333333337, -0.33333333333333337]]
     """
-    #TODO use http://scikit-learn.org/stable/modules/random_projection.html
     def __init__(self, kelastic=0.3):
         """
         :param kelastic: coeficient d'elasticité: `force = kelastic * dlen`
