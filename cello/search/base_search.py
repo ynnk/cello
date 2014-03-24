@@ -19,6 +19,7 @@ import logging
 
 import igraph as ig #TODO: pas térible d'avoir le import igraph ici
 
+from cello.types import Numeric
 from cello.pipeline import Optionable
 
 
@@ -61,8 +62,9 @@ class GraphProxSearch(AbstractSearch):
         self._logger = logging.getLogger(__name__)
         self.graph = graph
         
-        self.add_value_option("nb_results", 30, "Max number of vertices to retrieve", otype=int)
-        self.add_option("l", 3, "lenght of the random walk", otype=int)
+        self.add_option("nb_results", Numeric(default=30, 
+            help="Max number of vertices to retrieve"))
+        self.add_option("l", Numeric(default=3, help="lenght of the random walk"))
 
     def _query_to_p0(self, query):
         """ Transform the query to a list of initial graph ids
