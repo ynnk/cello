@@ -20,6 +20,7 @@ import logging
 import igraph as ig #TODO: pas térible d'avoir le import igraph ici
 
 from cello.types import Numeric
+from cello.schema import Schema, Doc
 from cello.pipeline import Optionable
 
 
@@ -85,7 +86,7 @@ class GraphProxSearch(AbstractSearch):
     def search(self, p0, nb_results, l):
         """ retrive a 'nb_results' number of vertices by random walk starting from p0
         """
-        from cello.utils import prox
+        from cello.graphs import prox
         global_graph = self.graph
         #TODO: choix de la méthode d'extraction
         #TODO: forcer la reflexivité ou pas
@@ -99,22 +100,27 @@ class GraphProxSearch(AbstractSearch):
         
         vid_to_docnum = lambda vid: "%d" % vid
         global_graph = self.graph
+        
         kdocs = []
+        
+        schema = Schema(
+            docnum=Numeric(),
+            degree_out=Numeric(),
+            degree_in=Numeric(),
+            score=Numeric(vtype=float),
+            
+            neighbors=Numeric(multi=True, uniq=True)
+        )
         for vid, score in v_extract:
-            kdoc = Doc(vid_to_docnum(vid))
+            kdoc = Doc(schema, docnum=vid)
             kdoc.score = score
             vtx = global_graph.vs[vid]
-            vtx["kgraph_id"] = vid
-            # recopie des attribue du sommet dans le KodexDoc
-            kdoc.update(vtx.attributes())
             # autres attributs
             kdoc.degree_out = vtx.degree(ig.OUT)
             kdoc.degree_in = vtx.degree(ig.IN)
             # les voisins sont dans un term field
-            # TODO: est-ce que c'est nécéssaire ?
-            kdoc.declare_field("neighbors")
             for nei in vtx.neighbors(): #TODO: ajout IN/OUT ?
-                kdoc.add_element("neighbors", vid_to_docnum(nei.index)) #TODO ajout d'un poids !
+                kdoc["neighbors"].add( nei.index) #TODO ajout d'un poids !
             # on ajoute le doc
             kdocs.append(kdoc)
         return kdocs

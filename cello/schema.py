@@ -205,7 +205,7 @@ class SetField(DocField, set):
         items = set(self._ftype.validate(v) for v in values)
         self.clear()
         self.update(items)
-
+    
 
 class ListField(DocField, list):
     """ list container for non-uniq field """
@@ -609,8 +609,10 @@ class Doc(dict):
         def value(x):
             if type(x) == ValueField: 
                 return x.get_value()
-            elif isinstance(x, DocField): 
+            elif isinstance(x, VectorField): 
                 return x.as_dict()
+            elif isinstance(x, (ListField, SetField)): 
+                return list(x)
             else:
                 return x
         
@@ -618,5 +620,6 @@ class Doc(dict):
             if not key.startswith("_") and key not in exclude )
         
         doc = { key:value(val) for key, val in gen}
+        print doc
         return doc 
 

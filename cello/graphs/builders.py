@@ -399,7 +399,7 @@ class SimpleGraphBuilder(AbstractGraphBuilder):
             else:
                 neighbor_field = neighbors
             # ajout neighbors (liens)
-            for neighbor in kdoc.iter_field(neighbor_field):
+            for neighbor in kdoc[neighbor_field]:
                 # ajout neighbor, if needed
                 if neighbor not in kdocs_idx:
                     #self._logger.warning("'%s' is not a KodexDoc of the result set" % neighbor)
