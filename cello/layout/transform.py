@@ -23,15 +23,15 @@ class ReducePCA(Composable):
     >>> layout
     <Layout with 5 vertices and 5 dimensions>
 
-    >>> pca = ReducePCA(3)
+    >>> pca = ReducePCA(2)
     >>> pca(layout)
-    <Layout with 5 vertices and 3 dimensions>
+    <Layout with 5 vertices and 2 dimensions>
 
     .. note:: the input layout should have the same number of dim than vertices
     """
-    def __init__(self, out_dim=3):
+    def __init__(self, dim=3):
         super(ReducePCA, self).__init__()
-        self.out_dim = out_dim
+        self.out_dim = dim
 
     def robust_pca(self, mat, nb_fail=0):
         if nb_fail > 5:
@@ -69,7 +69,7 @@ class ReducePCA(Composable):
         return ig.Layout(result.tolist())
 
 
-class ReduceRandomProjection(Composable):
+class ReduceRandProj(Composable):
     """ Reduce a layout dimention by a a random projection
 
     >>> import igraph as ig
@@ -77,14 +77,14 @@ class ReduceRandomProjection(Composable):
     >>> layout
     <Layout with 5 vertices and 4 dimensions>
 
-    >>> rproj = ReduceRandomProjection(3)
+    >>> rproj = ReduceRandProj(dim=3)
     >>> rproj(layout)
     <Layout with 5 vertices and 3 dimensions>
     """
     #TODO use http://scikit-learn.org/stable/modules/random_projection.html
-    def __init__(self, out_dim=3):
-        super(ReduceRandomProjection, self).__init__()
-        self.out_dim = out_dim
+    def __init__(self, dim=3):
+        super(ReduceRandProj, self).__init__()
+        self.out_dim = dim
 
     def __call__(self, layout):
         """ Process the random projection
@@ -95,13 +95,13 @@ class ReduceRandomProjection(Composable):
         return ig.Layout(result.tolist())
 
 
-@Composable
 def normalise(layout):
     """ Normalize a :class:`igraph.Layout` between -0.5 and 0.5
 
     >>> import igraph as ig
     >>> import numpy as np
     >>> layout = ig.Layout([[10,  0,  0], [0,  10,  0], [0,   0,  0], [0,   0, 10], [0,  -10,  0]])
+    
     >>> np.array(normalise(layout).coords).max()
     0.5
     >>> np.array(normalise(layout).coords).min()
@@ -130,7 +130,7 @@ class Shaker(Composable):
         """
         :param kelastic: coeficient d'elasticité: `force = kelastic * dlen`
         """
-        super(Shaker, self).__init__()
+        super(Shaker, self).__init__(name='shake')
         self.kelastic = kelastic
 
     def __call__(self, layout):
