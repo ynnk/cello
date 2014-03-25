@@ -19,7 +19,7 @@ import logging
 
 import igraph as ig #TODO: pas térible d'avoir le import igraph ici
 
-from cello.types import Numeric
+from cello.types import Numeric, Text
 from cello.schema import Schema, Doc
 from cello.pipeline import Optionable
 
@@ -55,17 +55,18 @@ class GraphProxSearch(AbstractSearch):
     #TODO: pour avoir d'autre extract que ProxMarkov:
     # passer ceette class en Abstract, et choix du 'prox' dans class filles (methode protected _extract)
 
-    def __init__(self, graph, name="simple_graph_search"):
+    def __init__(self, graph, name="simple_graph_search", copy=[]):
         """ Initialise searcher with the graph.
         @param kgraph: the L{KodexGraph} to use,
         """
         AbstractSearch.__init__(self, name)
         self._logger = logging.getLogger(__name__)
         self.graph = graph
+        self.attrs_to_copy = copy
         
         self.add_option("nb_results", Numeric(default=30, 
             help="Max number of vertices to retrieve"))
-        self.add_option("l", Numeric(default=3, help="lenght of the random walk"))
+        self.add_option("l", Numeric(default=3, help="length of the random walk"))
 
     def _query_to_p0(self, query):
         """ Transform the query to a list of initial graph ids
@@ -108,7 +109,7 @@ class GraphProxSearch(AbstractSearch):
             degree_out=Numeric(),
             degree_in=Numeric(),
             score=Numeric(vtype=float),
-            
+            label=Text(),
             neighbors=Numeric(multi=True, uniq=True)
         )
         for vid, score in v_extract:
@@ -118,9 +119,11 @@ class GraphProxSearch(AbstractSearch):
             # autres attributs
             kdoc.degree_out = vtx.degree(ig.OUT)
             kdoc.degree_in = vtx.degree(ig.IN)
+            kdoc.label = vtx['label']
             # les voisins sont dans un term field
             for nei in vtx.neighbors(): #TODO: ajout IN/OUT ?
                 kdoc["neighbors"].add( nei.index) #TODO ajout d'un poids !
+            
             # on ajoute le doc
             kdocs.append(kdoc)
         return kdocs

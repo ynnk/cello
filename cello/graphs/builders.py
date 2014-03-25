@@ -325,21 +325,21 @@ class SimpleGraphBuilder(AbstractGraphBuilder):
     def __init__(self, neighbors_field="_all_terms",
                        neighbors_scores_field=None,
                        name="sgbuilder",
-                       attrs_to_copy=[]):
+                       copy=[]):
         """
         from 'neighbors_field' and 'neighbors_scores_field' if a list is provided then
         the choice of the field became an option.
         
         @param neighbor_field: the name of the neighbor/term field used to build the graph
         @param neighbor_scores_field: name of the score field used to weight the graph. No weight if None.
-        @param attrs_to_copy: kdoc attr that will be copied into vertices
+        @param copy: kdoc attr that will be copied into vertices
         """
         AbstractGraphBuilder.__init__(self, name, directed=False)
         self._logger = logging.getLogger(self.__class__.__name__)
         # neighbors/terms field
         self._neighbors_field = neighbors_field
         self._neighbor_field_choice = False
-        self._attrs_to_copy = attrs_to_copy
+        self._attrs_to_copy = copy
         if isinstance(neighbors_field, (list, tuple)):
             if len(neighbors_field) == 0:
                 ValueError("neighbors_field should be either a *non-emtpy* list or a string")
@@ -373,8 +373,8 @@ class SimpleGraphBuilder(AbstractGraphBuilder):
                                  str)
         # Graph builder init
         self.declare_vattr("type")
-        self.declare_vattr("kodex_doc")
-        for attr in attrs_to_copy:
+        self.declare_vattr("_doc")
+        for attr in copy:
             self.declare_vattr(attr)
         self.declare_eattr(EDGE_WEIGHT_ATTR)
 
@@ -382,18 +382,19 @@ class SimpleGraphBuilder(AbstractGraphBuilder):
         """ Private methode called by self.build_graph().
         """
         kdocs_idx = {} # garde un dico docnum->gid, pour etre sur que l'on ajoute pas des sommets hors result set
-        for rank, kdoc in enumerate(kdocs):
+        for rank, _doc in enumerate(kdocs):
             # ajout doc
-            doc_gid = self.add_get_vertex((True, kdoc.docnum))
+            kdoc = _doc.as_dict()
+            doc_gid = self.add_get_vertex((True, kdoc['docnum']))
+            self.set_vattr(doc_gid, "_doc", _doc)
             self.set_vattr(doc_gid, "type", True)
-            self.set_vattr(doc_gid, "kodex_doc", kdoc)
             for attr in self._attrs_to_copy:
                 self.set_vattr(doc_gid, attr, kdoc[attr])
-            kdocs_idx[kdoc.docnum] = doc_gid
+            kdocs_idx[kdoc['docnum']] = doc_gid
 
         #
         for kdoc in kdocs:
-            doc_gid = self.add_get_vertex((True, kdoc.docnum))
+            doc_gid = self.add_get_vertex((True, kdoc['docnum']))
             if not self._neighbor_field_choice:
                 neighbor_field = self._neighbors_field
             else:
