@@ -534,7 +534,7 @@ class Doc(dict):
             { k: self[k] for k in self.schema.field_names() }
         )
 
-    def __init__(self, schema, **data):
+    def __init__(self, schema=None, **data):
         """ Document initialisation
         
         .. warning:: a copy of the given schema is stored in the document
@@ -545,8 +545,16 @@ class Doc(dict):
         >>> doc = Doc(Schema(titre=Text()), titre=u'Un titre')
         """
         dict.__init__(self)
+        # check there is a docnum
+        #XXX docnum needed or not ?
+        #if 'docnum' not in data:
+        #    raise SchemaError("A document should have a docnum")
         # set the document schema
-        object.__setattr__(self, 'schema', schema.copy())
+        if schema is None:
+            schema = Schema()
+        else:
+            schema = schema.copy()
+        object.__setattr__(self, 'schema', schema)
         #    i.e. "self.schema = schema.copy()" but this is forbiden
         # Doc should always have a docnum !
         if 'docnum' not in self.schema:
@@ -607,7 +615,7 @@ class Doc(dict):
         """ returns a dictionary representation of the document
         """
         def value(x):
-            if type(x) == ValueField: 
+            if type(x) == ValueField:
                 return x.get_value()
             elif isinstance(x, VectorField): 
                 return x.as_dict()
@@ -620,6 +628,5 @@ class Doc(dict):
             if not key.startswith("_") and key not in exclude )
         
         doc = { key:value(val) for key, val in gen}
-        print doc
         return doc 
 

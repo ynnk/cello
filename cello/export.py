@@ -69,7 +69,6 @@ def export_graph(graph):
     return graph_dict
 
 
-
 def export_clustering(vertex_cover):
     """ Build a dictionary view of a vertex cover (a clustering)
     
@@ -81,13 +80,27 @@ def export_clustering(vertex_cover):
         [
             {
                 'gids': [1, 3, 5, 8],
-                'docnums': []
+                'docnums': [u'docnum_1', ...]
                 'misc': False,
-            }
+            },
+            ...
         ]
     
     :param vertex_cover: the vertex cover to convert
     :type vertex_cover: :class:`igraph.VertexCover`
+    
+    >>> import igraph as ig
+    >>> g = ig.Graph.Formula("a--b, a--c, a--d")
+    >>> from cello.schema import Doc
+    >>> g.vs['_doc'] = None
+    >>> g.vs[0]['_doc'] = Doc(docnum=45526)
+    >>> g.vs[2]['_doc'] = Doc(docnum=8886)
+
+    >>> from cello.clustering import MaximalCliques
+    >>> clustering = MaximalCliques()
+    >>> cover = clustering(g)
+    >>> export_clustering(cover)
+    [{'docs': [45526], 'misc': False, 'gids': [0, 3]}, {'docs': [45526, 8886], 'misc': False, 'gids': [0, 2]}, {'docs': [45526], 'misc': False, 'gids': [0, 1]}]
     """
     clusters = []
     if hasattr(vertex_cover, "misc_cluster") : # "misc" cluster id
@@ -95,13 +108,22 @@ def export_clustering(vertex_cover):
     else: # pas de "misc"
         misc_cluster = -1
 
+    gid_to_doc = None
     if hasattr(vertex_cover, 'graph') and '_doc' in vertex_cover.graph.vs.attributes():
-        gid_to_doc = vertex_cover.graph.vs['_doc']
+        gid_to_doc = {gid: doc.docnum \
+            for gid, doc in enumerate(vertex_cover.graph.vs['_doc']) \
+            if doc is not None
+        }
 
     for cnum, gids in enumerate(vertex_cover):
+        cluster = {}
         # is misc ?
         cluster['misc'] = cnum == misc_cluster
         cluster['gids'] = gids
+        # doc ?
+        cluster['docs'] = []
+        if gid_to_doc:
+            cluster['docs'] = [gid_to_doc[gid] for gid in gids if gid in gid_to_doc]
         # add the cluster
         clusters.append(cluster)
 
