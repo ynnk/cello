@@ -1,9 +1,6 @@
-#!/usr/bin/env python
 #-*- coding:utf-8 -*-
-""" Graph clustering objects
-
-G{classtree ClusteringMethod}
-__author__ = "Emmanuel Navarro <navarro@irit.fr>"
+""" :mod:`cello.clustering`
+===========================
 """
 
 import logging
@@ -17,44 +14,18 @@ from cello.types import Numeric, Text, Boolean
 from cello.clustering.walktrap import walktrap_bigraph
 from cello.graphs import EDGE_WEIGHT_ATTR
 from cello.graphs.transform import GraphProjection
+
 import clustering_external
 #import link_clustering
+
+from cello.clustering.filter import filter_cover
+
 
 _logger = logging.getLogger("cello.clustering")
 
 class CelloClusteringError(CelloError):
     pass
 
-
-def filter_cover(cover, min_docs, min_terms, logger=None):
-    """ Merge too small clusters in a "misc" one.
-    """
-    if logger is not None:
-       logger.debug("Filter cluster, min_docs:%d min_terms:%d" % (min_docs, min_terms))
-    graph = cover.graph
-    new_clusters = []
-    # recupere les sommets seuls dans le misc
-    misc = [idx for idx, member in enumerate(cover.membership) if len(member) == 0]
-
-    for num, cluster in enumerate(cover):
-        is_misc = False
-        if min_docs > 0 or min_terms > 0:
-            vs_cluster = graph.vs[cluster]
-            ndocs = len(vs_cluster.select(type=True))
-            nterms = len(vs_cluster.select(type=False))
-            if ndocs < min_docs or nterms < min_terms:
-                misc += cluster
-                is_misc = True
-        if not is_misc:
-            new_clusters.append(cluster)
-    if logger is not None:
-       logger.info("Cluster misc with %d vertices" % len(misc))
-    if len(misc) > 0:
-        if logger is not None:
-           logger.info("Goes from %d to %d clusters" % (len(cover), len(new_clusters) + 1))
-        cover = ig.VertexCover(graph, new_clusters + [misc])
-        cover.misc_cluster = len(new_clusters)
-    return cover
 
 #{
 class ClusteringMethod(Optionable):
@@ -202,10 +173,10 @@ class FormalConceptAnalysis(BigraphClusteringMethod):
         self.add_option("no_trivial", Boolean(default=True, 
             help="Remove trivial concepts (i.e. concepts with no objects or no properties)"))
         if fca_method == "kov_py":
-            from cello.graphs.fca import fca_kov
+            from cello.clustering.fca import fca_kov
             self.fca_fct = fca_kov.compute_concepts_kov
         elif fca_method == "fcbo":
-            from cello.graphs.fca import fca_fcbo_wrapper
+            from cello.clustering.fca import fca_fcbo_wrapper
             self.fca_fct = lambda bigraph: fca_fcbo_wrapper.fcbo(bigraph, min_support=0, obj_type=True, delete_files=True, fcbo_exec=None)
         else:
             raise ValueError("'%s' is not a possible FCA algorithm" % fca_method)
@@ -404,43 +375,4 @@ def bipartite_clustering_methods():
     methods.append(FormalConceptAnalysis())
     return methods
 
-from cello.utils import deprecated
-
-@deprecated("This method 'get_basic_clustering_methods' should be updated")
-def get_basic_clustering_methods():
-    """ Return a list of all clustering method (instance)
-    i.e. MaximalCliques and ConnectedComponents
-    """
-    methods = []
-    methods.append(WalktrapBigraph())
-    methods.append(Infomap())
-    methods.extend(get_xtrem_clustering_methods())
-    return methods
-
-
-@deprecated("This mehtod 'get_good_clustering_methods' should be updated")
-def get_good_clustering_methods():
-    """ Return a list of 'good' clustering method (instance)
-    """
-    methods = []
-    methods.append(Infomap())
-    try:
-        pass
-        #methods.append(OslomPG())
-    except ImportError as error:
-        _logger.error("Oslom import error: %s" % error)
-    methods.append(WalktrapBigraph())
-    return methods
-
-
-@deprecated("This mehtod 'get_xtrem_clustering_methods' should be updated")
-def get_xtrem_clustering_methods():
-    """ Return a list of extrems clustering method (instance)
-    i.e. MaximalCliques and ConnectedComponents
-    """
-    methods = []
-    methods.append(ConnectedComponents())
-    methods.append(MaximalCliques())
-    methods.append(FormalConceptAnalysis())
-    return methods
 #}
