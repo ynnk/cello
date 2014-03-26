@@ -22,7 +22,7 @@ Class
 
 
 """
-from cello.types import GenericType, Numeric
+from cello.types import GenericType, Numeric, Text
 from cello.exceptions import SchemaError
 
 
@@ -176,7 +176,7 @@ class SetField(DocField, set):
     
     >>> from cello.types import Text
     >>> schema = Schema(tags=Text(multi=True, uniq=True))
-    >>> doc = Doc(schema, docnum=42)
+    >>> doc = Doc(schema, docnum='abc42')
     >>> doc.tags.add(u'boo')
     >>> doc.tags.add(u'foo')
     >>> len(doc.tags)
@@ -256,7 +256,7 @@ class VectorField(DocField):
     usage: 
 
     >>> from cello.types import Text, Numeric
-    >>> doc = Doc(Schema(), docnum=1)
+    >>> doc = Doc(Schema(), docnum='1')
     >>> doc.terms = Text(multi=True, uniq=True, attrs={'tf': Numeric()}) 
     >>> doc.terms.add('chat') # vectoritem
     >>> doc.terms['chat'].tf = 12
@@ -558,7 +558,7 @@ class Doc(dict):
         #    i.e. "self.schema = schema.copy()" but this is forbiden
         # Doc should always have a docnum !
         if 'docnum' not in self.schema:
-            self.add_field('docnum', Numeric())
+            self.add_field('docnum', Text(vtype=str))
         #elf.docnum = data['docnum'] if "docnum" in data else 0# or fail
         # fields value(s)
         for key, ftype in schema.iter_fields():
