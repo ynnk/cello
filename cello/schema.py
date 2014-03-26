@@ -126,7 +126,11 @@ class DocField(object):
         """ return the value of the field.
         """
         raise NotImplementedError
-
+    
+    def export(self):
+        """ Returns a serialisable representation of the field
+        """
+        raise NotImplementedError
     
 
     @staticmethod
@@ -168,6 +172,10 @@ class ValueField(DocField):
     
     def set(self, value): 
         self.value = self._ftype.validate(value)
+    
+    
+    def export(self):
+        return self.get_value()
 
 class SetField(DocField, set):
     """ Document field for a set of values (i.e. the fieldtype is "multi" and "uniq")
@@ -206,6 +214,8 @@ class SetField(DocField, set):
         self.clear()
         self.update(items)
     
+    def export(self):
+        return list(self)
 
 class ListField(DocField, list):
     """ list container for non-uniq field """
@@ -249,6 +259,9 @@ class ListField(DocField, list):
         assert j-i == len(values), "given data don't fit slice size (%s-%s != %s)" % (i, j, len(values))
         for x, xi in enumerate(xrange(i, j)):
             self[xi] = values[x]
+    
+    def export(self):
+        return list(self)
 
 
 class VectorField(DocField):
@@ -341,7 +354,7 @@ class VectorField(DocField):
         """ from DocField, convenient method """
         return self
 
-    def as_dict(self):
+    def export(self):
         #XXX: TODO ?
         d = {'keys': self.keys()}
         for name in self._attrs.keys():
@@ -578,20 +591,28 @@ class Doc(dict):
         self.schema.add_field(name, ftype)
         self[name] = docfield or DocField.FromType(ftype)
 
+    def get_field(self, name):
+        """ return the :class:`DocField` field for the given name """
+        try:
+            return dict.__getitem__(self, name)
+        except KeyError as err:
+            raise SchemaError("'%s' is not a document field (existing attributes are: %s)" % (err, self.keys()))
+
     def __getitem__(self, name):
         return getattr(self, name)
 
     def __getattr__(self, name):
+        """ Return a value if the type of the :class:`DocField` is instance of
+        :class:`ValueField`
+        prefer :func:`get_field` is you want direct acces to the container.
+        """
         # this is called if there is no 'real' object attribute of the given name
         # http://docs.python.org/2/reference/datamodel.html#object.__getattr__s
-        try:
-            field = dict.__getitem__(self, name)
-            if type(field) == ValueField:
-                return field.get_value()
-            else:
-                return field
-        except KeyError as err:
-            raise SchemaError("'%s' is not a document field (existing attributes are: %s)" % (err, self.keys()))
+        field = self.get_field(name)
+        if type(field) == ValueField:
+            return field.get_value()
+        else:
+            return field
 
     def __setitem__(self,name, value):
         setattr(self, name, value)
@@ -611,22 +632,12 @@ class Doc(dict):
         else:
             raise SchemaError("'%s' is not a document field (existing attributes are: %s)" % (name, self.keys()))
 
-    def as_dict(self, exclude=[]):
+    def export(self, exclude=[]):
         """ returns a dictionary representation of the document
         """
-        def value(x):
-            if type(x) == ValueField:
-                return x.get_value()
-            elif isinstance(x, VectorField): 
-                return x.as_dict()
-            elif isinstance(x, (ListField, SetField)): 
-                return list(x)
-            else:
-                return x
-        
-        gen = ( (key, getattr(self, key)) for key in self.schema
+        fields = ( (key, self.get_field(key)) for key in self.schema
             if not key.startswith("_") and key not in exclude )
         
-        doc = { key:value(val) for key, val in gen}
+        doc = { name: field.export() for name, field in fields}
         return doc 
 

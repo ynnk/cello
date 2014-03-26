@@ -213,7 +213,7 @@ class TestDoc(unittest.TestCase):
         self.assertEqual(doc["schema"], doc.schema)
         # repr, weak test, just avoid Exception
         self.assertNotEqual(repr(doc), "")
-        self.assertNotEqual(doc.as_dict(), "")
+        self.assertNotEqual(doc.export(), "")
         
         # try to overide the schema
         with self.assertRaises(SchemaError):
@@ -246,3 +246,5 @@ class TestDoc(unittest.TestCase):
         doc.authors.add("Jule Rime")
         doc.authors.add("Lise Liseuse")
         self.assertEqual(len(doc.authors), 2)
+        
+    
