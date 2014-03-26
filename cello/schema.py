@@ -22,6 +22,7 @@ Class
 
 
 """
+from collections import OrderedDict
 from cello.types import GenericType, Numeric, Text
 from cello.exceptions import SchemaError
 
@@ -169,6 +170,7 @@ class ValueField(DocField):
     def set(self, value): 
         self.value = self._ftype.validate(value)
 
+
 class SetField(DocField, set):
     """ Document field for a set of values (i.e. the fieldtype is "multi" and "uniq")
     
@@ -205,7 +207,7 @@ class SetField(DocField, set):
         items = set(self._ftype.validate(v) for v in values)
         self.clear()
         self.update(items)
-    
+
 
 class ListField(DocField, list):
     """ list container for non-uniq field """
@@ -256,9 +258,9 @@ class VectorField(DocField):
     usage: 
 
     >>> from cello.types import Text, Numeric
-    >>> doc = Doc(Schema(), docnum='1')
+    >>> doc = Doc(docnum='1')
     >>> doc.terms = Text(multi=True, uniq=True, attrs={'tf': Numeric()}) 
-    >>> doc.terms.add('chat') # vectoritem
+    >>> doc.terms.add('chat')
     >>> doc.terms['chat'].tf = 12
     >>> doc.terms['chat'].tf
     12
@@ -272,7 +274,7 @@ class VectorField(DocField):
     def __init__(self, ftype):
         DocField.__init__(self, ftype)
         self._attrs =  {} # attr_name : [DocField, ]    
-        self._keys = {}   # key: idx
+        self._keys = OrderedDict()   # key: idx
         self.clear_attributes()
 
     def attribute_names(self):
@@ -335,6 +337,10 @@ class VectorField(DocField):
         return key in self._keys
 
     def __getitem__(self, key):
+        """ Returns a :class:`.VectorItem` mapping the given key
+        """
+        if not self.has(key):
+            raise KeyError("No such key ('%s') in this field" % key)
         return VectorItem(self, key)
 
     def get_value(self): 
@@ -342,7 +348,19 @@ class VectorField(DocField):
         return self
 
     def as_dict(self):
-        #XXX: TODO ?
+        """ returns a dictionary
+        
+        >>> from cello.types import Text, Numeric
+        >>> doc = Doc(docnum='1')
+        >>> doc.terms = Text(multi=True, uniq=True, attrs={'tf': Numeric(default=1)}) 
+        >>> doc.terms.add('chat')
+        >>> doc.terms.add('rat')
+        >>> doc.terms.add('chien')
+        >>> doc.terms['chien'].tf = 2
+        >>> doc.terms['rat'].tf = 5
+        >>> doc.as_dict()
+        {'docnum': '1', 'terms': {'keys': ['chat', 'rat', 'chien'], 'tf': [1, 5, 2]}}
+        """
         d = {'keys': self.keys()}
         for name in self._attrs.keys():
             d[name] = self.get_attribute(name).values()
@@ -363,9 +381,9 @@ class VectorField(DocField):
         doc.terms = ['a', 'b']
         """
         # clear keys and atributes
-        self._keys = {}
+        self._keys = OrderedDict()
         self.clear_attributes()
-        _validate = self._ftype.validate 
+        _validate = self._ftype.validate
         for key in keys:
             self.add(_validate(key))
 
@@ -410,6 +428,13 @@ class VectorField(DocField):
 
 class VectorAttr(object):
     """ Internal class used to acces an attribute of a :class:`.VectorField`
+
+    >>> from cello.types import Text, Numeric
+    >>> doc = Doc(docnum='1')
+    >>> doc.terms = Text(multi=True, uniq=True, attrs={'tf': Numeric()}) 
+    >>> doc.terms.add('chat')
+    >>> type(doc.terms.tf)
+    <class 'cello.schema.VectorAttr'>
     """
     #XXX; maybe it can be a "list" or a collections.Sequence
     # http://docs.python.org/2/library/collections.html#collections-abstract-base-classes
@@ -440,6 +465,13 @@ class VectorAttr(object):
 
 class VectorItem(object):
     """ Internal class used to acces an item (= a value) of a :class:`.VectorField`
+
+    >>> from cello.types import Text, Numeric
+    >>> doc = Doc(docnum='1')
+    >>> doc.terms = Text(multi=True, uniq=True, attrs={'tf': Numeric()}) 
+    >>> doc.terms.add('chat')
+    >>> type(doc.terms['chat'])
+    <class 'cello.schema.VectorItem'>
     """
     def __init__(self, vector, key):
         self._vector = vector
@@ -617,16 +649,17 @@ class Doc(dict):
         def value(x):
             if type(x) == ValueField:
                 return x.get_value()
-            elif isinstance(x, VectorField): 
+            elif isinstance(x, VectorField):
                 return x.as_dict()
-            elif isinstance(x, (ListField, SetField)): 
+            elif isinstance(x, (ListField, SetField)):
                 return list(x)
             else:
                 return x
         
-        gen = ( (key, getattr(self, key)) for key in self.schema
-            if not key.startswith("_") and key not in exclude )
+        # all the fields that do not start by _ and ar not in 'exclude'
+        fields = ( (field, getattr(self, field)) for field in self.schema
+            if not field.startswith("_") and field not in exclude )
         
-        doc = { key:value(val) for key, val in gen}
-        return doc 
+        doc = { field:value(val) for field, val in fields}
+        return doc
 
