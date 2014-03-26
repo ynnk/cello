@@ -1,6 +1,7 @@
 #-*- coding:utf-8 -*-
 """ :mod:`cello.export`
 ========================
+
 """
 from cello.schema import Doc, Numeric
 
@@ -11,60 +12,90 @@ def export_docs(kdocs, exclude=[]):
     """
     return [doc.as_dict(exclude=exclude) for doc in kdocs]
 
-
-def export_graph(graph):
+#TODO exclude_gattrs, exclude_vattrs, exclude_eattrs
+#TODO: est-ce que l'on passe pas a des include plutot que exclude
+def export_graph(graph, exclude_gattrs=[], exclude_vattrs=[], exclude_eattrs=[]):
     """ Transform a graph (igraph graph) to a dictionary
     to send it to template (or json)
 
-
     :param graph: the graph to transform
     :type graph: :class:`igraph.Graph`
+    :param exclude_gattrs: graph attributes to exclude (TODO)
+    :param exclude_vattrs: vertex attributes to exclude (TODO)
+    :param exclude_eattrs: edges attributes to exclude (TODO)
+
+    >>> import igraph as ig
+    >>> from pprint import pprint
+    >>> g = ig.Graph.Formula("a--b, a--c, a--d, a--f, d--f")
+    >>> from cello.schema import Doc
+    >>> g.vs["docnum"] = [1+vid if vid%2 == 0 else None for vid in range(g.vcount())]
+    >>> graph_dict = export_graph(g)
+    >>> pprint(graph_dict)
+    {'attributes': {'bipartite': False, 'directed': False},
+     'es': [{'s': 0, 't': 1},
+            {'s': 0, 't': 2},
+            {'s': 0, 't': 3},
+            {'s': 0, 't': 4},
+            {'s': 3, 't': 4}],
+     'vs': [{'docnum': 1, 'name': 'a'},
+            {'docnum': None, 'name': 'b'},
+            {'docnum': 3, 'name': 'c'},
+            {'docnum': None, 'name': 'd'},
+            {'docnum': 5, 'name': 'f'}]}
+
+
+    The '_doc' vertex attribute is converted into a 'docnum' attribut :
+
+    >>> from cello.schema import Doc
+    >>> del g.vs["docnum"]
+    >>> g.vs["_doc"] = [Doc(docnum="d_%d" % vid) if vid%2 == 0 else None for vid in range(g.vcount())]
+    >>> graph_dict = export_graph(g)
+    >>> pprint(graph_dict)
+    {'attributes': {'bipartite': False, 'directed': False},
+     'es': [{'s': 0, 't': 1},
+            {'s': 0, 't': 2},
+            {'s': 0, 't': 3},
+            {'s': 0, 't': 4},
+            {'s': 3, 't': 4}],
+     'vs': [{'docnum': 'd_0', 'name': 'a'},
+            {'name': 'b'},
+            {'docnum': 'd_2', 'name': 'c'},
+            {'name': 'd'},
+            {'docnum': 'd_4', 'name': 'f'}]}
+
     """
     import igraph
+    assert isinstance(graph, igraph.Graph)
     # create the graph dict
     graph_dict = {}
     graph_dict['vs'] = []
     graph_dict['es'] = []
-    graph_dict['attributes'] = {}
+    # attributs of the graph
+    graph_dict['attributes'] = {} #TODO recopier les attr du graphe
     # check argument
-    if not isinstance(graph, igraph.Graph):
-        return graph_dict
     # default graph attrs
     graph_dict['attributes']['directed'] = graph.is_directed()
-    graph_dict['attributes']['bipartite'] = 'type' in graph.vs and graph.is_bipartite() 
+    #TODO: attention is bipartite... => le passer en simple attr de graphe, seté dans le graph builder
+    graph_dict['attributes']['bipartite'] = 'type' in graph.vs and graph.is_bipartite()
     # vertices
     for vtx in graph.vs:
         vertex = vtx.attributes()
-        # colors still needs some conversion to r;g;b 255
-        vertex["color"] = vertex.get("color", (99,99,99)) # ";".join([ "%s" % int(255*c) for c in vertex.get("color", (0.2,0.2,0.2)) ])
         # transformation des Kodex_Doc en docnum
-        if "_doc" in vertex and isinstance(vertex["_doc"], Doc):
+        if "_doc" in vertex and vertex["_doc"] is not None:
+            assert isinstance(vertex["_doc"], Doc)
+            assert "docnum" not in vertex
             docnum = vertex["_doc"].docnum
             vertex["docnum"] = docnum
+        if "_doc" in vertex:
             del vertex["_doc"]
-        else:
-            vertex["docnum"] = None
-        
-        # transformation des Kodex_LU en 'form"
-        #~ if "kodex_LU" in vertex and isinstance(vertex["kodex_LU"], KodexLU):
-            #~ form = vertex["kodex_LU"].form
-            #~ vertex["klu_form"] = form
-            #~ del vertex["kodex_LU"]
-        #~ else:
-            #~ vertex["klu_form"] = None
         graph_dict['vs'].append(vertex)
     # edges
     for edg in graph.es:
-        #TODO pourquoi pas partir de edg.attributes()
-        edge = {}
+        edge = edg.attributes() # recopie tous les attributs
+        # add source et target
         edge["s"] = edg.source
         edge["t"] = edg.target
-        edge["w"] = edg["weight"]
-        # recopier tous les attributs
-        edge.update({
-            attr_name: edg[attr_name] for attr_name in graph.es.attribute_names()
-        })
-        #TODO check il n'y a pas de 's' 't' ou 'w' dans attr
+        #TODO check il n'y a pas de 's' 't' dans attr
         graph_dict['es'].append(edge)
     return graph_dict
 
@@ -76,37 +107,40 @@ def export_clustering(vertex_cover):
     (not None) '_doc' attribute
     
     .. code-block:: js
-
-        [
-            {
-                'gids': [1, 3, 5, 8],
-                'docnums': [u'docnum_1', ...]
-                'misc': False,
-            },
-            ...
-        ]
-    
+        {
+            'misc': -1,
+            'clusters': [
+                {
+                    'gids': [1, 3, 5, 8],
+                    'docnums': [u'docnum_1', ...]
+                },
+                ...
+            ]
+        }
     :param vertex_cover: the vertex cover to convert
     :type vertex_cover: :class:`igraph.VertexCover`
     
     >>> import igraph as ig
-    >>> g = ig.Graph.Formula("a--b, a--c, a--d")
+    >>> from pprint import pprint
+    >>> g = ig.Graph.Formula("a--b, a--c, a--d, a--f, d--f")
     >>> from cello.schema import Doc
-    >>> g.vs['_doc'] = None
-    >>> g.vs[0]['_doc'] = Doc(docnum=45526)
-    >>> g.vs[2]['_doc'] = Doc(docnum=8886)
+    >>> g.vs["_doc"] = [Doc(docnum="d_%d" % vid) if vid%2 == 0 else None for vid in range(g.vcount())]
 
     >>> from cello.clustering import MaximalCliques
     >>> clustering = MaximalCliques()
     >>> cover = clustering(g)
-    >>> export_clustering(cover)
-    [{'docs': [45526], 'misc': False, 'gids': [0, 3]}, {'docs': [45526, 8886], 'misc': False, 'gids': [0, 2]}, {'docs': [45526], 'misc': False, 'gids': [0, 1]}]
+    >>> cover_dict = export_clustering(cover)
+    >>> pprint(cover_dict)
+    {'clusters': [{'docnums': ['d_0', 'd_4'], 'vids': [0, 3, 4]},
+                  {'docnums': ['d_0', 'd_2'], 'vids': [0, 2]},
+                  {'docnums': ['d_0'], 'vids': [0, 1]}],
+     'misc': -1}
     """
-    clusters = []
+    cover = {}
     if hasattr(vertex_cover, "misc_cluster") : # "misc" cluster id
-        misc_cluster = vertex_cover.misc_cluster
+        cover['misc'] = vertex_cover.misc_cluster
     else: # pas de "misc"
-        misc_cluster = -1
+        cover['misc'] = -1
 
     gid_to_doc = None
     if hasattr(vertex_cover, 'graph') and '_doc' in vertex_cover.graph.vs.attributes():
@@ -115,75 +149,16 @@ def export_clustering(vertex_cover):
             if doc is not None
         }
 
-    for cnum, gids in enumerate(vertex_cover):
+    clusters = []
+    for cnum, vids in enumerate(vertex_cover):
         cluster = {}
-        # is misc ?
-        cluster['misc'] = cnum == misc_cluster
-        cluster['gids'] = gids
+        cluster['vids'] = vids
         # doc ?
-        cluster['docs'] = []
+        cluster['docnums'] = []
         if gid_to_doc:
-            cluster['docs'] = [gid_to_doc[gid] for gid in gids if gid in gid_to_doc]
+            cluster['docnums'] = [gid_to_doc[gid] for gid in vids if gid in gid_to_doc]
         # add the cluster
         clusters.append(cluster)
+    cover['clusters'] = clusters
+    return cover
 
-    return clusters
-
-def prepare_clustering(vertex_cover, docs, graph):
-    """ Run the clustering method on the graph
-    
-    .. note:: arguments should be setted according to the clustering object options.
-    .. seealso:: L{cello.clustering}
-    """
-    # clusters = {cluster_id:{"docs":[KodexDoc, ...], "terms":[KodexLU, ...]}, ...}
-    clusters = {}
-    if hasattr(vertex_cover, "misc_cluster") : # "misc" cluster id
-        misc_cluster = vertex_cover.misc_cluster
-    else: # pas de "misc"
-        misc_cluster = -1
-    # save the cluster membership of each document
-    if docs:
-        for doc in docs:
-            if not "clusters" in doc.schema : doc["clusters"] = Numeric(multi=True)
-            
-    ### construction du dictionaire 'self.clusters'
-    for k, vids in enumerate(vertex_cover):
-        if k == misc_cluster: k = 9998
-        clusters[k] = {}
-        # Liste des sommets (docs and terms) du clusters
-        nodes = graph.vs[set(vids)]
-        # documents
-        clusters[k]['docs'] = nodes.select(type=True)["_doc"]
-        # terms
-        terms = nodes.select(type=False)
-        if len(terms) and "kodex_LU" in graph.vs.attribute_names():
-            clusters[k]['terms'] = terms["kodex_LU"]
-        else:
-            clusters[k]['terms'] = []
-        # labels
-        clusters[k]['labels'] = {}
-        # ajoute l'info sur le cluster dans le documents
-        if docs :
-            for doc in clusters[k]['docs']:
-                doc.clusters.append(k)
-
-    clustering = {}
-    cluster_list = []
-    cluster_misc = {}
-    for cluster_id, cluster in clusters.iteritems():
-        new_cluster = {}
-        new_cluster["docnums"] = [kdoc.docnum for kdoc in cluster["docs"]]
-        labels = {}
-        for name, data  in cluster["labels"].iteritems():
-            labels[name] = {}
-            labels[name]['models'] = [(klu.form, score) for klu, score in data['models'] ]
-        new_cluster["labels"] = labels
-        if cluster_id == 9998: #XXX: ce 9998 ici ca ne va pas !
-            cluster_misc = new_cluster
-        else:
-            cluster_list.append((cluster_id, new_cluster))
-    cluster_list.sort()
-    clustering["clusters"] = [cluster for _, cluster in cluster_list]
-    clustering["misc"] = cluster_misc
-
-    return clustering
