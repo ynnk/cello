@@ -7,7 +7,6 @@
 
 .. toctree::
 
-    cello.utils.graph
     cello.utils.prox
     cello.utils.log
 
