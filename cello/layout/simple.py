@@ -15,9 +15,8 @@ from cello.pipeline import Optionable, Composable
 class KamadaKawaiLayout(Composable):
     """ Kamada Kawai layout
     
-    >>> layout = KamadaKawaiLayout(dim=2)
-    >>> import igraph as ig
     >>> g = ig.Graph.Formula("a--b, a--c, a--d")
+    >>> layout = KamadaKawaiLayout(dim=2)
     >>> layout(g)
     <Layout with 4 vertices and 2 dimensions>
     """
@@ -37,9 +36,8 @@ class KamadaKawaiLayout(Composable):
 class FruchtermanReingoldLayout(Composable):
     """ Fruchterman Reingold layout
     
-    >>> layout = FruchtermanReingoldLayout(dim=3)
-    >>> import igraph as ig
     >>> g = ig.Graph.Formula("a--b, a--c, a--d")
+    >>> layout = FruchtermanReingoldLayout(dim=3)
     >>> layout(g)
     <Layout with 4 vertices and 3 dimensions>
     """
@@ -60,9 +58,8 @@ class FruchtermanReingoldLayout(Composable):
 class RandomLayout(Composable):
     """ Random layout
     
-    >>> layout = RandomLayout(dim=2)
-    >>> import igraph as ig
     >>> g = ig.Graph.Formula("a--b, a--c, a--d")
+    >>> layout = RandomLayout(dim=2)
     >>> layout(g)
     <Layout with 4 vertices and 2 dimensions>
     """
@@ -83,9 +80,8 @@ class RandomLayout(Composable):
 class GridLayout(Optionable):
     """ Grid layout
     
-    >>> layout = GridLayout()
-    >>> import igraph as ig
     >>> g = ig.Graph.Formula("a--b, a--c, a--d")
+    >>> layout = GridLayout()
     >>> layout(g, 1, 2)
     <Layout with 4 vertices and 3 dimensions>
     """

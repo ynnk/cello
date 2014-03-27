@@ -19,9 +19,8 @@ class ProxLayout(Optionable):
     .. Note:: Don't use this component directly, you need to reduce dimention to
         have a usable 2D or 3D layout.
     
-    >>> layout = ProxLayout()
-    >>> import igraph as ig
     >>> g = ig.Graph.Formula("a--b, a--c, a--d, a--f")
+    >>> layout = ProxLayout()
     >>> layout(g)
     <Layout with 5 vertices and 5 dimensions>
     """
@@ -43,9 +42,8 @@ def ProxLayoutPCA(name="prox_layout_PCA", dim=3):
     :param name: name of the component
     :param dim: number of dimentions of the output layouts
 
-    >>> layout = ProxLayoutPCA(dim=2)
-    >>> import igraph as ig
     >>> g = ig.Graph.Formula("a--b, a--c, a--d, a--f")
+    >>> layout = ProxLayoutPCA(dim=2)
     >>> layout(g)
     <Layout with 5 vertices and 2 dimensions>
     """
@@ -61,9 +59,8 @@ def ProxLayoutRandomProj(name="prox_layout_PCA", dim=3):
     :param dim: number of dimentions of the output layouts
     
     
-    >>> layout = ProxLayoutRandomProj(dim=3)
-    >>> import igraph as ig
     >>> g = ig.Graph.Formula("a--b, a--c, a--d, a--f")
+    >>> layout = ProxLayoutRandomProj(dim=3)
     >>> layout(g)
     <Layout with 5 vertices and 3 dimensions>
     """
@@ -81,7 +78,6 @@ class ProxBigraphLayout(Optionable):
         have a usable 2D or 3D layout. See: :class:`ProxBigraphLayoutPCA` or 
         :class:`ProxBigraphLayoutRandomProj`.
     
-    >>> import igraph as ig
     >>> g = ig.Graph.Formula("A--a, A--b, A--c, B--b, B--f")
     >>> g.vs['type'] = [vtx['name'].isupper() for vtx in g.vs]
     
@@ -111,7 +107,6 @@ def ProxBigraphLayoutPCA(name="prox_bigraph_layout_PCA", dim=3):
     :param name: name of the component
     :param dim: number of dimentions of the output layouts
 
-    >>> import igraph as ig
     >>> g = ig.Graph.Formula("A--a, A--b, A--c, B--b, B--f")
     >>> g.vs['type'] = [vtx['name'].isupper() for vtx in g.vs]
 
@@ -130,7 +125,6 @@ def ProxBigraphLayoutRandomProj(name="prox_layout_PCA", dim=3):
     :param name: name of the component
     :param dim: number of dimentions of the output layouts
     
-    >>> import igraph as ig
     >>> g = ig.Graph.Formula("A--a, A--b, A--c, B--b, B--f")
     >>> g.vs['type'] = [vtx['name'].isupper() for vtx in g.vs]
 
