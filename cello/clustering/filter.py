@@ -1,35 +1,101 @@
 #-*- coding:utf-8 -*-
 """ :mod:`cello.clustering.filter`
 ==================================
+
 """
 import igraph as ig
 
-def filter_cover(cover, min_docs, min_terms, logger=None):
-    """ Merge too small clusters in a "misc" one.
-    """
-    if logger is not None:
-       logger.debug("Filter cluster, min_docs:%d min_terms:%d" % (min_docs, min_terms))
-    graph = cover.graph
-    new_clusters = []
-    # recupere les sommets seuls dans le misc
-    misc = [idx for idx, member in enumerate(cover.membership) if len(member) == 0]
+from cello.types import Numeric
+from cello.pipeline import Optionable, Composable
 
-    for num, cluster in enumerate(cover):
-        is_misc = False
-        if min_docs > 0 or min_terms > 0:
-            vs_cluster = graph.vs[cluster]
-            ndocs = len(vs_cluster.select(type=True))
-            nterms = len(vs_cluster.select(type=False))
-            if ndocs < min_docs or nterms < min_terms:
-                misc += cluster
-                is_misc = True
-        if not is_misc:
-            new_clusters.append(cluster)
-    if logger is not None:
-       logger.info("Cluster misc with %d vertices" % len(misc))
-    if len(misc) > 0:
-        if logger is not None:
-           logger.info("Goes from %d to %d clusters" % (len(cover), len(new_clusters) + 1))
-        cover = ig.VertexCover(graph, new_clusters + [misc])
-        cover.misc_cluster = len(new_clusters)
-    return cover
+from functools import update_wrapper
+
+class OtherInMisc(Composable):
+    """ Add all vertices that have no clusters in 'misc' cluster
+    
+    >>> g = ig.Graph.Formula("0:1--1:2:3, 4--5")
+    >>> cover = ig.VertexCover(g, [[0, 1, 2], [3]])
+
+    >>> other_in_misc = OtherInMisc()
+    >>> cover = other_in_misc(cover)
+    >>> list(cover)
+    [[0, 1, 2], [3], [4, 5]]
+    >>> cover.misc_cluster
+    2
+    """
+    def __init__(self):
+        super(OtherInMisc, self).__init__()
+
+    def __call__(self, cover):
+        # recupere les sommets n'ayant pas de cluster dans le misc
+        new_misc = [idx for idx, member in enumerate(cover.membership) \
+                    if len(member) == 0]
+        
+        if len(new_misc):
+            # check misc
+            if not hasattr(cover, 'misc_cluster'):
+                misc_id = len(cover)
+                new_clusters = list(cover) + [new_misc]
+                cover = ig.VertexCover(cover.graph, new_clusters)
+                cover.misc_cluster = misc_id
+            else:
+                cover[cover.misc_cluster].extend(new_misc)
+        return cover
+
+
+class TooSmall(Optionable):
+    """ Merge clusters that are 'too' small in a misc cluster
+    
+    >>> g = ig.Graph.Formula("0:1--1:2:3, 4--5")
+    >>> cover = ig.VertexCover(g, [[0, 1, 2], [3]])
+    >>> too_small = TooSmall()
+    >>> cover = too_small(cover, min_vtx=2)
+    >>> list(cover)
+    [[0, 1, 2], [3]]
+    >>> cover.misc_cluster
+    1
+
+    It may also be applyed when a misc cluster already exist:
+    
+    >>> cover = ig.VertexCover(g, [[0, 1, 2], [3]])
+    >>> other_in_misc = OtherInMisc()
+    >>> cover = other_in_misc(cover)
+    >>> list(cover)
+    [[0, 1, 2], [3], [4, 5]]
+    >>> cover = too_small(cover, min_vtx=2)
+    >>> list(cover)
+    [[0, 1, 2], [3, 4, 5]]
+    """
+    def __init__(self):
+        super(TooSmall, self).__init__()
+        self.add_option("min_vtx", Numeric(default=2,
+            help=u"Minimum number of vertex per cluster"))
+
+    def __call__(self, cover, min_vtx):
+        self._logger.debug("Filter cluster, min_vtx: %d" % (min_vtx))
+        misc_id = -1
+        if hasattr(cover, 'misc_cluster'):
+            misc_id = cover.misc_cluster
+        new_clusters = []
+        new_misc = []
+        for num, cluster in enumerate(cover):
+            if num == misc_id: # already in misc
+                continue
+            if len(cluster) < min_vtx: # cluster too smal ==> to misc
+                new_misc += cluster
+            else:  # we keep it
+                new_clusters.append(cluster)
+        
+        self._logger.info("Cluster misc with %d new vertices" % len(new_misc))
+        if len(new_misc):
+            if misc_id >= 0: # already a misc
+                new_misc += cover[misc_id]
+            cover = ig.VertexCover(cover.graph, new_clusters + [new_misc])
+            cover.misc_cluster = len(new_clusters)
+        return cover
+
+
+def basic_cover_filter():
+    """ Return a basic filter
+    """
+    return OtherInMisc() | TooSmall()
