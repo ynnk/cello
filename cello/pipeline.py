@@ -16,9 +16,10 @@ Class
 """
 import logging
 from collections import OrderedDict
-from functools import wraps
+from functools import wraps, update_wrapper
 
 from cello.options import ValueOption
+
 
 class Composable(object):
     """ Basic composable element
@@ -71,7 +72,7 @@ class Composable(object):
                 self.name = func.func_name
             else:
                 self.name = name
-            self.__doc__ = func.__doc__
+            update_wrapper(self, func)
         elif name is None:
             self.name = self.__class__.__name__
         else:
@@ -146,6 +147,16 @@ class Optionable(Composable):
         """ Whether the  component have a given option
         """
         return opt_name in self._options
+
+    def print_options(self):
+        """ print description of the component options
+        """
+        summary = []
+        for opt_name, opt in self._options.iteritems():
+            if opt.hidden:
+                continue
+            summary.append(opt.summary())
+        print("\n".join(summary))
 
     def option_is_hidden(self, opt_name):
         """ Whether the given option is hidden
@@ -477,6 +488,7 @@ class MapSeq(OptionableSequence):
     def map(self, *args, **kwargs):
         return [self.call_item(item, *args, **kwargs) for item in self.items]
 
+
 class MapReduce(MapSeq):
     """ MapReduce implentation for components
 
@@ -511,4 +523,5 @@ class MapReduce(MapSeq):
     
     def reduce(self, array, *args,  **kwargs):
         return NotImplementedError
+
 
