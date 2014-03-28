@@ -248,3 +248,29 @@ class TestDoc(unittest.TestCase):
         self.assertEqual(len(doc.authors), 2)
         
     
+    def test_doc_analyse(self):
+        from collections import OrderedDict
+        text = u"i have seen chicken passing the street and i believed "\
+           +"how many chicken must pass in the street before you believe"
+        # text analyse 
+        tokens = text.split(' ')  
+        #crop = lambda term, max_length : term[:min(max_length, len(term))] 
+        #tokens = [ crop(term,5) for term in text]
+        text_terms =  list(OrderedDict.fromkeys(tokens))
+        terms_tf = [ tokens.count(k) for k in text_terms ]
+        terms_pos = [[i for i, x in enumerate(tokens) if x == k ] for k in text_terms]
+        
+        # document
+        term_field = Text(multi=True, uniq=True, 
+                          attrs={'tf':Numeric(default=1),
+                                 'positions':Numeric(multi=True), } )
+        schema = Schema( docnum=Numeric(), title=Text(), text=Text(), terms=term_field )
+        doc = Doc(schema , docnum=1, text=text, title=u"chickens")
+        doc.terms = text_terms
+        self.assertEqual(doc.terms.tf.values(), [1]*len(text_terms)) 
+        doc.terms.tf = terms_tf
+        doc.terms.positions = terms_pos
+        self.assertEqual(doc.terms['chicken'].positions, [3, 12] ) 
+        self.assertEqual(doc.terms['chicken'].tf, 2 ) 
+        self.assertEqual(doc.title, "chickens")
+        self.assertEqual( doc.export(), "")

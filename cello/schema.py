@@ -162,6 +162,8 @@ class DocField(object):
 class ValueField(DocField):
     """ Stores only one value
     """
+    __slot__ = ['value']
+    
     def __init__(self, fieldtype):
         if fieldtype.multi:
             raise SchemaError("The type of a ValueField should not be multiple")

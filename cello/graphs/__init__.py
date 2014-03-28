@@ -6,6 +6,7 @@
 import igraph as ig
 
 from cello.pipeline import Optionable
+from cello.schema import Doc
 
 EDGE_WEIGHT_ATTR = "weight"
 
@@ -25,28 +26,227 @@ def random_vertex(graph, attr=None, from_edges=False):
     # return attr or vid
     if attr is not None:
         return self.graph.vs[vid][attr]
-    else:
+    else:isinstance(vertex["_doc"], Doc
         return vid
 
+
+#TODO exclude_gattrs, exclude_vattrs, exclude_eattrs
+#TODO: est-ce que l'on passe pas a des include plutot que exclude
+def export_graph(graph, exclude_gattrs=[], exclude_vattrs=[], exclude_eattrs=[]):
+    """ Transform a graph (igraph graph) to a dictionary
+    to send it to template (or json)
+
+    :param graph: the graph to transform
+    :type graph: :class:`igraph.Graph`
+    :param exclude_gattrs: graph attributes to exclude (TODO)
+    :param exclude_vattrs: vertex attributes to exclude (TODO)
+    :param exclude_eattrs: edges attributes to exclude (TODO)
+
+    >>> import igraph as ig
+    >>> from pprint import pprint
+    >>> g = ig.Graph.Formula("a--b, a--c, a--d, a--f, d--f")
+    >>> from cello.schema import Doc
+    >>> g.vs["docnum"] = [1+vid if vid%2 == 0 else None for vid in range(g.vcount())]
+    >>> graph_dict = export_graph(g)
+    >>> pprint(graph_dict)
+    {'attributes': {'bipartite': False, 'directed': False},
+     'es': [{'s': 0, 't': 1},
+            {'s': 0, 't': 2},
+            {'s': 0, 't': 3},
+            {'s': 0, 't': 4},
+            {'s': 3, 't': 4}],
+     'vs': [{'_id': 0, 'docnum': 1, 'name': 'a'},
+            {'_id': 1, 'docnum': None, 'name': 'b'},
+            {'_id': 2, 'docnum': 3, 'name': 'c'},
+            {'_id': 3, 'docnum': None, 'name': 'd'},
+            {'_id': 4, 'docnum': 5, 'name': 'f'}]}
+
+    The '_doc' vertex attribute is converted into a 'docnum' attribut :
+
+    >>> from cello.schema import Doc
+    >>> del g.vs["docnum"]
+    >>> g.vs["_doc"] = [Doc(docnum="d_%d" % vid) if vid%2 == 0 else None for vid in range(g.vcount())]
+    >>> graph_dict = export_graph(g)
+    >>> pprint(graph_dict)
+    {'attributes': {'bipartite': False, 'directed': False},
+     'es': [{'s': 0, 't': 1},
+            {'s': 0, 't': 2},
+            {'s': 0, 't': 3},
+            {'s': 0, 't': 4},
+            {'s': 3, 't': 4}],
+     'vs': [{'docnum': 'd_0', 'name': 'a'},
+            {'name': 'b'},
+            {'docnum': 'd_2', 'name': 'c'},
+            {'name': 'd'},
+            {'docnum': 'd_4', 'name': 'f'}]}
+
+    """
+    import igraph
+    assert isinstance(graph, igraph.Graph)
+    # create the graph dict
+    graph_dict = {}
+    graph_dict['vs'] = []
+    graph_dict['es'] = []
+    # attributs of the graph
+    graph_dict['attributes'] = {} #TODO recopier les attr du graphe
+    # check argument
+    # default graph attrs
+    graph_dict['attributes']['directed'] = graph.is_directed()
+    #TODO: attention is bipartite... => le passer en simple attr de graphe, seté dans le graph builder
+    graph_dict['attributes']['bipartite'] = 'type' in graph.vs and graph.is_bipartite()
+    graph_dict['attributes']['v_attrs'] = [attr for attr in graph.vs.attribute_names() 
+                                            if attr[0:1] != "_" ]
+    graph_dict['attributes']['e_attrs'] = graph.es.attribute_names()
+
+    # structural vertex attr 
+    if not 'vid' in graph.vs:
+        graph.vs['_id'] = range(graph.vcount())
+    
+    # vertices
+    for _id, vtx in enumerate(graph.vs):
+        vertex = vtx.attributes()
+        # transformation des Kodex_Doc en docnum
+        if "_doc" in vertex and vertex["_doc"] is not None:
+            assert isinstance(vertex["_doc"], Doc)
+            assert "docnum" not in vertex
+            docnum = vertex["_doc"].docnum
+            vertex["docnum"] = docnum
+        if "_doc" in vertex:
+            del vertex["_doc"]
+        graph_dict['vs'].append(vertex)
+    # edges
+    for edg in graph.es:
+        edge = edg.attributes() # recopie tous les attributs
+        # add source et target
+        edge["s"] = graph.vs[edg.source]['_id']
+        edge["t"] = graph.vs[edg.target]['_id']
+        #TODO check il n'y a pas de 's' 't' dans attr
+        graph_dict['es'].append(edge)
+    
+    return graph_dict
+
+
+def read_json(data, filename=None):
+    """ read,parse and return a :class:`Iggrap.Graph` from json data or file
+    :param data: deserialized json data
+    :param filename: path to a file
+    
+    G default is undirected 
+    
+    graph format:
+        {
+          attributes: { # graph attributes
+            v_attrs: [], # vertex attrs names , otype ??
+            e_attrs: [], # edges attrs names 
+            
+            directed: True/False,   # default = False
+            bipartite: True/False,  # default = False
+            
+            key:value, ... # any pair of key, value
+          },
+          
+          vs: [ # vertices list
+            { # vertex
+              _id: id,    # protected vertex id should not be editable 
+              key:value,  # any pair of key value may match a type 
+            }, ...
+          ],
+          
+          es: [ # edge list
+            { # edge
+              s: source vid,
+              t: target vid, 
+              key: value, ...
+            }, ...
+          ],
+        }
+    """
+    g_attrs = data['attributes']
+    v_attrs = g_attrs.pop('v_attrs')
+    e_attrs = g_attrs.pop('e_attrs')
+    
+    directed = g_attrs.get('directed', False)
+
+    builder = GraphBuilder(directed=directed)
+    
+    builder.declare_vattr(v_attrs)
+    builder.declare_eattr(e_attrs)
+    
+    builder.reset()
+    
+    print builder._vertex_attrs_name
+    
+    builder.set_gattrs(**g_attrs)
+    
+    for v in data['vs']:
+        vid = builder.add_get_vertex(v['_id'])
+        for attr in v_attrs:
+            print vid, attr, v
+            builder.set_vattr(vid, attr, v[attr])
+    
+    for e in data['es']:
+        eid = builder.add_get_edge(e['s'],e['t'])
+        for attr in v_attrs:
+            builder.set_vattr(vid, attr, v[attr])
+    
+    return builder.create_graph()
+        
+    
+
+
+    
+    
+    
 class GraphBuilder(object):
     """ Abstract class to build a igraph graph object by parsing a source.
 
     You just need to implement the _parse() methode.
     
     - in the constructer you need to declare edge and vertex attributes using self.declare_eattr() and self.declare_vattr()
-    - 
+
+    builder = GraphBuilder()
+    builder.declare_vattr(...)
+    buidler.reset()
+    #parsing...
+    builder.add_get_vertex(...)
+    # create the igraph graph
+    graph = builder.create_graph()
     
     """
     def __init__(self, directed = False):
         self._directed = directed
+        
         self._graph_attrs = {}
-        self._vertex_attrs_name = []
-        self._edges_attrs_name = []
-        self._init_internal_graph_repr()
+        
+        self._vertex_attrs_name = [] # not reseted
+        self._vertices = {}
+        self._vertex_attrs = {}
 
-    def set_gattr(self, attr_name, value):
+        self._edges_attrs_name = [] # not reseted
+        self._edges = {}
+        self._edge_attrs = {}
+
+        self._edge_list = []
+        
+    def reset(self):
+        self._vertices = {}
+        self._vertex_attrs = {}
+
+        for att in self._vertex_attrs_name:
+            self._vertex_attrs[att] = []
+
+        self._edges = {}
+        self._edge_attrs = {}
+
+        for att in self._edges_attrs_name:
+            self._edge_attrs[att] = []
+        # removes edges 
+        self._edge_list = []
+
+    def set_gattrs(self, **kwargs):
         """ Set the graph attribut *attr_name* """
-        self._graph_attrs[attr_name] = value
+        for attr_name, value in kwargs.iteritems():
+            self._graph_attrs[attr_name] = value
 
     ####### Vertices ########
     def add_get_vertex(self, vident):
@@ -154,20 +354,6 @@ class GraphBuilder(object):
         self.set_eattr(eid, attr_name, _val)
         return _val
 
-    ####
-    def _init_internal_graph_repr(self):
-        self._vertices = {}
-        self._vertex_attrs = {}
-        for att in self._vertex_attrs_name:
-            self._vertex_attrs[att] = []
-
-        self._edges = {}
-        self._edge_list = []
-        self._edge_attrs = {}
-        for att in self._edges_attrs_name:
-            self._edge_attrs[att] = []
-
-    #######
     def _parse(self, *args, **kargs):
         """ Parse the 'source' and build the edge and vertex list, should be
         overide in a inherited class.
@@ -180,8 +366,11 @@ class GraphBuilder(object):
 
         @return the igraph graph
         """
-        self._init_internal_graph_repr()
+        self.reset()
         self._parse( *args, **kargs)
+        return self.create_graph()
+    
+    def create_graph(self):
         graph = ig.Graph(n = len(self._vertices),
                          edges = self._edge_list,
                          directed = self._directed, 

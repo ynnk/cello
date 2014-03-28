@@ -60,4 +60,3 @@ class TestFieldTypes(unittest.TestCase):
         self.assertTrue(schema_bis.has_field('title'))
         self.assertFalse(schema_bis.has_field('boo'))
         
-
