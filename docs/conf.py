@@ -93,6 +93,10 @@ pygments_style = 'sphinx'
 #modindex_common_prefix = []
 
 
+# -- Options for AUTODOC -------------------------------------------------------
+
+autodoc_member_order = "bysource"
+
 def skip(app, what, name, obj, skip, options):
     if name in ["__init__", "__call__"]:
         return False

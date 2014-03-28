@@ -1,6 +1,18 @@
 #-*- coding:utf-8 -*-
 """ :mod:`cello.clustering`
 ===========================
+
+SubModules
+----------
+
+.. toctree::
+
+    cello.clustering.core
+    cello.clustering.common
+    cello.clustering.filter
+
+Helpers
+-------
 """
 
 import logging
@@ -13,7 +25,6 @@ from cello.clustering.common import Walktrap, Infomap
 from cello.clustering.filter import basic_cover_filter
 
 #{ Pack of methods
-
 def unipartite_clustering_methods():
     """ Returns standart clustering method for unipartite graphs
     
@@ -29,6 +40,7 @@ def unipartite_clustering_methods():
 
 def bipartite_clustering_methods():
     """ Returns standart clustering method for bipartite graphs
+    
     >>> methods = bipartite_clustering_methods()
     >>> len(methods)
     1
@@ -36,13 +48,14 @@ def bipartite_clustering_methods():
     methods = []
     methods.append(Infomap())
     return methods
-
+#}
 
 def export_clustering(vertex_cover):
     """ Build a dictionary view of a vertex cover (a clustering)
     
     .. Note:: for each cluster 'docnums' are extracted from vertices that have a
-    (not None) '_doc' attribute
+        (not None) '_doc' attribute
+    
     
     .. code-block:: js
     
@@ -56,6 +69,7 @@ def export_clustering(vertex_cover):
                 ...
             ]
         }
+
     :param vertex_cover: the vertex cover to convert
     :type vertex_cover: :class:`igraph.VertexCover`
     
@@ -75,6 +89,7 @@ def export_clustering(vertex_cover):
      'misc': -1}
 
     One can also have a misc cluster:
+    
     >>> cover.misc_cluster = 2
     >>> cover_dict = export_clustering(cover)
     >>> pprint(cover_dict)

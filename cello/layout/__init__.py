@@ -2,7 +2,9 @@
 """ :mod:`cello.layout`
 ======================
 
-Submodules:
+
+SubModules
+----------
 
 .. toctree::
 
@@ -10,6 +12,8 @@ Submodules:
     cello.layout.prox
     cello.layout.transform
 
+Helpers
+    -------
 """
 import igraph as ig
 
