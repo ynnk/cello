@@ -13,7 +13,7 @@ help:
 	@echo "          $ py.test --cov PATH_OR_FILE --cov-report term-missing"
 
 clean-doc:
-	rm -rf docs/_build/ docs/_static/ docs/_templates/
+	rm -rf docs/_build/ docs/_templates/
 
 doc:
 	#ipython nbconvert --to rst notebooks/Cello*.ipynb
