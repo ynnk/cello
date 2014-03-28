@@ -2,13 +2,19 @@
 """ :mod:`cello.graphs`
 =======================
 """
-
+import random
 import igraph as ig
 
 from cello.pipeline import Optionable
 from cello.schema import Doc
 
 EDGE_WEIGHT_ATTR = "weight"
+
+"""
+
+
+"""
+
 
 def random_vertex(graph, attr=None, from_edges=False):
     """ return a random vertex of the given graph
@@ -22,11 +28,11 @@ def random_vertex(graph, attr=None, from_edges=False):
         vid = random.choice([es.source, es.target])
     else:
         # random node
-        vid = random.choice(xrange(self.graph.vcount()))
+        vid = random.choice(xrange(graph.vcount()))
     # return attr or vid
     if attr is not None:
         return self.graph.vs[vid][attr]
-    else:isinstance(vertex["_doc"], Doc
+    else:
         return vid
 
 
@@ -43,23 +49,12 @@ def export_graph(graph, exclude_gattrs=[], exclude_vattrs=[], exclude_eattrs=[])
     :param exclude_eattrs: edges attributes to exclude (TODO)
 
     >>> import igraph as ig
-    >>> from pprint import pprint
-    >>> g = ig.Graph.Formula("a--b, a--c, a--d, a--f, d--f")
     >>> from cello.schema import Doc
+
+    >>> g = ig.Graph.Formula("a--b, a--c, a--d, a--f, d--f")
+
     >>> g.vs["docnum"] = [1+vid if vid%2 == 0 else None for vid in range(g.vcount())]
     >>> graph_dict = export_graph(g)
-    >>> pprint(graph_dict)
-    {'attributes': {'bipartite': False, 'directed': False},
-     'es': [{'s': 0, 't': 1},
-            {'s': 0, 't': 2},
-            {'s': 0, 't': 3},
-            {'s': 0, 't': 4},
-            {'s': 3, 't': 4}],
-     'vs': [{'_id': 0, 'docnum': 1, 'name': 'a'},
-            {'_id': 1, 'docnum': None, 'name': 'b'},
-            {'_id': 2, 'docnum': 3, 'name': 'c'},
-            {'_id': 3, 'docnum': None, 'name': 'd'},
-            {'_id': 4, 'docnum': 5, 'name': 'f'}]}
 
     The '_doc' vertex attribute is converted into a 'docnum' attribut :
 
@@ -67,18 +62,7 @@ def export_graph(graph, exclude_gattrs=[], exclude_vattrs=[], exclude_eattrs=[])
     >>> del g.vs["docnum"]
     >>> g.vs["_doc"] = [Doc(docnum="d_%d" % vid) if vid%2 == 0 else None for vid in range(g.vcount())]
     >>> graph_dict = export_graph(g)
-    >>> pprint(graph_dict)
-    {'attributes': {'bipartite': False, 'directed': False},
-     'es': [{'s': 0, 't': 1},
-            {'s': 0, 't': 2},
-            {'s': 0, 't': 3},
-            {'s': 0, 't': 4},
-            {'s': 3, 't': 4}],
-     'vs': [{'docnum': 'd_0', 'name': 'a'},
-            {'name': 'b'},
-            {'docnum': 'd_2', 'name': 'c'},
-            {'name': 'd'},
-            {'docnum': 'd_4', 'name': 'f'}]}
+   
 
     """
     import igraph
@@ -88,15 +72,17 @@ def export_graph(graph, exclude_gattrs=[], exclude_vattrs=[], exclude_eattrs=[])
     graph_dict['vs'] = []
     graph_dict['es'] = []
     # attributs of the graph
-    graph_dict['attributes'] = {} #TODO recopier les attr du graphe
-    # check argument
-    # default graph attrs
+    graph_dict['attributes'] = { attr:graph[attr] for attr in graph.attributes()}
     graph_dict['attributes']['directed'] = graph.is_directed()
-    #TODO: attention is bipartite... => le passer en simple attr de graphe, seté dans le graph builder
+    # FIXME: bipartite... => le passer en simple attr de graphe, 
+    #                        setté par le graph builder
     graph_dict['attributes']['bipartite'] = 'type' in graph.vs and graph.is_bipartite()
+    graph_dict['attributes']['e_attrs'] = graph.es.attribute_names()
     graph_dict['attributes']['v_attrs'] = [attr for attr in graph.vs.attribute_names() 
                                             if attr[0:1] != "_" ]
-    graph_dict['attributes']['e_attrs'] = graph.es.attribute_names()
+    # FIXME add a docnum if there are `Doc` in an _doc attribute
+    if '_doc' in graph.vs.attribute_names():
+        graph_dict['attributes']['v_attrs'].append('docnum')
 
     # structural vertex attr 
     if not 'vid' in graph.vs:
@@ -106,14 +92,18 @@ def export_graph(graph, exclude_gattrs=[], exclude_vattrs=[], exclude_eattrs=[])
     for _id, vtx in enumerate(graph.vs):
         vertex = vtx.attributes()
         # transformation des Kodex_Doc en docnum
-        if "_doc" in vertex and vertex["_doc"] is not None:
-            assert isinstance(vertex["_doc"], Doc)
-            assert "docnum" not in vertex
-            docnum = vertex["_doc"].docnum
-            vertex["docnum"] = docnum
+        if "_doc" in vertex:
+            if vertex["_doc"] is not None:
+                assert isinstance(vertex["_doc"], Doc)
+                assert "docnum" not in vertex
+                docnum = vertex["_doc"].docnum
+                vertex["docnum"] = docnum
+            else:
+                vertex["docnum"] = None
         if "_doc" in vertex:
             del vertex["_doc"]
         graph_dict['vs'].append(vertex)
+        
     # edges
     for edg in graph.es:
         edge = edg.attributes() # recopie tous les attributs

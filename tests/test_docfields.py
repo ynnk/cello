@@ -273,4 +273,19 @@ class TestDoc(unittest.TestCase):
         self.assertEqual(doc.terms['chicken'].positions, [3, 12] ) 
         self.assertEqual(doc.terms['chicken'].tf, 2 ) 
         self.assertEqual(doc.title, "chickens")
-        self.assertEqual( doc.export(), "")
+        
+        expect = {
+         'docnum': 1, 
+         'text': u'i have seen chicken passing the street and i believed how many chicken must pass in the street before you believe', 
+         'terms': {
+            'keys': [u'i', u'have', u'seen', u'chicken', u'passing', u'the', 
+                u'street', u'and', u'believed', u'how', u'many', u'must', u'pass',
+                u'in', u'before', u'you', u'believe'], 
+            'tf': [2, 1, 1, 2, 1, 2, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1], 
+            'positions': [[0, 8], [1], [2], [3, 12], [4], [5, 16], [6, 17], [7], 
+            [9],[10], [11], [13], [14], [15], [18], [19], [20]]
+          }, 
+          'title': u'chickens'
+        } 
+       
+        self.assertEqual( doc.export(), expect)
