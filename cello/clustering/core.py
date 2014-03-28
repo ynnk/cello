@@ -13,13 +13,37 @@ from cello.graphs import EDGE_WEIGHT_ATTR
 
 class ClusteringMethod(Optionable):
     """ Abstract clustering method, should work for unipartite or bipartite graphs
+
+    >>> clustering = ClusteringMethod()
+    >>> g = ig.Graph(n=4)
+    >>> clustering(g)
+    Traceback (most recent call last):
+    NotImplementedError: Should be implemented in a inherited class.
     """
-    def __init__(self, name):
-        Optionable.__init__(self, name)
+    def __init__(self, name=None):
+        Optionable.__init__(self, name=name)
     
     ## tools
     def graph_is_trivial(self, graph, weighted=False):
         """ Check that the graph is not trivial.
+        
+        >>> clustering = ClusteringMethod()
+    
+        >>> g = ig.Graph.Formula("a:b:c--b:c:d, e--f")
+        >>> clustering.graph_is_trivial(g)
+        False
+        
+        >>> g = ig.Graph()
+        >>> clustering.graph_is_trivial(g)
+        True
+        
+        >>> g = ig.Graph.Formula("a")
+        >>> clustering.graph_is_trivial(g)
+        True
+        
+        >>> g = ig.Graph.Formula("a, b, c")
+        >>> clustering.graph_is_trivial(g)
+        True
         """
         trivial = False
         # In case of empty graph
@@ -54,16 +78,37 @@ class ClusteringMethod(Optionable):
 
 class BigraphClusteringMethod(ClusteringMethod):
     """ Abstract clustering method for bipartite graph
+
+    >>> clustering = BigraphClusteringMethod()
+    >>> g = ig.Graph.Formula("a:b:c--B:C:D, a--F")
+    >>> clustering(g)
+    Traceback (most recent call last):
+    NotImplementedError: Should be implemented in a inherited class.
     """
-    def __init__(self, name):
-        super(BigraphClusteringMethod, self).__init__(name)
+    def __init__(self, name=None):
+        super(BigraphClusteringMethod, self).__init__(name=name)
 
     ## tools
     def graph_is_bipartite(self, graph):
         """ Check that the graph is bipartite
+
+        >>> clustering = BigraphClusteringMethod()
+        >>> g = ig.Graph.Formula("a:b:c--B:C:D, a--F")
+        >>> g.vs["type"] = [vtx["name"].islower() for vtx in g.vs]
+        >>> clustering.graph_is_bipartite(g)
+        True
+        
+        >>> g = ig.Graph.Formula("a:b:c--B:C:D, a--F")
+        >>> clustering.graph_is_bipartite(g)
+        False
+
+        >>> g = ig.Graph.Formula("a:b:c--B:C:D, a--F, a--c")
+        >>> g.vs["type"] = [vtx["name"].islower() for vtx in g.vs]
+        >>> clustering.graph_is_bipartite(g)
+        False
         """
         res = True
-        if not graph.is_bipartite():
+        if "type" not in graph.vs.attributes() or not graph.is_bipartite():
             self._logger.warn("The graph is not bipartite !")
             res = False
         return res

@@ -25,7 +25,7 @@ class Walktrap(ClusteringMethod):
     [[0], [0], [0], [0], [1], [1]]
 
     >>> g.es[EDGE_WEIGHT_ATTR] = [0.]       # Graph as 'no' real edge
-    >>> clustering(g).membership    # here, should be same as connected components
+    >>> clustering(g).membership
     [[], [], [], [], [], []]
     """
     def __init__(self, name=None):
@@ -51,6 +51,10 @@ class Infomap(ClusteringMethod):
     >>> clustering = Infomap()
     >>> clustering(g).membership    # here, should be same as connected components
     [[0], [0], [0], [0], [1], [1]]
+
+    >>> g = ig.Graph(n=5)           # in case of graph with no edge
+    >>> clustering(g).membership
+    [[], [], [], [], []]
     """
     def __init__(self, name=None):
         super(Infomap, self).__init__(name=name)

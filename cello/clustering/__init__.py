@@ -16,15 +16,22 @@ from cello.clustering.filter import basic_cover_filter
 
 def unipartite_clustering_methods():
     """ Returns standart clustering method for unipartite graphs
+    
+    >>> methods = unipartite_clustering_methods()
+    >>> len(methods)
+    2
     """
     methods = []
     methods.append(Infomap() | basic_cover_filter())
-    methods.append(Walktrap() | basic_cover_filter()    )
+    methods.append(Walktrap() | basic_cover_filter())
     return methods
 
 
 def bipartite_clustering_methods():
     """ Returns standart clustering method for bipartite graphs
+    >>> methods = bipartite_clustering_methods()
+    >>> len(methods)
+    1
     """
     methods = []
     methods.append(Infomap())
@@ -66,6 +73,15 @@ def export_clustering(vertex_cover):
                   {'docnums': ['d_0', 'd_2'], 'vids': [0, 2]},
                   {'docnums': ['d_0'], 'vids': [0, 1]}],
      'misc': -1}
+
+    One can also have a misc cluster:
+    >>> cover.misc_cluster = 2
+    >>> cover_dict = export_clustering(cover)
+    >>> pprint(cover_dict)
+    {'clusters': [{'docnums': ['d_0', 'd_4'], 'vids': [0, 3, 4]},
+                  {'docnums': ['d_0', 'd_2'], 'vids': [0, 2]},
+                  {'docnums': ['d_0'], 'vids': [0, 1]}],
+     'misc': 2}
     """
     cover = {}
     if hasattr(vertex_cover, "misc_cluster") : # "misc" cluster id

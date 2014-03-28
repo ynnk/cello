@@ -22,6 +22,13 @@ class OtherInMisc(Composable):
     [[0, 1, 2], [3], [4, 5]]
     >>> cover.misc_cluster
     2
+    
+    One can also a cover that already have a misc cover:
+    >>> cover = ig.VertexCover(g, [[0, 1, 2], [3]])
+    >>> cover.misc_cluster = 1
+    >>> cover = other_in_misc(cover)
+    >>> list(cover)
+    [[0, 1, 2], [3, 4, 5]]
     """
     def __init__(self):
         super(OtherInMisc, self).__init__()
