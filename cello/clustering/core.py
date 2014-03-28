@@ -149,8 +149,16 @@ class ConnectedComponents(ClusteringMethod):
 class MaximalCliques(ClusteringMethod):
     """ Maximal cliques
     
-    >>> g = ig.Graph.Formula("a:b--b:c:d, e--f")
+    Available options are :
+
     >>> clustering = MaximalCliques()
+    >>> clustering.print_options()
+    min (Numeric, default=0): Minimum cliques size
+    max (Numeric, default=10): Maximal cliques size
+
+    here is an usage exemple:
+
+    >>> g = ig.Graph.Formula("a:b--b:c:d, e--f")
     >>> [g.vs[cluster]["name"] for cluster in clustering(g)]
     [['f', 'e'], ['a', 'b', 'd'], ['a', 'b', 'c']]
     """
@@ -159,6 +167,7 @@ class MaximalCliques(ClusteringMethod):
         self.add_option("min", Numeric(default=0, help=u"Minimum cliques size"))
         self.add_option("max", Numeric(default=10, help=u"Maximal cliques size"))
 
+    @ClusteringMethod.check
     def __call__(self, graph, min=0, max=10):
         return ig.VertexCover(graph, graph.maximal_cliques(min, max))
 
