@@ -48,21 +48,53 @@ def export_graph(graph, exclude_gattrs=[], exclude_vattrs=[], exclude_eattrs=[])
     :param exclude_vattrs: vertex attributes to exclude (TODO)
     :param exclude_eattrs: edges attributes to exclude (TODO)
 
-    >>> import igraph as ig
-    >>> from cello.schema import Doc
+    >>> from pprint import pprint
 
     >>> g = ig.Graph.Formula("a--b, a--c, a--d, a--f, d--f")
-
     >>> g.vs["docnum"] = [1+vid if vid%2 == 0 else None for vid in range(g.vcount())]
+    >>> g.summary()
+    'IGRAPH UN-- 5 5 -- \\n+ attr: docnum (v), name (v)'
     >>> graph_dict = export_graph(g)
+    >>> g.summary()     # the graph hasn't changed !
+    'IGRAPH UN-- 5 5 -- \\n+ attr: docnum (v), name (v)'
+    >>> pprint(graph_dict)
+    {'attributes': {'bipartite': False,
+                    'directed': False,
+                    'e_attrs': [],
+                    'v_attrs': ['docnum', 'name']},
+     'es': [{'s': 0, 't': 1},
+            {'s': 0, 't': 2},
+            {'s': 0, 't': 3},
+            {'s': 0, 't': 4},
+            {'s': 3, 't': 4}],
+     'vs': [{'_id': 0, 'docnum': 1, 'name': 'a'},
+            {'_id': 1, 'docnum': None, 'name': 'b'},
+            {'_id': 2, 'docnum': 3, 'name': 'c'},
+            {'_id': 3, 'docnum': None, 'name': 'd'},
+            {'_id': 4, 'docnum': 5, 'name': 'f'}]}
 
     The '_doc' vertex attribute is converted into a 'docnum' attribut :
 
     >>> from cello.schema import Doc
-    >>> del g.vs["docnum"]
+    >>> g = ig.Graph.Formula("a--b, a--c, a--d, a--f, d--f")
     >>> g.vs["_doc"] = [Doc(docnum="d_%d" % vid) if vid%2 == 0 else None for vid in range(g.vcount())]
+    >>> g.es["weight"] = [4, 4, 5, 5, 1]    # add an edge attribute
     >>> graph_dict = export_graph(g)
-   
+    >>> pprint(graph_dict)
+    {'attributes': {'bipartite': False,
+                    'directed': False,
+                    'e_attrs': ['weight'],
+                    'v_attrs': ['name', 'docnum']},
+     'es': [{'s': 0, 't': 1, 'weight': 4},
+            {'s': 0, 't': 2, 'weight': 4},
+            {'s': 0, 't': 3, 'weight': 5},
+            {'s': 0, 't': 4, 'weight': 5},
+            {'s': 3, 't': 4, 'weight': 1}],
+     'vs': [{'_id': 0, 'docnum': 'd_0', 'name': 'a'},
+            {'_id': 1, 'docnum': None, 'name': 'b'},
+            {'_id': 2, 'docnum': 'd_2', 'name': 'c'},
+            {'_id': 3, 'docnum': None, 'name': 'd'},
+            {'_id': 4, 'docnum': 'd_4', 'name': 'f'}]}
 
     """
     import igraph
@@ -78,19 +110,18 @@ def export_graph(graph, exclude_gattrs=[], exclude_vattrs=[], exclude_eattrs=[])
     #                        setté par le graph builder
     graph_dict['attributes']['bipartite'] = 'type' in graph.vs and graph.is_bipartite()
     graph_dict['attributes']['e_attrs'] = graph.es.attribute_names()
-    graph_dict['attributes']['v_attrs'] = [attr for attr in graph.vs.attribute_names() 
-                                            if attr[0:1] != "_" ]
-    # FIXME add a docnum if there are `Doc` in an _doc attribute
+    graph_dict['attributes']['v_attrs'] = [attr for attr in graph.vs.attribute_names() \
+                                            if not attr.startswith('_')]
+    # add a docnum if there are `Doc` in an _doc attribute
     if '_doc' in graph.vs.attribute_names():
         graph_dict['attributes']['v_attrs'].append('docnum')
 
-    # structural vertex attr 
-    if not 'vid' in graph.vs:
-        graph.vs['_id'] = range(graph.vcount())
-    
+
     # vertices
     for _id, vtx in enumerate(graph.vs):
         vertex = vtx.attributes()
+        # _id : structural vertex attr
+        vertex["_id"] = _id
         # transformation des Kodex_Doc en docnum
         if "_doc" in vertex:
             if vertex["_doc"] is not None:
@@ -103,13 +134,13 @@ def export_graph(graph, exclude_gattrs=[], exclude_vattrs=[], exclude_eattrs=[])
         if "_doc" in vertex:
             del vertex["_doc"]
         graph_dict['vs'].append(vertex)
-        
+
     # edges
     for edg in graph.es:
         edge = edg.attributes() # recopie tous les attributs
         # add source et target
-        edge["s"] = graph.vs[edg.source]['_id']
-        edge["t"] = graph.vs[edg.target]['_id']
+        edge["s"] = edg.source # match with '_id' vertex attributs
+        edge["t"] = edg.target
         #TODO check il n'y a pas de 's' 't' dans attr
         graph_dict['es'].append(edge)
     
