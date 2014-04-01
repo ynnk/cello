@@ -15,12 +15,6 @@ inheritance diagrams
 
 Class
 -----
-
-
-
-    FIXME: manque de coherence entre les get_value, values, as_dict
-
-
 """
 from collections import OrderedDict
 from cello.types import GenericType, Numeric, Text
@@ -132,7 +126,6 @@ class DocField(object):
         """ Returns a serialisable representation of the field
         """
         raise NotImplementedError
-    
 
     @staticmethod
     def FromType(ftype):
@@ -176,7 +169,6 @@ class ValueField(DocField):
     def set(self, value): 
         self.value = self._ftype.validate(value)
     
-    
     def export(self):
         return self.get_value()
 
@@ -193,9 +185,11 @@ class SetField(DocField, set):
     >>> doc.tags.add(u'foo')
     >>> len(doc.tags)
     2
+    
     """
     #XXX; maybe it can use collections.MutableSet
     # http://docs.python.org/2/library/collections.html#collections-abstract-base-classes
+
     def __init__(self, fieldtype):
         if not fieldtype.uniq:
             raise SchemaError("The type of a SetField should be uniq")
@@ -264,28 +258,34 @@ class ListField(DocField, list):
         assert j-i == len(values), "given data don't fit slice size (%s-%s != %s)" % (i, j, len(values))
         for x, xi in enumerate(xrange(i, j)):
             self[xi] = values[x]
-    
+
     def export(self):
         return list(self)
 
 
 class VectorField(DocField):
-    """ 
-    usage: 
+    """ More complex document field container
+
+    usage:
 
     >>> from cello.types import Text, Numeric
     >>> doc = Doc(docnum='1')
-    >>> doc.terms = Text(multi=True, uniq=True, attrs={'tf': Numeric()}) 
+    >>> doc.terms = Text(vtype=str, multi=True, uniq=True, attrs={'tf': Numeric()}) 
     >>> doc.terms.add('chat')
     >>> doc.terms['chat'].tf = 12
     >>> doc.terms['chat'].tf
     12
-    >>> doc['boo'] = Text(default=u"boo")
-    >>> doc.boo
-    u'boo'
+    >>> doc.terms.add('dog', tf=55)
+    >>> doc.terms['dog'].tf
+    55
+    
+    One can also add an atribute after the field is created:
     >>> doc.terms.add_attribute('foo', Numeric(default=42))
     >>> doc.terms.foo.values()
-    [42]
+    [42, 42]
+    >>> doc.terms['dog'].foo = 20
+    >>> doc.terms.foo.values()
+    [42, 20]
     """
     def __init__(self, ftype):
         DocField.__init__(self, ftype)
@@ -370,25 +370,50 @@ class VectorField(DocField):
         >>> doc = Doc(docnum='1')
         >>> doc.terms = Text(multi=True, uniq=True, attrs={'tf': Numeric(default=1)}) 
         >>> doc.terms.add('chat')
-        >>> doc.terms.add('rat')
-        >>> doc.terms.add('chien')
-        >>> doc.terms['chien'].tf = 2
-        >>> doc.terms['rat'].tf = 5
-        >>> doc.export()
-        {'docnum': '1', 'terms': {'keys': ['chat', 'rat', 'chien'], 'tf': [1, 5, 2]}}
+        >>> doc.terms.add('rat', tf=5)
+        >>> doc.terms.add('chien', tf=2)
+        >>> doc.terms.export()
+        {'keys': ['chat', 'rat', 'chien'], 'tf': [1, 5, 2]}
         """
         d = {'keys': self.keys()}
         for name in self._attrs.keys():
             d[name] = self.get_attribute(name).values()
         return d
 
-    def add(self, key):
-        """ Add a key to the vector, do nothing if the key is already present """
+    def add(self, key, **kwargs):
+        """ Add a key to the vector, do nothing if the key is already present
+        
+        >>> doc = Doc(docnum='1')
+        >>> doc.terms = Text(vtype=str, multi=True, attrs={'tf': Numeric(default=1, min=0)}) 
+        >>> doc.terms.add('chat')
+        >>> doc.terms.add('dog', tf=2)
+        >>> doc.terms.tf.values()
+        [1, 2]
+        
+        >>> doc.terms.add('mouse', comment="a small mouse")
+        Traceback (most recent call last):
+        ...
+        ValueError: Invalid attribute name: 'comment'
+        
+        >>> doc.terms.add('mouse', tf=-2)
+        Traceback (most recent call last):
+        ValidationError: [u'Ensure this value ("-2") is greater than or equal to 0.']
+        """
         if not self.has(key):
+            # check if kwargs are valid
+            for attr_name, value in kwargs.iteritems():
+                if attr_name not in self._ftype.attrs:
+                    raise ValueError("Invalid attribute name: '%s'" % attr_name)
+                if not self._ftype.attrs[attr_name].validate(value):
+                    raise ValueError("Invalid attribute value: '%s' (for '%s')" % (value, attr_name))
+            # add the key
             self._keys[key] = len(self._keys)
-            #append to attributes
+            # append attributes
             for name, attr_type in self._ftype.attrs.iteritems():
-                self._attrs[name].append(DocField.FromType(attr_type))
+                attr_field = DocField.FromType(attr_type)
+                if name in kwargs:
+                    attr_field.set(kwargs[name])
+                self._attrs[name].append(attr_field)
 
     def set(self, keys):
         """ Set new keys.
