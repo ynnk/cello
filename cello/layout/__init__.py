@@ -13,7 +13,7 @@ SubModules
     cello.layout.transform
 
 Helpers
-    -------
+-------
 """
 import igraph as ig
 

@@ -1,19 +1,70 @@
 #-*- coding:utf-8 -*-
-import logging
+""" :mod:`cello.graphs.transform`
+==============================
+"""
+import igraph as ig
 
-from cello.pipeline import Optionable
+from cello.pipeline import Composable, Optionable
+from cello.types import Text
+
 from cello.graphs import EDGE_WEIGHT_ATTR
 from cello.graphs.prox import prox_markov_wgt
-from cello.types import Text
-_logger = logging.getLogger("cello.graphs.transform")
+
+
+class EdgeAttr(Composable):
+    """ Add one or more attributes to the edges of the graph
+
+    >>> g = ig.Graph.Formula("a--B, a--C, a--D, C--f, D--f")
+    >>> edge_label = lambda graph, edg: '-'.join(graph.vs[[edg.source, edg.target]]['name'])
+    >>> add_attr = EdgeAttr(weigth=2.0, label=edge_label)
+    >>> g = add_attr(g)
+    >>> g.es['weigth']
+    [2.0, 2.0, 2.0, 2.0, 2.0]
+    >>> g.es['label']
+    ['a-B', 'a-C', 'a-D', 'C-f', 'D-f']
+    """
+    def __init__(self, name=None, **kwargs):
+        super(EdgeAttr, self).__init__(name=name)
+        self._eattrs = kwargs
+
+    def __call__(self, graph):
+        for attr, value in self._eattrs.iteritems():
+            if callable(value):
+                graph.es[attr] = [value(graph, edg) for edg in graph.es]
+            else:
+                graph.es[attr] = value
+        return graph
+
+
+class VtxAttr(Composable):
+    """ Add one or more attributes to the vertices of the graph
+    
+    >>> g = ig.Graph.Formula("a--B, a--C, a--D, C--f, D--f")
+    >>> add_attr = VtxAttr(score=1, type=lambda graph, vtx: vtx['name'].islower())
+    >>> g = add_attr(g)
+    >>> g.vs["score"]
+    [1, 1, 1, 1, 1]
+    >>> g.vs["type"]
+    [True, False, False, False, True]
+    """
+    def __init__(self, name=None, **kwargs):
+        super(VtxAttr, self).__init__(name=name)
+        self._vattrs = kwargs
+
+    def __call__(self, graph):
+        for attr, value in self._vattrs.iteritems():
+            if callable(value):
+                graph.vs[attr] = [value(graph, vtx) for vtx in graph.vs]
+            else:
+                graph.vs[attr] = value
+        return graph
 
 
 class GraphProjection(Optionable):
     def __init__(self, projection_wgt=None, name="PG"):
-        """ Projection of a bipartite graph to a unipartite graph of KodexDoc
+        """ Projection of a bipartite graph to a unipartite graph
         """
         Optionable.__init__(self, name)
-        self._logger = logging.getLogger(self.__class__.__name__)
         
         self._projection_wgt = projection_wgt
         if self._projection_wgt is None:

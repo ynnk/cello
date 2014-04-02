@@ -8,8 +8,12 @@ SubModules
 .. toctree::
 
     cello.graphs.builder
+    cello.graphs.filter
+    cello.graphs.transform
 
 
+Helpers
+-------
 """
 import random
 import igraph as ig

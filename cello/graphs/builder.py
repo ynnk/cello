@@ -220,9 +220,10 @@ class DocumentFieldBigraph(OptionableGraphBuilder):
 
     Objects attributes (attributes associated to each object in a vector field)
     can eihter :
-     * be ignored,
-     * be copied as edge attribute between a document and an object (weight for ex.),
-     * be transformed as object vertex attribute.
+
+        * be ignored,
+        * be copied as edge attribute between a document and an object (weight for ex.),
+        * be transformed as object vertex attribute.
 
     The vertex attribute '`_doc`' contains for each document-vertex a reference
     to original :class:`.Doc` object.
