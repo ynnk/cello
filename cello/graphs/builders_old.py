@@ -11,7 +11,9 @@ from bisect import bisect
 import igraph as ig
 
 import cello.graphs.prox 
-from cello.graphs import GraphBuilder, AbstractGraphBuilder, EDGE_WEIGHT_ATTR 
+from cello.graphs.builder import GraphBuilder
+from cello.graphs.builder import OptionableGraphBuilder as AbstractGraphBuilder
+from cello.graphs import EDGE_WEIGHT_ATTR 
 
 logger = logging.getLogger("cello.builders")
 
@@ -19,10 +21,11 @@ logger = logging.getLogger("cello.builders")
 #{ Graph builders
 
 class Scoring():
-    @staticmethod    
+    @staticmethod
     def one(termset, term, doc):
         return 1
-            
+
+
 class AbstractSetGraph(AbstractGraphBuilder):
     EDGE_WEIGHT_ATTR = "weight"
     
@@ -43,8 +46,7 @@ class AbstractSetGraph(AbstractGraphBuilder):
         for k in copy_bottoms: 
             self.declare_vattr(k)
         self.declare_eattr(EDGE_WEIGHT_ATTR)
-        
-    
+
 
 class FieldSetGraph(AbstractSetGraph):
     """
