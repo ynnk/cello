@@ -345,7 +345,7 @@ class VectorField(DocField):
         # add the attr it self
         self._attrs[name] = [DocField.FromType(ftype) for _ in xrange(len(self))]
     
-    def get_attribute(self, name): 
+    def get_attribute(self, name):
         return getattr(self, name)
 
     def clear_attributes(self):
@@ -366,6 +366,18 @@ class VectorField(DocField):
         return len(self._keys)
 
     def __iter__(self):
+        """ It is possible to iterate over a vector field:
+
+        >>> from cello.types import Text, Numeric
+        >>> doc = Doc(docnum='1')
+        >>> doc.terms = Text(vtype=str, multi=True, uniq=True, attrs={'tf': Numeric()}) 
+        >>> doc.terms.add('cat', tf=2)
+        >>> doc.terms.add('dog', tf=55)
+        >>> for term in doc.terms:
+        ...     print term
+        cat
+        dog
+        """
         return self._keys.iterkeys()
 
     def keys(self): 
@@ -466,6 +478,12 @@ class VectorField(DocField):
 
     def get_attr_value(self, key, attr):
         """ returns the value of a given attribute for a given key
+        
+        >>> doc = Doc(docnum='1')
+        >>> doc.terms = Text(vtype=str, multi=True, uniq=True, attrs={'tf': Numeric()}) 
+        >>> doc.terms.add('chat', tf=55)
+        >>> doc.terms.get_attr_value('chat', 'tf')
+        55
         """
         idx = self._keys[key]
         return self._attrs[attr][idx].get_value()
