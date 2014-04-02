@@ -1,6 +1,5 @@
-#!/usr/bin/env python
 #-*- coding:utf-8 -*-
-import logging        
+import logging
 
 from cello.pipeline import Optionable
 from cello.graphs import EDGE_WEIGHT_ATTR
