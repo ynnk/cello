@@ -261,7 +261,7 @@ def compute_concepts_kov(bigraph):
 
 
 ################################################################################
-from cello.graphs import GraphBuilder
+from cello.graphs.builder import GraphBuilder
 
 class ConceptsBigraph(GraphBuilder):
     def __init__(self):
