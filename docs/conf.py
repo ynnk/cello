@@ -31,8 +31,8 @@ extensions = [
     'sphinx.ext.inheritance_diagram',
     'sphinx.ext.doctest',
     'sphinx.ext.autosummary',
-    #'sphinx.ext.pngmath',
-    'sphinx.ext.mathjax',
+    'sphinx.ext.pngmath',
+    #'sphinx.ext.mathjax',
 ]
 
 # Add any paths that contain templates here, relative to this directory.
@@ -94,6 +94,9 @@ pygments_style = 'sphinx'
 # A list of ignored prefixes for module index sorting.
 #modindex_common_prefix = []
 
+# -- Options for MATHJAX -------------------------------------------------------
+
+mathjax_path = "https://c328740.ssl.cf1.rackcdn.com/mathjax/latest/MathJax.js"
 
 # -- Options for AUTODOC -------------------------------------------------------
 
