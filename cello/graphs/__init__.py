@@ -75,8 +75,6 @@ def export_graph(graph, exclude_gattrs=[], exclude_vattrs=[], exclude_eattrs=[])
     :param exclude_vattrs: vertex attributes to exclude (TODO)
     :param exclude_eattrs: edges attributes to exclude (TODO)
 
-    >>> from pprint import pprint
-
     >>> g = ig.Graph.Formula("a--b, a--c, a--d, a--f, d--f")
     >>> g.vs["docnum"] = [1+vid if vid%2 == 0 else None for vid in range(g.vcount())]
     >>> g.summary()
@@ -84,6 +82,7 @@ def export_graph(graph, exclude_gattrs=[], exclude_vattrs=[], exclude_eattrs=[])
     >>> graph_dict = export_graph(g)
     >>> g.summary()     # the graph hasn't changed !
     'IGRAPH UN-- 5 5 -- \\n+ attr: docnum (v), name (v)'
+    >>> from pprint import pprint
     >>> pprint(graph_dict)
     {'attributes': {'bipartite': False,
                     'directed': False,
@@ -100,7 +99,7 @@ def export_graph(graph, exclude_gattrs=[], exclude_vattrs=[], exclude_eattrs=[])
             {'_id': 3, 'docnum': None, 'name': 'd'},
             {'_id': 4, 'docnum': 5, 'name': 'f'}]}
 
-    The '_doc' vertex attribute is converted into a 'docnum' attribut :
+    The '_doc' vertex attribute is converted into a 'docnum' attribut:
 
     >>> from cello.schema import Doc
     >>> g = ig.Graph.Formula("a--b, a--c, a--d, a--f, d--f")
@@ -210,6 +209,8 @@ def read_json(data):
             }, ...
           ],
         }
+
+    Here is an usage exemple:
 
     >>> graph_data = {'attributes': {'bipartite': False,
     ...                'directed': False,

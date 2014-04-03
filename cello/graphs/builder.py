@@ -2,7 +2,13 @@
 """ :mod:`cello.graphs.builder`
 ==============================
 
+inheritance diagrams
+--------------------
 
+.. inheritance-diagram:: GraphBuilder OptionableGraphBuilder DocumentFieldBigraph
+
+Class
+-----
 """
 import logging
 
@@ -14,19 +20,45 @@ class GraphBuilder(object):
     """ Abstract class to build a igraph graph object by parsing a source.
 
     This class may be use in two way : either direclty or by inheritage.
-    
-    If you use it by inheritage you need to implement the :func:`_parse` method.
-    
-    - in the constructer you need to declare edge and vertex attributes using self.declare_eattr() and self.declare_vattr()
 
-    builder = GraphBuilder()
-    builder.declare_vattr(...)
-    buidler.reset()
-    #parsing...
-    builder.add_get_vertex(...)
-    # create the igraph graph
-    graph = builder.create_graph()
+    If you use it by inheritage you need to implement the :func:`_parse` method
+    and then you can call :func:`.build_graph`:
+
+    >>> builder = GraphBuilder()
+    >>> builder.build_graph()
+    Traceback (most recent call last):
+    ...
+    NotImplementedError: Subclasses should implement this!
+
+    Note that all arguments given to :func:`.build_graph`: are given to
+    :func:`_parse` method
+
+    See for instance :class:`.DocumentFieldBigraph`.
+
+
+    If you use it directly you can use it this way, first setup the builder
+    with vertex and edge attributes:
+
+    >>> builder = GraphBuilder()
+    >>> builder.declare_vattr('name')
+    >>> builder.declare_eattr('weight')
+
+    and then add vertice and edges:
+
+    >>> builder.reset()         # reset 
+    >>> aid = builder.add_get_vertex("a")
+    >>> bid = builder.add_get_vertex("b")
+    >>> builder.set_vattr(aid, 'name', 'A')
+    >>> builder.set_vattr(bid, 'name', 'B')
+    >>> eid = builder.add_get_edge(aid, bid)
+    >>> builder.set_eattr(eid, 'weight', 42)
     
+    before to create the igraph graph it self:
+
+    >>> graph = builder.create_graph()
+    >>> print(graph.summary())
+    IGRAPH UNW- 2 1 -- 
+    + attr: name (v), weight (e)
     """
     def __init__(self, directed = False):
         self._directed = directed
@@ -67,8 +99,8 @@ class GraphBuilder(object):
     def add_get_vertex(self, vident):
         """ Add the vertex *vident* if not already present.
         
-        @param vident: the identifier of the vertex (will be a key in a dict)
-        @return: the id of the vertex in the graph
+        :param vident: the identifier of the vertex (will be a key in a dict)
+        :return: the id of the vertex in the graph
         """
         if vident not in self._vertices:
             # add the vertex
@@ -80,7 +112,9 @@ class GraphBuilder(object):
 
     def declare_vattr(self, attrs_name):
         """ Declare attributes of graph's vertices.
-        @param attrs_name: <str> or [<str>, ... ] names of vertex attributes
+        
+        :param attrs_name: names of vertex attributes
+        :type attrs_name: str or list of str
         """
         assert len(self._vertices) == 0, "You should declare attributes before parsing."
         if isinstance(attrs_name, list):
@@ -119,9 +153,9 @@ class GraphBuilder(object):
         Note: if the graph is set to be undirected (in the __init__) then the 
         vertex ids *vid_from* and *vid_to* may be swapped.
         
-        @param vid_from: source of the edge
-        @param vid_to: target of the edge
-        @return: the id of the edges in the graph
+        :param vid_from: source of the edge
+        :param vid_to: target of the edge
+        :return: the id of the edges in the graph
         """
         if self._directed: key = (vid_from, vid_to)
         else: key = (min(vid_from, vid_to), max(vid_from, vid_to))
@@ -135,7 +169,9 @@ class GraphBuilder(object):
 
     def declare_eattr(self, attrs_name):
         """ Declare attributes of graph's edges
-        @params attrs_name: <str> or [<str>, ... ] names of edge attributes
+        
+        :params attrs_name: names of edge attributes
+        :type  attrs_name: str or list of str
         """
         assert len(self._edges) == 0, "You should declare attributes before parsing."
         if isinstance(attrs_name, list) :
@@ -176,10 +212,11 @@ class GraphBuilder(object):
         raise NotImplementedError("Subclasses should implement this!")
     
     def build_graph(self, *args, **kargs):
-        """ Build the graph by using *_parse* method.
-        The parameters are passed to *_parse*.
+        """ Build the graph by using :func:`_parse` method.
+        The parameters are passed to :func:`_parse`.
 
-        @return the igraph graph
+        :returns: the graph
+        :rtype: :class:`igraph.Graph`
         """
         self.reset()
         self._parse( *args, **kargs)
@@ -187,6 +224,9 @@ class GraphBuilder(object):
     
     def create_graph(self):
         """ Create the graph it self and return it
+        
+        :returns: the graph
+        :rtype: :class:`igraph.Graph`
         """
         graph = ig.Graph(n=len(self._vertices),
                          edges=self._edge_list,
@@ -195,6 +235,7 @@ class GraphBuilder(object):
                          vertex_attrs=self._vertex_attrs,
                          edge_attrs=self._edge_attrs)
         return graph
+
 
 class OptionableGraphBuilder(Optionable, GraphBuilder):
     """ Optionable graph builder
