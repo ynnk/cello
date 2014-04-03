@@ -1,23 +1,24 @@
-#!/usr/bin/env python
 #-*- coding:utf-8 -*-
-import logging
+""" :mod:`cello.graphs.filter`
+==============================
+"""
 import itertools
 
 from cello.pipeline import Optionable
 from cello.types import Numeric
 
 class BottomFilter(Optionable):
-    """ Removes bottom vertices from a bigraph.
+    """ Removes bottom (type=False) vertices from a bigraph.
     """
+    #TODO add doc test
     def __init__(self):
         name = self.__class__.__name__
         Optionable.__init__(self, name)
-        self._logger = logging.getLogger(name)
 
-        self.add_option("top_min", Numeric(default=0, 
-            help="Removes type=false vertices connected to less than top_min (type=True) vertices"))
-        self.add_option("top_max_ratio", Numeric(vtype=float, default=1.,
-            help="Removes type=false vertices connected to more than top_max_ratio percents of the (type=True) vertices"))
+        self.add_option("top_min", Numeric(default=0, min=0.,
+            help="Removes type=False vertices connected to less than top_min (type=True) vertices"))
+        self.add_option("top_max_ratio", Numeric(vtype=float, default=1., min=0., max=1.,
+            help="Removes type=False vertices connected to more than top_max_ratio percents of the (type=True) vertices"))
 
     #XXX:kwargs ne sert a rien ?
     def __call__(self, graph, top_min=0, top_max_ratio=1., **kwargs):

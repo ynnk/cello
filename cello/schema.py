@@ -15,12 +15,6 @@ inheritance diagrams
 
 Class
 -----
-
-
-
-    FIXME: manque de coherence entre les get_value, values, as_dict
-
-
 """
 from collections import OrderedDict
 from cello.types import GenericType, Numeric, Text
@@ -28,33 +22,45 @@ from cello.exceptions import SchemaError
 
 
 class Schema(object):
-    """ Schema definition for docs <Doc>
-    class inspired from Matt Chaput's Whoosh.  
+    """ Schema definition for documents (:class:`Doc`).
+    Class inspired from Matt Chaput's Whoosh.
     
-    Creating a schema :
+    Creating a schema:
+    
     >>> from cello.types import Text, Numeric
     >>> schema = Schema(title=Text(), score=Numeric())
     >>> schema.field_names()
     ['score', 'title']
     """
-    
+
     def __init__(self, **fields):
+        """ Create a schema from pairs of field name and field type
+        
+        For exemple:
+        
+        >>> from cello.types import Text, Numeric
+        >>> schema = Schema(tags=Text(multi=True), score=Numeric(vtype=float, min=0., max=1.))
+        """
         self._fields = {}
         # Create fields
         for name, fieldtype in fields.iteritems():
             self.add_field(name, fieldtype)
-    
+
     def copy(self):
         """ Returns a copy of the schema
         """
         return Schema(**self._fields)
-    
+
     def add_field(self, name, field):
         """ Add a named field to the schema.
         
+        .. Warning:: the field name should not contains spaces and should not
+            start with an underscore.
+        
         :param name: name of the new field
         :type name: str
-        :param field:  type instance for the field 
+        :param field: type instance for the field 
+        :type field: subclass of :class:`.GenericType`
         """
         # testing names 
         if name.startswith("_"):
@@ -66,32 +72,32 @@ class Schema(object):
         if not isinstance(field, GenericType):
             raise SchemaError("Wrong type in schema for field: %s, %s is not a GenericType" % (name, field))
         self._fields[name] = field
-    
+
     def remove_field(self, field_name):
         raise NotImplementedError()
-    
+
     def iter_fields(self):
         return self._fields.iteritems()
-    
+
     def field_names(self):
         return self._fields.keys()
-    
+
     def has_field(self, name):
         return self.__contains__(name)
-    
+
     def __iter__(self):
         return self._fields.iterkeys()
-        
+
     def __contains__(self, name):
         return name in self._fields    
-    
+
     def __len__(self): 
         """ returns field count in schema """
         return len(self._fields)
-    
+
     def __getattr__(self, name): 
         return self.__getitem__(name)
-        
+
     def __getitem__(self, name): 
         if name == '_fields': 
             return self._fields
@@ -99,7 +105,7 @@ class Schema(object):
             return self._fields[name]
         else : 
             raise SchemaError("Field '%s' does not exist in Schema (%s)" % (name, self.field_names()))
-    
+
     def __repr__(self):
         fields_repr = "\n".join(
             " * %s: %s" % (key, value)
@@ -132,7 +138,6 @@ class DocField(object):
         """ Returns a serialisable representation of the field
         """
         raise NotImplementedError
-    
 
     @staticmethod
     def FromType(ftype):
@@ -173,9 +178,8 @@ class ValueField(DocField):
     def get_value(self): 
         return self.value
     
-    def set(self, value): 
+    def set(self, value):
         self.value = self._ftype.validate(value)
-    
     
     def export(self):
         return self.get_value()
@@ -193,9 +197,12 @@ class SetField(DocField, set):
     >>> doc.tags.add(u'foo')
     >>> len(doc.tags)
     2
+    >>> doc.tags.export()
+    [u'foo', u'boo']
     """
     #XXX; maybe it can use collections.MutableSet
     # http://docs.python.org/2/library/collections.html#collections-abstract-base-classes
+
     def __init__(self, fieldtype):
         if not fieldtype.uniq:
             raise SchemaError("The type of a SetField should be uniq")
@@ -223,7 +230,21 @@ class SetField(DocField, set):
 
 
 class ListField(DocField, list):
-    """ list container for non-uniq field """
+    """ list container for non-uniq field
+    
+    usage example:
+    
+    >>> from cello.types import Text
+    >>> schema = Schema(tags=Text(multi=True, uniq=False))
+    >>> doc = Doc(schema, docnum='abc42')
+    >>> doc.tags.add(u'boo')
+    >>> doc.tags.add(u'foo')
+    >>> doc.tags.add(u'foo')
+    >>> len(doc.tags)
+    3
+    >>> doc.tags.export()
+    [u'boo', u'foo', u'foo']
+    """
     #XXX; maybe it can use collections.MutableSequence
     # http://docs.python.org/2/library/collections.html#collections-abstract-base-classes
     def __init__(self, fieldtype):
@@ -264,28 +285,35 @@ class ListField(DocField, list):
         assert j-i == len(values), "given data don't fit slice size (%s-%s != %s)" % (i, j, len(values))
         for x, xi in enumerate(xrange(i, j)):
             self[xi] = values[x]
-    
+
     def export(self):
         return list(self)
 
 
 class VectorField(DocField):
-    """ 
-    usage: 
+    """ More complex document field container
+
+    usage:
 
     >>> from cello.types import Text, Numeric
     >>> doc = Doc(docnum='1')
-    >>> doc.terms = Text(multi=True, uniq=True, attrs={'tf': Numeric()}) 
+    >>> doc.terms = Text(vtype=str, multi=True, uniq=True, attrs={'tf': Numeric()}) 
     >>> doc.terms.add('chat')
     >>> doc.terms['chat'].tf = 12
     >>> doc.terms['chat'].tf
     12
-    >>> doc['boo'] = Text(default=u"boo")
-    >>> doc.boo
-    u'boo'
+    >>> doc.terms.add('dog', tf=55)
+    >>> doc.terms['dog'].tf
+    55
+    
+    One can also add an atribute after the field is created:
+    
     >>> doc.terms.add_attribute('foo', Numeric(default=42))
     >>> doc.terms.foo.values()
-    [42]
+    [42, 42]
+    >>> doc.terms['dog'].foo = 20
+    >>> doc.terms.foo.values()
+    [42, 20]
     """
     def __init__(self, ftype):
         DocField.__init__(self, ftype)
@@ -317,7 +345,7 @@ class VectorField(DocField):
         # add the attr it self
         self._attrs[name] = [DocField.FromType(ftype) for _ in xrange(len(self))]
     
-    def get_attribute(self, name): 
+    def get_attribute(self, name):
         return getattr(self, name)
 
     def clear_attributes(self):
@@ -338,6 +366,18 @@ class VectorField(DocField):
         return len(self._keys)
 
     def __iter__(self):
+        """ It is possible to iterate over a vector field:
+
+        >>> from cello.types import Text, Numeric
+        >>> doc = Doc(docnum='1')
+        >>> doc.terms = Text(vtype=str, multi=True, uniq=True, attrs={'tf': Numeric()}) 
+        >>> doc.terms.add('cat', tf=2)
+        >>> doc.terms.add('dog', tf=55)
+        >>> for term in doc.terms:
+        ...     print term
+        cat
+        dog
+        """
         return self._keys.iterkeys()
 
     def keys(self): 
@@ -370,31 +410,64 @@ class VectorField(DocField):
         >>> doc = Doc(docnum='1')
         >>> doc.terms = Text(multi=True, uniq=True, attrs={'tf': Numeric(default=1)}) 
         >>> doc.terms.add('chat')
-        >>> doc.terms.add('rat')
-        >>> doc.terms.add('chien')
-        >>> doc.terms['chien'].tf = 2
-        >>> doc.terms['rat'].tf = 5
-        >>> doc.export()
-        {'docnum': '1', 'terms': {'keys': ['chat', 'rat', 'chien'], 'tf': [1, 5, 2]}}
+        >>> doc.terms.add('rat', tf=5)
+        >>> doc.terms.add('chien', tf=2)
+        >>> doc.terms.export()
+        {'keys': ['chat', 'rat', 'chien'], 'tf': [1, 5, 2]}
         """
         d = {'keys': dict(  zip(self.keys(), range(len(self.keys()))  ))}
         for name in self._attrs.keys():
             d[name] = self.get_attribute(name).values()
         return d
 
-    def add(self, key):
-        """ Add a key to the vector, do nothing if the key is already present """
+    def add(self, key, **kwargs):
+        """ Add a key to the vector, do nothing if the key is already present
+        
+        >>> doc = Doc(docnum='1')
+        >>> doc.terms = Text(vtype=str, multi=True, attrs={'tf': Numeric(default=1, min=0)}) 
+        >>> doc.terms.add('chat')
+        >>> doc.terms.add('dog', tf=2)
+        >>> doc.terms.tf.values()
+        [1, 2]
+        
+        >>> doc.terms.add('mouse', comment="a small mouse")
+        Traceback (most recent call last):
+        ...
+        ValueError: Invalid attribute name: 'comment'
+        
+        >>> doc.terms.add('mouse', tf=-2)
+        Traceback (most recent call last):
+        ValidationError: [u'Ensure this value ("-2") is greater than or equal to 0.']
+        """
         if not self.has(key):
+            # check if kwargs are valid
+            for attr_name, value in kwargs.iteritems():
+                if attr_name not in self._ftype.attrs:
+                    raise ValueError("Invalid attribute name: '%s'" % attr_name)
+                self._ftype.attrs[attr_name].validate(value)
+            # add the key
             self._keys[key] = len(self._keys)
-            #append to attributes
+            # append attributes
             for name, attr_type in self._ftype.attrs.iteritems():
-                self._attrs[name].append(DocField.FromType(attr_type))
+                attr_field = DocField.FromType(attr_type)
+                if name in kwargs:
+                    attr_field.set(kwargs[name])
+                self._attrs[name].append(attr_field)
 
     def set(self, keys):
         """ Set new keys.
-        
         Mind this will clear all attributes and keys before adding new keys
-        doc.terms = ['a', 'b']
+        
+        >>> doc = Doc(docnum='1')
+        >>> doc.terms = Text(vtype=str, multi=True, attrs={'tf': Numeric(default=1)}) 
+        >>> doc.terms.add('copmputer', tf=12)
+        >>> doc.terms.tf.values()
+        [12]
+        >>> doc.terms.set(['keyboard', 'mouse'])
+        >>> doc.terms.keys()
+        ['keyboard', 'mouse']
+        >>> doc.terms.tf.values()
+        [1, 1]
         """
         # clear keys and atributes
         self._keys = OrderedDict()
@@ -405,6 +478,12 @@ class VectorField(DocField):
 
     def get_attr_value(self, key, attr):
         """ returns the value of a given attribute for a given key
+        
+        >>> doc = Doc(docnum='1')
+        >>> doc.terms = Text(vtype=str, multi=True, uniq=True, attrs={'tf': Numeric()}) 
+        >>> doc.terms.add('chat', tf=55)
+        >>> doc.terms.get_attr_value('chat', 'tf')
+        55
         """
         idx = self._keys[key]
         return self._attrs[attr][idx].get_value()
@@ -416,8 +495,16 @@ class VectorField(DocField):
         self._attrs[attr][idx].set(value)
 
     def __getattr__(self, name):
-        """
+        """ Returns the :class:`VectorAttr`
+
         :param name: attribute name
+        :type name: str
+
+        >>> doc = Doc(docnum='1')
+        >>> doc.terms = Text(vtype=str, multi=True, attrs={'tf': Numeric(default=1)}) 
+        >>> doc.terms.add('computer', tf=12)
+        >>> type(doc.terms.tf)
+        <class 'cello.schema.VectorAttr'>
         """
         if name in self._attrs: 
             return VectorAttr(self, name)
@@ -425,8 +512,17 @@ class VectorField(DocField):
             raise SchemaError("No such attribute '%s' in Vector" % name)
 
     def __setattr__(self, name, values):
-        """
-        doc.terms.x = [1,2]
+        """ Set all the attributes value
+
+        >>> doc = Doc(docnum='1')
+        >>> doc.terms = Text(vtype=str, multi=True, attrs={'tf': Numeric(default=1)}) 
+        >>> doc.terms.add('computer', tf=12)
+        >>> doc.terms.add('pad', tf=2)
+        >>> doc.terms.tf = [3, 10]
+        >>> doc.terms['computer'].tf
+        3
+        >>> doc.terms['pad'].tf
+        10
         """
         if name.startswith('_'):
             DocField.__setattr__(self, name, values)
@@ -441,6 +537,7 @@ class VectorField(DocField):
             self._attrs[name] = _attr
         else:
             raise SchemaError("No such attribute '%s' in Vector" % name)
+
 
 class VectorAttr(object):
     """ Internal class used to acces an attribute of a :class:`.VectorField`
