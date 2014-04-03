@@ -61,6 +61,7 @@ class VtxAttr(Composable):
 
 
 class GraphProjection(Optionable):
+    #TODO add test
     def __init__(self, projection_wgt=None, name="PG"):
         """ Projection of a bipartite graph to a unipartite graph
         """
