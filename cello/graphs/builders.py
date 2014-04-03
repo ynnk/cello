@@ -68,7 +68,7 @@ class FieldSetGraph(AbstractSetGraph):
             self.set_vattr(doc_gid, "_doc", doc)
             self.set_vattr(doc_gid, "type", True)            
             self.set_vattr(doc_gid, "color", (255,0,0) )
-            self.set_vattr(doc_gid, "label", doc.title[:10])
+            self.set_vattr(doc_gid, "label", doc.title)
             for k in copy_tops:
                 self.set_vattr(doc_gid, k, doc[k])
                 
