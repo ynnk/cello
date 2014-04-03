@@ -159,7 +159,9 @@ class TypeFalseLabel(VertexAsLabel):
 
     def vtx_to_label(self, graph, cover, vtx):
         label = None
-        if not vtx["type"]:
+        if not 'type' in graph.vs.attributes():
+            raise ValueError("The graph should be bipartite, and have a 'type' attribute on each vertex")
+        if not vtx['type']:
             vois = set(nei.index for nei in vtx.neighbors())
             commun = vois.intersection(cover)
             score = len(commun) / (1.*len(vois))
