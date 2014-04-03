@@ -202,7 +202,9 @@ class TestDocFields(unittest.TestCase):
 
 
 class TestDoc(unittest.TestCase):
-    
+
+    maxDiff = None
+
     def test_doc(self):
         schema = Schema(titre = Text(vtype=str))
         doc = Doc(schema)
@@ -253,39 +255,40 @@ class TestDoc(unittest.TestCase):
         text = u"i have seen chicken passing the street and i believed "\
            +"how many chicken must pass in the street before you believe"
         # text analyse 
-        tokens = text.split(' ')  
+        tokens = text.split(' ')
         #crop = lambda term, max_length : term[:min(max_length, len(term))] 
-        #tokens = [ crop(term,5) for term in text]
+        #tokens = [crop(term,5) for term in text]
         text_terms =  list(OrderedDict.fromkeys(tokens))
-        terms_tf = [ tokens.count(k) for k in text_terms ]
+        terms_tf = [tokens.count(k) for k in text_terms]
         terms_pos = [[i for i, x in enumerate(tokens) if x == k ] for k in text_terms]
         
         # document
         term_field = Text(multi=True, uniq=True, 
                           attrs={'tf':Numeric(default=1),
-                                 'positions':Numeric(multi=True), } )
-        schema = Schema( docnum=Numeric(), title=Text(), text=Text(), terms=term_field )
-        doc = Doc(schema , docnum=1, text=text, title=u"chickens")
+                                 'positions':Numeric(multi=True),})
+        schema = Schema(docnum=Numeric(), title=Text(), text=Text(), terms=term_field)
+        doc = Doc(schema, docnum=1, text=text, title=u"chickens")
         doc.terms = text_terms
         self.assertEqual(doc.terms.tf.values(), [1]*len(text_terms)) 
         doc.terms.tf = terms_tf
         doc.terms.positions = terms_pos
-        self.assertEqual(doc.terms['chicken'].positions, [3, 12] ) 
-        self.assertEqual(doc.terms['chicken'].tf, 2 ) 
+        self.assertEqual(doc.terms['chicken'].positions, [3, 12])
+        self.assertEqual(doc.terms['chicken'].tf, 2)
         self.assertEqual(doc.title, "chickens")
         
         expect = {
          'docnum': 1, 
          'text': u'i have seen chicken passing the street and i believed how many chicken must pass in the street before you believe', 
          'terms': {
-            'keys': [u'i', u'have', u'seen', u'chicken', u'passing', u'the', 
-                u'street', u'and', u'believed', u'how', u'many', u'must', u'pass',
-                u'in', u'before', u'you', u'believe'], 
-            'tf': [2, 1, 1, 2, 1, 2, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1], 
-            'positions': [[0, 8], [1], [2], [3, 12], [4], [5, 16], [6, 17], [7], 
+            'keys': {u'and': 7, u'before': 14, u'believe': 16, u'believed': 8,
+                u'chicken': 3, u'have': 1, u'how': 9, u'i': 0, u'in': 13,
+                u'many': 10, u'must': 11, u'pass': 12, u'passing': 4,
+                u'seen': 2, u'street': 6, u'the': 5, u'you': 15},
+            'tf': [2, 1, 1, 2, 1, 2, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+            'positions': [[0, 8], [1], [2], [3, 12], [4], [5, 16], [6, 17], [7],
             [9],[10], [11], [13], [14], [15], [18], [19], [20]]
           }, 
           'title': u'chickens'
         } 
        
-        self.assertEqual( doc.export(), expect)
+        self.assertEqual(doc.export(), expect)

@@ -413,7 +413,7 @@ class VectorField(DocField):
         >>> doc.terms.add('rat', tf=5)
         >>> doc.terms.add('chien', tf=2)
         >>> doc.terms.export()
-        {'keys': ['chat', 'rat', 'chien'], 'tf': [1, 5, 2]}
+        {'keys': {'rat': 1, 'chien': 2, 'chat': 0}, 'tf': [1, 5, 2]}
         """
         d = {'keys': dict(  zip(self.keys(), range(len(self.keys()))  ))}
         for name in self._attrs.keys():
