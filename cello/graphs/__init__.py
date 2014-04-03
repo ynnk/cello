@@ -21,6 +21,8 @@ import igraph as ig
 from cello.pipeline import Optionable
 from cello.schema import Doc
 
+from cello.graphs.builder import GraphBuilder
+
 # default edge attribute for weighted graph
 EDGE_WEIGHT_ATTR = "weight"
 
@@ -31,6 +33,21 @@ def random_vertex(graph, attr=None, from_edges=False):
 
     :param attr: if not None return the attribute 'attr' of the random vertex, instead of the id (of the random vertex).
     :param from_edges: if True get an edges by random and then pick one of the ends of the edge by random
+    
+    >>> import random ; random.seed(1) # fix the random seed to test purpose
+    >>> g = ig.Graph.Formula("a--b, a--c, a--d, a--f, d--f")
+    >>> random_vertex(g)
+    0
+    >>> random_vertex(g, attr='name')
+    'f'
+    >>> random_vertex(g, attr='name')
+    'd'
+    >>> random_vertex(g, from_edges=True)
+    0
+    >>> random_vertex(g, attr='name', from_edges=True)
+    'd'
+    >>> random_vertex(g, attr='name', from_edges=True)
+    'a'
     """
     if from_edges:
         # random edge
@@ -41,7 +58,7 @@ def random_vertex(graph, attr=None, from_edges=False):
         vid = random.choice(xrange(graph.vcount()))
     # return attr or vid
     if attr is not None:
-        return self.graph.vs[vid][attr]
+        return graph.vs[vid][attr]
     else:
         return vid
 
@@ -157,46 +174,67 @@ def export_graph(graph, exclude_gattrs=[], exclude_vattrs=[], exclude_eattrs=[])
     return graph_dict
 
 
-def read_json(data, filename=None):
-    """ read, parse and return a :class:`Igraph.Graph` from json data or file
-    
+def read_json(data):
+    """ read, parse and return a :class:`igraph.Graph` from a dict
+
     :param data: deserialized json data
     :param filename: path to a file
-    
-    G default is undirected 
-    
+
     graph format:
 
-    .. code-block:: js
-    
+    .. code-block:: python
+
         {
-          attributes: { # graph attributes
-            v_attrs: [], # vertex attrs names , otype ??
-            e_attrs: [], # edges attrs names 
-            
-            directed: True/False,   # default = False
-            bipartite: True/False,  # default = False
-            
-            key:value, ... # any pair of key, value
+          'attributes': { # graph attributes
+            'v_attrs': [], # vertex attrs names , otype ??
+            'e_attrs': [], # edges attrs names 
+
+            'directed': True/False,   # default = False
+            'bipartite': True/False,  # default = False
+
+            'key': value, ... # any pair of key, value
           },
           
-          vs: [ # vertices list
+          'vs': [ # vertices list
             { # vertex
-              _id: id,    # protected vertex id should not be editable 
-              key: value,  # any pair of key value may match a type
+              '_id': id,    # protected vertex id should not be editable 
+              'key': value,  # any pair of key value may match a type
             }, ...
           ],
-          
-          es: [ # edge list
+
+          'es': [ # edge list
             { # edge
-              s: source vid,
-              t: target vid, 
-              key: value, ...
+              's': source vid,
+              't': target vid, 
+              'key': value, ...
             }, ...
           ],
         }
+
+    >>> graph_data = {'attributes': {'bipartite': False,
+    ...                'directed': False,
+    ...                'e_attrs': ['weight'],
+    ...                'v_attrs': ['name', 'docnum']},
+    ... 'es': [{'s': 0, 't': 1, 'weight': 4},
+    ...        {'s': 0, 't': 2, 'weight': 4},
+    ...        {'s': 0, 't': 3, 'weight': 5},
+    ...        {'s': 0, 't': 4, 'weight': 5},
+    ...        {'s': 3, 't': 4, 'weight': 1}],
+    ... 'vs': [{'_id': 0, 'docnum': 'd_0', 'name': 'a'},
+    ...        {'_id': 1, 'docnum': None, 'name': 'b'},
+    ...        {'_id': 2, 'docnum': 'd_2', 'name': 'c'},
+    ...        {'_id': 3, 'docnum': None, 'name': 'd'},
+    ...        {'_id': 4, 'docnum': 'd_4', 'name': 'f'}]}
+    >>> graph = read_json(graph_data)
+    >>> print(graph.summary())
+    IGRAPH UNW- 5 5 -- 
+    + attr: bipartite (g), directed (g), docnum (v), name (v), weight (e)
+    >>> graph.vs[0].attributes()
+    {'docnum': 'd_0', 'name': 'a'}
+
     """
-    g_attrs = data['attributes']
+    g_attrs = {}
+    g_attrs.update(data['attributes'])
     v_attrs = g_attrs.pop('v_attrs')
     e_attrs = g_attrs.pop('e_attrs')
     
@@ -208,17 +246,13 @@ def read_json(data, filename=None):
     builder.declare_eattr(e_attrs)
     
     builder.reset()
-    
-    print builder._vertex_attrs_name
-    
     builder.set_gattrs(**g_attrs)
-    
+
     for v in data['vs']:
         vid = builder.add_get_vertex(v['_id'])
         for attr in v_attrs:
-            print vid, attr, v
             builder.set_vattr(vid, attr, v[attr])
-    
+
     for e in data['es']:
         eid = builder.add_get_edge(e['s'],e['t'])
         for attr in v_attrs:
