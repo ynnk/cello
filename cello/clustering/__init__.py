@@ -10,6 +10,7 @@ SubModules
     cello.clustering.core
     cello.clustering.common
     cello.clustering.filter
+    cello.clustering.labelling
 
 Helpers
 -------
