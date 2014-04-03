@@ -415,7 +415,7 @@ class VectorField(DocField):
         >>> doc.terms.export()
         {'keys': ['chat', 'rat', 'chien'], 'tf': [1, 5, 2]}
         """
-        d = {'keys': self.keys()}
+        d = {'keys': dict(  zip(self.keys(), range(len(self.keys()))  ))}
         for name in self._attrs.keys():
             d[name] = self.get_attribute(name).values()
         return d
