@@ -87,14 +87,14 @@ class Result(object):
         """ Views on components errors
         """
         errors = (c['errors'] for c in self.components)
-        return list(itertools.chain.from_iterable( errors ))
+        return list(itertools.chain.from_iterable(errors))
 
     @property
     def warnings(self):
         """ Views on components warnings
         """
         warnings = (c['warnings'] for c in self.components)
-        return list(itertools.chain.from_iterable( warnings ))
+        return list(itertools.chain.from_iterable(warnings))
 
     @property
     def has_error(self):
@@ -108,10 +108,10 @@ class Result(object):
 
 class Block(object):
     """ A block is a processing step realised by one component.
-    
+
     A component is a callable object that has a *name* attribute,
     often it is also a :class:`.Optionable` object or a pipeline beeing a :class:`.Composable` .
-    
+
     Block object provides methods to discover and parse components options (if any).
     """
 
@@ -119,7 +119,7 @@ class Block(object):
     @define_logger
     def __init__(self, name):
         """ Intialise a block. This should be done only from the :class:`.Engine`.
-        
+
         :param name: name of the Block
         :type name: str
         """
@@ -206,7 +206,7 @@ class Block(object):
 
     def selected(self):
         """ returns the list of selected component names.
-        
+
         if no component selected return the one marked as default.
         If the block is required and no component where indicated as default,
         then the first component is selected.
@@ -292,7 +292,7 @@ class Block(object):
         
         :param components: components to append Optionables or Composables
         """
-        self._logger.info(" Set '%s': \n\t%s", self.name, "\n\t".join(( "%s %s"%(e.name, e) for e in components)))
+        self._logger.info(" Set '%s': \n\t%s", self.name, "\n\t".join(("%s %s" % (e.name, e) for e in components)))
         self.reset()
         if len(components) == 1:
             self.append(components[0])
@@ -319,13 +319,13 @@ class Block(object):
 
     def select(self, comp_name, options=None):
         """ set an component as runnable with given options.
-        
+
         `options` will be passed to :func:`.Optionable.parse_options` is the
         component is :class:`Optionable`.
-        
+
         You can use :func:`iter_runnables` to get all selected components
         and associated options, or :func:`play` to run it.
-        
+
         :param name: name of the component to select
         :type comp_name: str
         :param options: options to set to the components
@@ -348,7 +348,7 @@ class Block(object):
                 self._selected[0] = comp_name
             else:
                 self._selected.append(comp_name)
-        else :
+        else:
             # TODO the component has already been selected
             pass
         # component might be a function or any callable
@@ -370,9 +370,8 @@ class Block(object):
         start = time.time()
         # TODO: multi mode option(False, pipeline, map)
         self.validate() # TODO what if validate fails
-        
+
         _break_on_error = True
-        
         results = None
         # run
         for comp_name in self.selected():
@@ -382,15 +381,15 @@ class Block(object):
             else:
                 options = {}
             # TODO store args and kwargs ?
-            argstr = [ str(arg)[:100].replace('\n','') for arg in args ]
+            argstr = [str(arg)[:100].replace('\n', '') for arg in args]
             comp_res = {
                 "name": comp.name,
-                "obj" : repr(comp),
-                "args" : "".join(argstr),
-                "kwargs" : options,
-                "errors" : [],
-                "warnings" : [],
-                "time" : 0
+                "obj": repr(comp),
+                "args": "".join(argstr),
+                "kwargs": options,
+                "errors": [],
+                "warnings": [],
+                "time": 0
             }
             self._logger.info(" playing '%s': %s \n\tcomponent: %s,\n\targs=%s[...], \n\tkwargs=%s" % (self._name, comp.name, comp, "\n\t\t".join(argstr), options))
 
@@ -420,7 +419,7 @@ class Block(object):
 
             except Exception as err:
                 # component error handling
-                comp_res['errors'].append("error in component %s %s /n %s" % ( comp, comp.name, err.message ))
+                comp_res['errors'].append("error in component %s %s /n %s" % (comp, comp.name, err.message))
                 self._logger.error(comp_res['errors'])
                 raise
                 if _break_on_error:
@@ -440,7 +439,7 @@ class Block(object):
 class Engine(object):
     """ The Cello engine.
     
-    """
+"""
     @define_logger
     def __init__(self, *names):
         self._blocks = OrderedDict()
@@ -458,7 +457,7 @@ class Engine(object):
         if len(names) == 0:
             raise ValueError("You should give at least one block name")
     
-        if self._blocks is not None and len(self._blocks) > 0 :
+        if self._blocks is not None and len(self._blocks) > 0:
             raise CelloError("Method 'requires' should be called only once before adding any composant")
         for name in names:
             if name in self._blocks:
@@ -620,8 +619,7 @@ class Engine(object):
         return results
 
     def get_play_trace(self):
-        return { block.name:block.meta.components for block in self }
-            
+        return {block.name: block.meta.components for block in self}
 
     def as_dict(self):
         """ dict repr of the components """
