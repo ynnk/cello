@@ -8,7 +8,7 @@
 inheritance diagrams
 --------------------
 
-.. inheritance-diagram:: GenericType Numeric Text Datetime
+.. inheritance-diagram:: cello.types
 
 Class
 -----
