@@ -7,7 +7,9 @@ import itertools
 import igraph as ig
 
 from cello.pipeline import Optionable
-from cello.types import Numeric
+from cello.types import Numeric, Boolean
+
+from cello.graphs import EDGE_WEIGHT_ATTR
 
 class BottomFilter(Optionable):
     """ Removes some bottom (type=False) vertices from a bigraph.
@@ -32,9 +34,8 @@ class BottomFilter(Optionable):
     >>> g.vs(type=False)['name']
     ['A', 'B', 'C', 'F']
     """
-    def __init__(self):
-        name = self.__class__.__name__
-        Optionable.__init__(self, name)
+    def __init__(self, name=None):
+        Optionable.__init__(self, name=name)
 
         self.add_option("top_min", Numeric(default=0, min=0.,
             help="Removes type=False vertices connected to less than top_min (type=True) vertices"))
@@ -63,5 +64,80 @@ class BottomFilter(Optionable):
         graph.delete_vertices(itertools.chain(too_poor_bots, too_rich_bots))
         self._logger.info("After filtering: |V_top|=%d, |V_bottom|=%d, |E|=%d" \
             % (len(graph.vs.select(type=True)), len(graph.vs.select(type=False)), graph.ecount()))
+        return graph
+
+
+class EdgeCut(Optionable):
+    """ Keep only a fixed number of edges.
+    Edges are ordered (before the cut) according to "weight" attribute.
+
+    >>> filter = EdgeCut()
+    >>> filter.print_options()
+    m (Numeric, default=0): Number of edges (with stronger weight) to keep
+    remove_single (Boolean, default=True): Remove vertices with no links after filtering
+
+    Here is an example:
+
+    >>> g = ig.Graph.Formula("a:b:c--A:B:C:D, d--D:E, c:d--F")
+    >>> g.vs["type"] = [vtx["name"].islower() for vtx in g.vs]
+    >>> g.es['weight'] = [1, 2, 3, 4, 5, 6, 7, 8]
+    >>> g.es['weight']
+    [1, 2, 3, 4, 5, 6, 7, 8, 1, 2, 3, 4, 5, 6, 7, 8]
+    >>> g = filter(g, m=5)
+    >>> print(g.summary())
+    IGRAPH UNWT 7 5 -- 
+    + attr: name (v), type (v), weight (e)
+    >>> g.es['weight']
+    [6, 7, 8, 7, 8]
+    >>> g.vs['name']
+    ['b', 'B', 'C', 'D', 'd', 'E', 'F']
+    """
+    def __init__(self, name=None):
+        Optionable.__init__(self, name=name)
+
+        self.add_option("m", Numeric(default=0, min=0.,
+            help="Number of edges (with stronger weight) to keep"))
+        self.add_option("remove_single", Boolean(default=True,
+            help="Remove vertices with no links after filtering"))
+
+    @Optionable.check
+    def __call__(self, graph, m=None, remove_single=None):
+        assert EDGE_WEIGHT_ATTR in graph.es.attributes(), "the edges should be weighted"
+        self._logger.info("Before filtering: |V|=%d, |E|=%d" % (graph.vcount(), graph.ecount()))
+        to_del = sorted(graph.es, key=lambda edg: edg["weight"], reverse=True)[m:]
+        graph.delete_edges(to_del)
+        self._logger.info("After filtering: |V|=%d, |E|=%d" % (graph.vcount(), graph.ecount()))
+        if remove_single:
+            graph.delete_vertices(graph.vs.select(_degree=0))
+            self._logger.info("After removing singles: |V|=%d" % (graph.vcount()))
+        return graph
+
+
+class GenericVertexFilter(Optionable):
+    """ Keep only a fixed number of edges.
+    Edges are ordered (before the cut) according to "weight" attribute.
+
+    >>> remove_filter = lambda vtx: vtx["name"].islower()
+    >>> filter = GenericVertexFilter(remove_filter)
+
+    Here is an example:
+
+    >>> g = ig.Graph.Formula("a:b:c--A:B:C:D, d--D:E, c:d--F")
+    >>> g.vs['name']
+    ['a', 'b', 'c', 'A', 'B', 'C', 'D', 'd', 'E', 'F']
+    >>> g = filter(g)
+    >>> g.vs['name']
+    ['A', 'B', 'C', 'D', 'E', 'F']
+    """
+    def __init__(self, vtx_select, name=None):
+        Optionable.__init__(self, name=name)
+        self._vtx_select = vtx_select
+
+    @Optionable.check
+    def __call__(self, graph):
+        self._logger.info("Before filtering: |V|=%d, |E|=%d" % (graph.vcount(), graph.ecount()))
+        to_del = graph.vs.select(self._vtx_select)
+        graph.delete_vertices(to_del)
+        self._logger.info("After filtering: |V|=%d, |E|=%d" % (graph.vcount(), graph.ecount()))
         return graph
 
