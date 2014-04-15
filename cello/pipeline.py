@@ -127,6 +127,10 @@ class Optionable(Composable):
         super(Optionable, self).__init__(name=name)
         self._options = OrderedDict()
 
+    @property
+    def options(self):
+        return self._options
+
     def add_option(self, opt_name, otype, hidden=False):
         """ Add an option to the object
         
@@ -341,7 +345,14 @@ class OptionableSequence(Optionable):
 
     def __call__(self, *args, **kwargs):
         raise NotImplementedError
-    
+
+    @property
+    def options(self):
+        _options = OrderedDict()
+        for item in self.items:
+            if isinstance(item, Optionable):
+                _options.update(item._options)
+        return _options
 
     def __repr__(self):
         return "%s(%s)" % (self.__class__.__name__,
