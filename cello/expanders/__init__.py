@@ -54,7 +54,7 @@ class AbstractExpand(Optionable):
 
 
 class AbstractDocListExpand(Optionable):
-    """ Expand a list of L{KodexDoc}.
+    """ Expand a list of L{Doc}.
     This is an abstract class, the method 
     """
     def __init__(self, name):
