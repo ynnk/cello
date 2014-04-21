@@ -110,7 +110,7 @@ def export_graph(graph, exclude_gattrs=[], exclude_vattrs=[], exclude_eattrs=[])
     {'attributes': {'bipartite': False,
                     'directed': False,
                     'e_attrs': ['weight'],
-                    'v_attrs': ['name', 'docnum']},
+                    'v_attrs': ['docnum', 'name']},
      'es': [{'s': 0, 't': 1, 'weight': 4},
             {'s': 0, 't': 2, 'weight': 4},
             {'s': 0, 't': 3, 'weight': 5},
@@ -142,6 +142,8 @@ def export_graph(graph, exclude_gattrs=[], exclude_vattrs=[], exclude_eattrs=[])
     if '_doc' in graph.vs.attribute_names():
         graph_dict['attributes']['v_attrs'].append('docnum')
 
+    graph_dict['attributes']['e_attrs'] = sorted(graph_dict['attributes']['e_attrs'])
+    graph_dict['attributes']['v_attrs'] = sorted(graph_dict['attributes']['v_attrs'])
 
     # vertices
     for _id, vtx in enumerate(graph.vs):
