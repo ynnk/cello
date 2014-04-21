@@ -334,7 +334,7 @@ class DocumentFieldBigraph(OptionableGraphBuilder):
         """ Create the bigraph builder
         
         :param fields: the name of the fields used to create the graph
-        :type fields: list of str
+        :type fields: list of str field should be a `:.VectorField:`
         :param field_vtx: the name of vertex attribute where the fields value
             will be stored.
         :type field_vtx: str
