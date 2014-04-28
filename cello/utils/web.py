@@ -48,7 +48,7 @@ class CelloFlaskView(Blueprint):
         return jsonify(conf)
 
     def play(self):
-        if not request.headers['Content-Type'] == 'application/json':
+        if not request.headers['Content-Type'].startswith('application/json'):
             abort(415)
         ### get data
         data = request.json
