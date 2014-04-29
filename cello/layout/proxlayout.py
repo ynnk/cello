@@ -11,6 +11,7 @@ import cprox
 from cello.types import Numeric, Boolean
 from cello.pipeline import Optionable, Composable
 
+from cello.graphs import prox
 from cello.layout.transform import ReducePCA, ReduceRandProj, normalise
 
 class ProxLayout(Optionable):
@@ -27,7 +28,7 @@ class ProxLayout(Optionable):
     def __init__(self, name="prox_layout"):
         super(ProxLayout, self).__init__(name=name)
         self.add_option("length", Numeric(default=3, min=1, max=50, help="Random walks length"))
-        self.add_option("add_loops", Boolean(default=True, help="Wether to add self loop on all vertice"))
+        self.add_option("add_loops", Boolean(default=True, help="Wether to add self loop on all vertices"))
 
     @Optionable.check
     def __call__(self, graph, length=None, add_loops=None):
@@ -149,8 +150,8 @@ class ProxGlobalLayout(ProxLayout):
         super(ProxGlobalLayout, self).__init__(name=name)
         self.global_graph = global_graph
 
-    def __call__(self, subgraph, shake=False, **kwargs):
-        """Compute a n-dimention layout for the given subgraph according to the
+    def __call__(self, subgraph, **kwargs):
+        """Compute a n-dimension layout for the given subgraph according to the
         result of random walks in the given graph.
         """
         raise NotImplementedError("this should be updated...")
@@ -160,11 +161,36 @@ class ProxGlobalLayout(ProxLayout):
         assert "kgraph_id" in subgraph.vertex_attributes(), "There is no global vertex id on subgraph vertices."
         # sur le "kgraph" seulement ie le global
         pzlist = subgraph.vs["kgraph_id"]
-        graph = self._kgraph.graph
+        graph = self.global_graph
 
         for gid in pzlist:
             pline = self.prox_func(graph, [gid], neighbors_fct, **kwargs )
             coords.append([pline.get(to_gid, .0) for to_gid in pzlist])
 
         return coords
+
+
+def layout_bipartite(subgraph, graph, l, neighbors_fct=None):
+    """Compute a n-dimention layout for the given bipartite subgraph according
+    to the result of random walks in the given graph (also bipartite).
+    
+    TODO
+    """
+    assert "globalIndex" in subgraph.vertex_attributes()
+    assert "type" in subgraph.vertex_attributes()
+    
+    if neighbors_fct is None:
+        neighbors_fct = lambda g, vid: g.neighbors(vid)
+    
+    global_idx = subgraph.vs["globalIndex"]
+    pzlist = [gid  if graph.vs[gid]["type"] else -1 for gid in global_idx]
+    
+    layout = []
+    for vid, gid in enumerate(global_idx):
+        length = l - (l%2) if graph.vs[gid]["type"] else l - (l%2) + 1
+        pline = prox.prox_markov_dict(graph, [gid], l=length,  neighbors_fct=neighbors_fct)
+        layout.append([pline.get(to_gid, .0) for to_gid in pzlist])
+        
+    return layout
+
 
