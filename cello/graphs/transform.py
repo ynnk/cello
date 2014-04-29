@@ -11,6 +11,14 @@ from cello.graphs import EDGE_WEIGHT_ATTR
 from cello.graphs.prox import prox_markov_wgt
 
 
+class Subgraph(Composable):
+    def __init__(self, graph, name=None):
+        super(Subgraph, self).__init__(name=name)
+        self._graph = graph
+        
+    def __call__(self, vids):
+        return self._graph.subgraph(vids)
+        
 class EdgeAttr(Composable):
     """ Add one or more attributes to the edges of the graph
 

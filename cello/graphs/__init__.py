@@ -16,53 +16,55 @@ Helpers
 -------
 """
 import random
-import igraph as ig
 
 from cello.pipeline import Optionable
 from cello.schema import Doc
 
 from cello.graphs.builder import GraphBuilder
 
+
+# Edge Mode
+OUT = 1
+IN  = 2
+ALL = 3
+
+
 # default edge attribute for weighted graph
 EDGE_WEIGHT_ATTR = "weight"
 
-
-
-def random_vertex(graph, attr=None, from_edges=False):
-    """ return a random vertex of the given graph
-
-    :param attr: if not None return the attribute 'attr' of the random vertex, instead of the id (of the random vertex).
-    :param from_edges: if True get an edges by random and then pick one of the ends of the edge by random
+class AbstractGraph(object):
+    def __init__(self, *args, **kwargs):
+        """
+        :param bipartite: the graph IS bipartite by 
+        :param reflexive: the graph IS reflexive all vertex have loops
+        """
+        self.gattrs = {}
     
-    >>> import random ; random.seed(1) # fix the random seed to test purpose
-    >>> g = ig.Graph.Formula("a--b, a--c, a--d, a--f, d--f")
-    >>> random_vertex(g)
-    0
-    >>> random_vertex(g, attr='name')
-    'f'
-    >>> random_vertex(g, attr='name')
-    'd'
-    >>> random_vertex(g, from_edges=True)
-    0
-    >>> random_vertex(g, attr='name', from_edges=True)
-    'd'
-    >>> random_vertex(g, attr='name', from_edges=True)
-    'a'
+    def __getitem__(self, name):
+        """ Get a graph attribute value """
+        return self.gattrs[name]
+
+    def __setitem__(self, name, value):
+        """ Set a graph attribute value """
+        return self.gattrs[name]
+    """    
+    vcount(self): 
+         returns the vertex count
+    ecount(self): 
+        returns the edges count 
+    neighbors(self, vtx, mode=OUT):
+    subgraph(self):    
     """
-    if from_edges:
-        # random edge
-        es = random.choice(graph.es)
-        vid = random.choice([es.source, es.target])
-    else:
-        # random node
-        vid = random.choice(xrange(graph.vcount()))
-    # return attr or vid
-    if attr is not None:
-        return graph.vs[vid][attr]
-    else:
-        return vid
+
+def neighbors(graph, vtx, mode=OUT):
+    """:param vertex: a vertex ID"""        
+    return graph.neighbors(vtx, mode)
+
+def random_vertex(graph, **kwargs):
+    return graph.random_vertex(**kwargs)
 
 
+# LOCAL GRAPH FUNCTION
 #TODO exclude_gattrs, exclude_vattrs, exclude_eattrs
 #TODO: est-ce que l'on passe pas a des include plutot que exclude
 def export_graph(graph, exclude_gattrs=[], exclude_vattrs=[], exclude_eattrs=[]):
@@ -75,7 +77,8 @@ def export_graph(graph, exclude_gattrs=[], exclude_vattrs=[], exclude_eattrs=[])
     :param exclude_vattrs: vertex attributes to exclude (TODO)
     :param exclude_eattrs: edges attributes to exclude (TODO)
 
-    >>> g = ig.Graph.Formula("a--b, a--c, a--d, a--f, d--f")
+    >>> from cello.providers.igraphGraph import  IgraphGraph
+    >>> g = IgraphGraph.Formula("a--b, a--c, a--d, a--f, d--f")
     >>> g.vs["docnum"] = [1+vid if vid%2 == 0 else None for vid in range(g.vcount())]
     >>> g.summary()
     'IGRAPH UN-- 5 5 -- \\n+ attr: docnum (v), name (v)'
@@ -102,7 +105,7 @@ def export_graph(graph, exclude_gattrs=[], exclude_vattrs=[], exclude_eattrs=[])
     The '_doc' vertex attribute is converted into a 'docnum' attribut:
 
     >>> from cello.schema import Doc
-    >>> g = ig.Graph.Formula("a--b, a--c, a--d, a--f, d--f")
+    >>> g = IgraphGraph.Formula("a--b, a--c, a--d, a--f, d--f")
     >>> g.vs["_doc"] = [Doc(docnum="d_%d" % vid) if vid%2 == 0 else None for vid in range(g.vcount())]
     >>> g.es["weight"] = [4, 4, 5, 5, 1]    # add an edge attribute
     >>> graph_dict = export_graph(g)
