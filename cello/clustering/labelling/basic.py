@@ -8,6 +8,7 @@ Classes
 import igraph as ig
 
 from cello.pipeline import Optionable
+from cello.types import Text
 from cello.clustering.labelling import Label, LabelledVertexCover
 
 class VertexAsLabel(Optionable):
@@ -65,7 +66,7 @@ class VertexAsLabel(Optionable):
             raise TypeError("argument 'vtx_to_label' should be None or sould be callable")
         self._vtx_to_label = vtx_to_label
 
-    def vtx_to_label(self, graph, cluster, vtx):
+    def vtx_to_label(self, graph, cluster, vtx, **kwargs):
         """ Function used to transform a vertex to a label.
         
         This is called on each vertex of each cluster. If the vertex should not
@@ -91,11 +92,12 @@ class VertexAsLabel(Optionable):
         NotImplementedError
         """
         if self._vtx_to_label is not None:
-            return self._vtx_to_label(graph, cluster, vtx)
+            return self._vtx_to_label(graph, cluster, vtx, **kwargs)
         else:
             raise NotImplementedError
 
-    def __call__(self, vertex_cover):
+    @Optionable.check
+    def __call__(self, vertex_cover, **kwargs):
         # if not labelled vertex cover transform it
         if not isinstance(vertex_cover, LabelledVertexCover):
             vertex_cover = LabelledVertexCover(vertex_cover.graph, vertex_cover)
@@ -103,7 +105,7 @@ class VertexAsLabel(Optionable):
         graph = vertex_cover.graph
         vs = graph.vs
         for cid, cluster in enumerate(vertex_cover):
-            labels = (self.vtx_to_label(graph, cluster, vs[vtx]) for vtx in cluster)
+            labels = (self.vtx_to_label(graph, cluster, vs[vtx], **kwargs) for vtx in cluster)
             labels = [label for label in labels if label is not None]
             vertex_cover.add_labels(cid, labels)
         return vertex_cover
@@ -111,10 +113,6 @@ class VertexAsLabel(Optionable):
 
 class TypeFalseLabel(VertexAsLabel):
     """ Transform all `type=False` vertices of the cluster to label.
-
-    .. note:: for now the score are compute this way:
-        :math:`\\frac{|\Gamma(v)\,\cup\,C|}{|\Gamma(v)|}` where :math:`\Gamma(v)`
-        is neighborooh of v, and :math:`C` is the set of cluster vertices.
 
     For exemple on the following bipartite graph:
 
@@ -133,8 +131,10 @@ class TypeFalseLabel(VertexAsLabel):
     Cover with 2 clusters
     [0] a, A, B, C, b (labels: A, B, C)
     [1] c, C, D (labels: C, D)
+    >>> vcover.labels[0]
+    [Label('A', 1.0, role='terms'), Label('B', 1.0, role='terms'), Label('C', 0.5, role='terms')]
     >>> vcover.labels[1]
-    [Label('C', 0.5, role='terms'), Label('D', 1.0, role='terms')]
+    [Label('C', 1.0, role='terms'), Label('D', 1.0, role='terms')]
 
     also note that the index of the original vertex is stored in each label:
 
@@ -142,6 +142,29 @@ class TypeFalseLabel(VertexAsLabel):
     3
     >>> g.vs[vcover.labels[1][0].vtx].attributes()
     {'type': False, 'name': 'C'}
+
+    One can chouse the scoring method with an option:
+
+    >>> labeller.print_options()
+    score (Text, default=recall, in: {recall, precision}): Label scoring method
+
+    the scoring are this:
+
+    * **precision**:  :math:`\\frac{|\Gamma(v)\,\cup\,C|}{|\Gamma(v)|}` where
+      :math:`\Gamma(v)` is neighborooh of v, and :math:`C` is the set of cluster vertices.
+
+    * **recall**: :math:`\\frac{|\Gamma(v)\,\cup\,C|}{|C_\\top|}` where
+      :math:`\Gamma(v)` is neighborooh of v, :math:`C` is the set of cluster
+      vertices, and :math:`C_\\top` the set of top-vertices (or True-vertices)
+      of the cluster.
+
+    Here is an exemple with precision score:
+
+    >>> vcover = ig.VertexCover(g, [[0,1,2,3,4], [5,3,6]])
+    >>> vcover = labeller(vcover, score="precision")
+    >>> vcover.labels[1]
+    [Label('C', 0.5, role='terms'), Label('D', 1.0, role='terms')]
+
     """
     def __init__(self, vtx_attr, role=None, name=None):
         """ Build the labelling component
@@ -156,17 +179,38 @@ class TypeFalseLabel(VertexAsLabel):
         super(TypeFalseLabel, self).__init__(name=name)
         self.vtx_attr = vtx_attr
         self.role = role
+        self.add_option("score", Text(vtype=str,
+            default="recall", choices=["recall", "precision"],
+            help="Label scoring method"
+        ))
 
-    def vtx_to_label(self, graph, cover, vtx):
+    @staticmethod
+    def scoring_prop_inclust(graph, cover, vtx):
+        """ precision: prop of neighbours that are in cluster
+        """
+        vois = set(nei.index for nei in vtx.neighbors())
+        commun = vois.intersection(cover)
+        return len(commun) / (1.*len(vois))
+
+    @staticmethod
+    def scoring_prop_ofclust(graph, cover, vtx):
+        """ recall: prop of cluster doc that are in neighbours
+        """
+        cover_doc = [1 for c in cover if graph.vs[c]["type"]]
+        vois = set(nei.index for nei in vtx.neighbors())
+        commun = vois.intersection(cover)
+        return len(commun) / (1.*len(cover_doc))
+
+    def vtx_to_label(self, graph, cover, vtx, score=None):
         label = None
         if not 'type' in graph.vs.attributes():
             raise ValueError("The graph should be bipartite, and have a 'type' attribute on each vertex")
         if not vtx['type']:
-            vois = set(nei.index for nei in vtx.neighbors())
-            commun = vois.intersection(cover)
-            score = len(commun) / (1.*len(vois))
-            #TODO other score computation are possible, how to generalize ?
-            label = Label(vtx[self.vtx_attr], score, self.role)
+            if score == "precision":
+                wgt = TypeFalseLabel.scoring_prop_inclust(graph, cover, vtx)
+            else:
+                wgt = TypeFalseLabel.scoring_prop_ofclust(graph, cover, vtx)
+            label = Label(vtx[self.vtx_attr], wgt, self.role)
             label.vtx = vtx.index
         return label
 
