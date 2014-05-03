@@ -32,6 +32,7 @@ class AbstractWriter(Optionable):
             add_document(kdoc)
             yield kdoc
 
+
 class ScreenWriter(AbstractWriter):
     """ Write a repr. of documents on the standart output
     """
@@ -80,12 +81,12 @@ class IndexWriter(AbstractWriter):
         """ 
         Helper component to add document in a solr index
         :param idx: Cello.Index
-        """     
+        """
         AbstractWriter.__init__(self)
         self._logger = logging.getLogger(self.__class__.__name__)
         self.idx = idx
 
-    def __call__(self, docs):        
+    def __call__(self, docs):
         try:
             self.idx.add_documents(docs)
         except Exception as error :

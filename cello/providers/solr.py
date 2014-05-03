@@ -8,7 +8,7 @@ try :
     import sunburnt
 except :
     print("Error importing sunburnt library for Apache Solr, run $ sudo pip install sunburnt")
-    
+
 from cello.schema import Doc
 from cello.pipeline import Optionable
 from cello.index import Index, CelloIndexError
@@ -57,7 +57,6 @@ class SolrIndex(Index):
         self.cache = kwargs.get("cache", 100 )
         self.fl = kwargs.get("fl", "*" ) # will return all field of 
         self.wrap = kwargs.get("wrap", self._default_wrapper())
-        
 
     def _default_wrapper(self):
         uniq_key = self.uniq_key
@@ -66,7 +65,7 @@ class SolrIndex(Index):
             kdoc.update(doc)
             return kdoc
         return wrap
-        
+
     def __len__(self):
         """ return count of document in index """
         params = {'q':'docnum:*', 'rows':0}
@@ -101,7 +100,7 @@ class SolrIndex(Index):
     def get_documents(self, docnums):
         """ fetch a set of documents given a docnum list or iterator.
         it will match the given value in field specified as 'uniqueKey' in schema.xml """
-        Q = self.conn.Q 
+        Q = self.conn.Q
         wrap = self.wrap
         uniq_key = self.uniq_key
         dnum_cache = []
@@ -120,7 +119,6 @@ class SolrIndex(Index):
                     yield wrap(doc)
                 ccount = 0
                 dnum_cache = []
-        
 
     def iter_docnums(self, incr=1000):
         start = 0
@@ -140,7 +138,6 @@ class SolrIndex(Index):
         #TODO: are each doc correctly added ?
         self.conn.add(kdocs, chunk=self.cache, commit=True)
         return [] 
-
 
 
 class SolrSearch(Optionable):
@@ -184,9 +181,4 @@ class SolrSearch(Optionable):
                 for doc in result.docs:
                     kdocs.append(idx.wrap(doc))
         return kdocs
-        
-        
 
-
-        
-        
