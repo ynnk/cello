@@ -1,6 +1,6 @@
 #-*- coding:utf-8 -*-
-""" :mod:`cello.layout.prox`
-=============================
+""" :mod:`cello.layout.proxlayout`
+==================================
 
 Set of 'prox' graphs layout, moslty based on igraph layouts
 """
