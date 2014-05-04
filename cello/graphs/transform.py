@@ -102,7 +102,7 @@ class GraphProjection(Optionable):
 
     >>> projection = GraphProjection()
     >>> projection.print_options()
-    proj_wgt (Text, default=p): projection weighting method
+    proj_wgt (Text, default=p, in: {no, count, p, pmin, pmax, pavg, confl}): projection weighting method
 
     .. Warning:: The bipartite graph should have True vertices in first in
         vertex sequence, if not see  :class:`TrueInFirst`:.
@@ -225,7 +225,7 @@ class GraphProjection(Optionable):
 
         # clear nul edges.keys
         null_edges = [e.index for e in pg.es if e[wgt_attr] - 1e-6 <= 0]
-        self._logger.info("Deletion of %d null edges" % (len(null_edges)))
+        _logger.info("Deletion of %d null edges" % (len(null_edges)))
         
         pg.delete_edges(null_edges)
         return pg
