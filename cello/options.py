@@ -113,7 +113,12 @@ class ValueOption(object):
         self.value = value
 
     def summary(self):
-        return "%s (%s, default=%s): %s" % (self.name, self.otype.__class__.__name__, self.otype.default, self.otype.help)
+        infos = []
+        infos.append(self.otype.__class__.__name__)
+        infos.append("default=%s" % self.otype.default)
+        if self.otype.choices:
+            infos.append("in: {%s}" % ", ".join([str(val) for val in self.otype.choices]))
+        return "%s (%s): %s" % (self.name, ", ".join(infos), self.otype.help)
 
     def validate(self, value):
         """ Raises :class:`.ValidationError` if the value is not correct, else

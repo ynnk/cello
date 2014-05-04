@@ -15,7 +15,16 @@ TODO
 Requires
 =======
 
-* igraph (for graph treatment)
-* pygraphviz and graphviz-dev (for engine schema generation)
+* Graph Library / providers and local computations
+    * igraph http://www.igraph.org
 
+* engine schema generation
+    * pygraphviz and graphviz-dev 
 
+* Python/WSGIserver
+    $ pip install Flask
+
+* Solr
+    * Apache Solr solr.apache.org
+    * Solr python library
+        $ pip install sunburnt

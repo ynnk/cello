@@ -71,7 +71,6 @@ class FieldFilter(Composable):
             yield doc
 
 
-
 class DocLength(FieldFilter):
     """ Counts documents length, (C{terms_df} -> C{dlen})
     """

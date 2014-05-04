@@ -16,6 +16,15 @@ from cello.graphs.prox import prox_markov_wgt
 _logger = logging.getLogger("cello.graphs.transform")
 
 
+class Subgraph(Composable):
+    def __init__(self, graph, name=None):
+        super(Subgraph, self).__init__(name=name)
+        self._graph = graph
+        
+    def __call__(self, vids):
+        return self._graph.subgraph(vids)
+        
+
 class EdgeAttr(Composable):
     """ Add one or more attributes to the edges of the graph
 
@@ -216,7 +225,7 @@ class GraphProjection(Optionable):
 
         # clear nul edges.keys
         null_edges = [e.index for e in pg.es if e[wgt_attr] - 1e-6 <= 0]
-        _logger.info("Deletion of %d null edges" % (len(null_edges)))
+        self._logger.info("Deletion of %d null edges" % (len(null_edges)))
         
         pg.delete_edges(null_edges)
         return pg

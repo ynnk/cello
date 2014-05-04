@@ -1,5 +1,5 @@
 
-.. automodule:: cello.layout.prox
+.. automodule:: cello.layout.proxlayout
     :show-inheritance:
     :members:
     :undoc-members:
