@@ -72,7 +72,7 @@ class CelloFlaskView(Blueprint):
             # serialise output
             if serializer is not None:
                 results[out_name] = serializer(raw_res[out_name])
-                print "serialize", out_name, "\n" , results[out_name] 
+                #print "serialize", out_name, "\n" , results[out_name] 
             else:
                 results[out_name] = raw_res[out_name]
         ### serialise play metadata

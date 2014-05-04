@@ -1,26 +1,26 @@
 #-*- coding:utf-8 -*-
+#TODO: docstr
 
 import igraph
 import random
 from cello.graphs import AbstractGraph, random_vertex
 
 class IgraphGraph( AbstractGraph, igraph.Graph):
-    
+
     def __init__(self, *args, **kwargs ):
         AbstractGraph.__init__( self, *args, **kwargs)
         igraph.Graph.__init__( self, *args, **kwargs)
-    
+
     @classmethod
     def Read(cls, *args, **kwargs):
         g = igraph.read(*args, **kwargs)
         cls.convert_from_igraph(g)
         return g
-        
+
     @classmethod
     def convert_from_igraph(cls, obj):
         obj.__class__ = cls
 
-    
     def random_vertex(self, attr=None, from_edges=False):
         """ return a random vertex of the given graph
 

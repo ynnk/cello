@@ -32,6 +32,7 @@ ALL = 3
 # default edge attribute for weighted graph
 EDGE_WEIGHT_ATTR = "weight"
 
+#TODO: basic AbstractGraph API describtion
 class AbstractGraph(object):
     def __init__(self, *args, **kwargs):
         """
