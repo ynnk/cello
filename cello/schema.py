@@ -690,8 +690,7 @@ class Doc(dict):
         >>> doc = Doc(Schema(titre=Text()), titre=u'Un titre')
         """
         dict.__init__(self)
-        # check there is a docnum
-        #XXX docnum needed or not ?
+        # FIXME docnum needed or not ?
         #if 'docnum' not in data:
         #    raise SchemaError("A document should have a docnum")
         # set the document schema
@@ -704,7 +703,7 @@ class Doc(dict):
         # Doc should always have a docnum !
         if 'docnum' not in self.schema:
             self.add_field('docnum', Text(vtype=str))
-        #elf.docnum = data['docnum'] if "docnum" in data else 0# or fail
+
         # fields value(s)
         for key, ftype in schema.iter_fields():
             self[key] = DocField.FromType(ftype)
