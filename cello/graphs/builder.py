@@ -250,7 +250,7 @@ class OptionableGraphBuilder(Optionable, GraphBuilder):
 
 
 class DocumentFieldBigraph(OptionableGraphBuilder):
-    """ Build bipartite graph from a list of documents: documents are conncted
+    """ Build bipartite graph from a list of documents: documents are connected
     to vertices built from one (or more) document field.
     
     A top vertex (type=True) is created for each document (document-vertex) and
@@ -260,7 +260,7 @@ class DocumentFieldBigraph(OptionableGraphBuilder):
     Document-vertices are connected to object-vertices they contains in indicated fields.
 
     Objects attributes (attributes associated to each object in a vector field)
-    can eihter :
+    can either :
 
         * be ignored,
         * be copied as edge attribute between a document and an object (weight for ex.),
