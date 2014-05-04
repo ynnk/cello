@@ -97,13 +97,16 @@ def spreading(graph, in_vect, mode, add_loops, weight, neighbors):
     return vect
 
 def vect_pzero(graph, p0):
+    """
+    returns a normalised a p0 dict.
+    :param p0: `dict` {vid:weight} or `list` [vid, vid, ... ] weight is then 1.
+    """
     if isinstance(p0, dict):
         vect = normalise(p0)
     else : 
         if len(p0) == 0:
             p0 = range(graph.vcount()) # graph global
-        v0 = 1./len(p0)
-        vect = {id: v0 for id in p0}
+        vect = normalise({k:1.  for k in p0})
     return vect
     
     
@@ -128,7 +131,6 @@ def prox_markov_dict(graph, p0, length, mode=OUT, add_loops=False, weight=None,
     TODO: ajout du choix de la fct de `spreading` en param (il faut bien normalisé l'interface de spreading)
     """
     vect = vect_pzero(graph, p0)
-    
     for k in xrange(length):
         vect = spreading(graph, vect, mode, add_loops, weight, neighbors)
     return vect
@@ -136,8 +138,8 @@ def prox_markov_dict(graph, p0, length, mode=OUT, add_loops=False, weight=None,
 
 def prox_markov_list(graph, p0, length, mode=OUT, add_loops=False, weight=None,
                         neighbors=cello.graphs.neighbors):
-    prox_vect = prox_markov_dict(graph, p0, length, mode, add_loops, weight, neighbors)
-    return [prox_vect.get(vidx, 0.) for vidx in xrange(graph.vcount())]
+    vect = prox_markov_dict(graph, p0, length, mode, add_loops, weight, neighbors)
+    return [vect.get(vidx, 0.) for vidx in xrange(graph.vcount())]
 
 
 def prox_markov_mtcl(graph, p0, length, throws, mode=OUT, add_loops=False,
