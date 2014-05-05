@@ -1,39 +1,41 @@
 #-*- coding:utf-8 -*-
-
 """ :mod:`cello.graphs.prox`
+===========================
 
 :copyright: (c) 2013 - 2014 by Yannick Chudy, Emmanuel Navarro.
 :license: ${LICENSE}
 
 .. currentmodule:: cello.graphs.prox
 
-    Python version of Prox over igraph :
+Python version of Prox over igraph:
 
-    Here is a minimal exemple:
-    >>> import igraph as ig 
-    >>> graph = ig.Graph.Formula("a-b-c-d")   #TODO: avoir un minigraph a nous non depédendant de igraph
-    >>> prox_markov_dict(graph, [0], 2)
-    {0: 0.5, 2: 0.5}
+Here is a minimal exemple:
 
-    On can also use a dict for `p0`:
-    >>> prox_markov_dict(graph, {0:1, 3:1}, 0)  # p0 is just normalized
-    {0: 0.5, 3: 0.5}
-    >>> prox_markov_dict(graph, {0:1, 3:1}, 1)
-    {1: 0.5, 2: 0.5}
-    >>> prox_markov_list(graph, {0:1, 3:1}, 1)
-    [0.0, 0.5, 0.5, 0.0]
-    >>> res = prox_markov_mtcl(graph, [0, 3], 1, 10)
-    
-    Zachary
-    >>> g = ig.Graph.Famous("Zachary")
-    >>> p4 = prox_markov_dict(g, [0], 4)
-    >>> len(p4)
-    34
-    >>> p4[0]
-    0.20139916513480394
-    >>> p4[2]
-    0.06625652318218955
+>>> import igraph as ig 
+>>> graph = ig.Graph.Formula("a-b-c-d")   #TODO: avoir un minigraph a nous non depédendant de igraph
+>>> prox_markov_dict(graph, [0], 2)
+{0: 0.5, 2: 0.5}
 
+On can also use a dict for `p0`:
+
+>>> prox_markov_dict(graph, {0:1, 3:1}, 0)  # p0 is just normalized
+{0: 0.5, 3: 0.5}
+>>> prox_markov_dict(graph, {0:1, 3:1}, 1)
+{1: 0.5, 2: 0.5}
+>>> prox_markov_list(graph, {0:1, 3:1}, 1)
+[0.0, 0.5, 0.5, 0.0]
+>>> res = prox_markov_mtcl(graph, [0, 3], 1, 10)
+
+Zachary :
+
+>>> g = ig.Graph.Famous("Zachary")
+>>> p4 = prox_markov_dict(g, [0], 4)
+>>> len(p4)
+34
+>>> p4[0]
+0.20139916513480394
+>>> p4[2]
+0.06625652318218955
 
 """
 from random import randint
@@ -43,22 +45,25 @@ import cello
 from cello.graphs import IN, OUT, ALL
 
 
-    
 def normalise(p0):
     """ normalise p0 dict vector 
-    >>> p0={0:1, 3:1}
+    
+    >>> p0 = {0:1, 3:1}
     >>> normalise(p0)
     {0: 0.5, 3: 0.5}
     """
     vsum = 1.* np.sum(abs(val) for val in p0.itervalues())
     return {vid: val/vsum for vid, val in p0.iteritems()}
 
-def sortcut( v_extract, vcount ):
-    """ Gets the frst vcount vertex sorted by score from the list or dict of score
+
+def sortcut(v_extract, vcount):
+    """ Gets the first vcount vertex sorted by score from the list or dict of score
+
     :param v_extract: dict vertex_ids, value or list of values
     :param vcount: vertex count
     :return: a list of the form: [(vid1, score), (vid2, score), ...]
     """
+    #TODO: add doctest
     if type(v_extract) is list : 
         v_extract = { i:v for i, v in enumerate(v_extract) }
 
@@ -83,7 +88,7 @@ def spreading(graph, in_vect, mode, add_loops, weight, neighbors):
         For `neighbors_fct` you can use :
         > neighbors_fct = lambda g, from_vertex : g.neighbors(from_vertex)
         > neighbors_fct = ig.Graph.neighbors
-    :return: output vector same format as in_vect.
+    :returns: output vector same format as in_vect.
     """
     vect = {}
     for vtx, value in in_vect.iteritems():
@@ -96,9 +101,10 @@ def spreading(graph, in_vect, mode, add_loops, weight, neighbors):
                 vect[neighbor] = vect.get(neighbor, 0.) + pvalue
     return vect
 
+
 def vect_pzero(graph, p0):
-    """
-    returns a normalised a p0 dict.
+    """ returns a normalised a p0 dict.
+
     :param p0: `dict` {vid:weight} or `list` [vid, vid, ... ] weight is then 1.
     """
     if isinstance(p0, dict):
@@ -108,12 +114,12 @@ def vect_pzero(graph, p0):
             p0 = range(graph.vcount()) # graph global
         vect = normalise({k:1.  for k in p0})
     return vect
-    
-    
+
+
 def prox_markov_dict(graph, p0, length, mode=OUT, add_loops=False, weight=None,
                         neighbors=cello.graphs.neighbors):
+    """ Generic prox implementation
 
-    """ Generic prox implementation 
     For `p0` : it is either a list of vertex idx or a dict of vertex associated 
     with starting weight.
     If it is a list of vertex idx (`[id_vertex1, id_vertex2, ...]`) then the walk 
@@ -124,12 +130,14 @@ def prox_markov_dict(graph, p0, length, mode=OUT, add_loops=False, weight=None,
     :param graph: subclass of :class:`.AbstractGraph`
     :param p0: list of starting nodes (see above)
     :param length: random walk length
-    :param ... : see `spreading`
+    :param _others_: see :func:`spreading`
     
-    :return: result vector, a python dictionary : `{vertex_id:value, ...}`
-
-    TODO: ajout du choix de la fct de `spreading` en param (il faut bien normalisé l'interface de spreading)
+    :returns: result vector, a python dictionary : `{vertex_id:value, ...}`
     """
+    if weight is not None:  #FIXME
+        raise NotImplementedError
+    #FIXME: neighbors should be None by default
+    #TODO: ajout du choix de la fct de `spreading` en param (il faut bien normalisé l'interface de spreading)
     vect = vect_pzero(graph, p0)
     for k in xrange(length):
         vect = spreading(graph, vect, mode, add_loops, weight, neighbors)
@@ -158,6 +166,8 @@ def prox_markov_mtcl(graph, p0, length, throws, mode=OUT, add_loops=False,
     died = 0 # proba de mourir : on meurt qd on doit faire un pas a partir d'un sommet sans voisins
     #p0 = normalise(p0)
     
+    if weight is not None:  #FIXME
+        raise NotImplementedError
     for throw in xrange(throws) :
         neighborhood = vect_pzero(graph, p0).keys() # FIXME not weighted
         for j in xrange(length) :
@@ -232,6 +242,7 @@ def prox_markov_wgt(g, p0, l=3, wgt=None, epsi=0, false_refl=False):
     for k in range(l):
         prox_vect = _spreading(prox_vect)
     return prox_vect
+
 
 def confluence(graph, vtxa, vtxb, length=3, add_loops=True, remove_edge=False, 
             prox_markov_list=prox_markov_list, neighbors=cello.graphs.neighbors):

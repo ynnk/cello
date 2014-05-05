@@ -10,6 +10,7 @@ SubModules
     cello.graphs.builder
     cello.graphs.filter
     cello.graphs.transform
+    cello.graphs.prox
 
 
 Helpers
