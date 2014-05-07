@@ -23,8 +23,6 @@ import igraph as ig
 from cello.clustering.core import OneCluster, ConnectedComponents, MaximalCliques
 from cello.clustering.common import Walktrap, Infomap
 
-from cello.clustering.filter import basic_cover_filter
-
 #{ Pack of methods
 def unipartite_clustering_methods():
     """ Returns standart clustering method for unipartite graphs
@@ -34,8 +32,8 @@ def unipartite_clustering_methods():
     2
     """
     methods = []
-    methods.append(Infomap() | basic_cover_filter())
-    methods.append(Walktrap() | basic_cover_filter())
+    methods.append(Infomap())
+    methods.append(Walktrap())
     return methods
 
 
