@@ -100,7 +100,7 @@ class VertexAsLabel(Optionable):
     def __call__(self, vertex_cover, **kwargs):
         # if not labelled vertex cover transform it
         if not isinstance(vertex_cover, LabelledVertexCover):
-            vertex_cover = LabelledVertexCover(vertex_cover.graph, vertex_cover)
+            vertex_cover = LabelledVertexCover.FromVertexCover(vertex_cover)
         # compute labels for each cluster
         graph = vertex_cover.graph
         vs = graph.vs
