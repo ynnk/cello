@@ -293,39 +293,28 @@ class TestEngine(unittest.TestCase):
                 'op1':[{'name': 'max20'}, {'name': 'plus_comp'}]
             })
 
-    def test_configure(self):
+    def test_as_dict(self):
         engine = Engine("op1", "op2")
-        engine.set("op1", self.mult_comp, self.plus_comp, self.max_comp)
+        engine.set("op1", self.plus_comp, self.mult_comp, self.max_comp)
         engine.set("op2", self.plus_comp)
-
-        engine.configure({
-            'op1':{
-                'name': 'mult_opt',
-                'options': {
-                    'factor': '10'
-                }
-            },
-            'op2':{
-                'name': 'plus_comp'
-            }
-        })
-        self.assertEqual(engine.op1.selected(), ["mult_opt"])
-        self.assertEqual(engine.op1["mult_opt"].get_option_value("factor"), 10)
-        self.assertEqual(engine.op1.play(5), 50)
-        
         self.assertDictEqual(engine.as_dict(), {
             'args': None,
             'blocks': [
                 {
                     'components': [
                         {
-                            'default': True,
+                            'default': True,       #This is the default NOT the selected value
+                            'name': 'plus_comp',
+                            'options': None
+                        },
+                        {
+                            'default': False,
                             'name': 'mult_opt',
                             'options': [
                                 {
                                     'name': 'factor',
                                     'type': 'value',
-                                    'value': 10,
+                                    'value': 5,
                                     'otype': {
                                         'choices': None,
                                         'default': 5,
@@ -341,38 +330,60 @@ class TestEngine(unittest.TestCase):
                             ]
                         },
                         {
-                            'name': 'plus_comp',
-                            'default': False,
-                            'options': None
-                        },
-                        {
                             'name': 'max20',
                             'default': False,
                             'options': None
                         }
-                 ],
-                 'args': None,
-                 'multiple': False,
-                 'name': 'op1',
-                 'returns': 'op1',
-                 'required': True
+                    ],
+                     'args': None,
+                     'multiple': False,
+                     'name': 'op1',
+                     'returns': 'op1',
+                     'required': True
+                },
+                {
+                    'components': [
+                         {
+                             'name': 'plus_comp',
+                             'default': True,
+                             'options': None
+                         }
+                     ],
+                     'args': None,
+                     'multiple': False,
+                     'name': 'op2',
+                     'returns': 'op2',
+                     'required': True
+                 }
+            ]
+        })
+
+    def test_configure(self):
+        engine = Engine("op1", "op2")
+        engine.set("op1", self.plus_comp, self.mult_comp, self.max_comp)
+        engine.set("op2", self.plus_comp)
+
+        self.assertEqual(engine.op1["mult_opt"].get_option_value("factor"), 5)
+        engine.configure({
+            'op1':{
+                'name': 'mult_opt',
+                'options': {
+                    'factor': '10'
+                }
             },
-            {
-                'components': [
-                     {
-                         'name': 'plus_comp',
-                         'default': True,
-                         'options': None
-                     }
-                 ],
-                 'args': None,
-                 'multiple': False,
-                 'name': 'op2',
-                 'returns': 'op2',
-                 'required': True
-             }
-        ]
-    })
+            'op2':{
+                'name': 'plus_comp'
+            }
+        })
+        self.assertEqual(engine.op1.selected(), ["mult_opt"])
+        self.assertEqual(engine.op1["mult_opt"].get_option_value("factor"), 10)
+        self.assertEqual(engine.op1.play(5), 50)
+        
+        # A new call to configure should reset the default values
+        engine.configure({})    #this should reset the selected/options to default state
+        self.assertEqual(engine.op1.selected(), ["plus_comp"])
+        self.assertEqual(engine.op1["mult_opt"].get_option_value("factor"), 5)
+
 
     def test_engine_named_inout_pipeline(self):
         engine = Engine("op1", "op2", "op3")

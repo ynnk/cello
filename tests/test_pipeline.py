@@ -272,5 +272,4 @@ class TestOptionableSequence(unittest.TestCase):
                     'value': False
                 }
             ]
-        ) 
-
+        )

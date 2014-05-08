@@ -77,7 +77,7 @@ class Composable(object):
             self.name = self.__class__.__name__
         else:
             self.name = name
-        self._logger = logging.getLogger(self.__class__.__name__)
+        self._logger = logging.getLogger("cello.%s" % self.__class__.__name__)
 
     @property
     def name(self):
@@ -127,13 +127,14 @@ class Optionable(Composable):
         super(Optionable, self).__init__(name=name)
         self._options = OrderedDict()
 
+    # Option dict is public but read only (sould pass by _options for write)
     @property
     def options(self):
         return self._options
 
     def add_option(self, opt_name, otype, hidden=False):
         """ Add an option to the object
-        
+
         :param opt_name: option name
         :type opt_name: str
         :param otype: option type
@@ -338,6 +339,7 @@ class OptionableSequence(Optionable):
     def __init__(self, *composants):
         # Composable init
         super(OptionableSequence, self).__init__()
+        self._options = None    # to detect better methods that are not overriden
         self.items = []
         for comp in composants:
             if not isinstance(comp, Composable):
@@ -408,6 +410,10 @@ class OptionableSequence(Optionable):
         item = self._item_from_option(opt_name)
         return item.option_is_hidden(opt_name)
 
+    def clear_option_value(self, opt_name):
+        item = self._item_from_option(opt_name)
+        item.clear_option_value(opt_name)
+
     def set_option_value(self, opt_name, value, parse=False):
         item = self._item_from_option(opt_name)
         item.set_option_value(opt_name, value, parse=parse)
@@ -427,6 +433,10 @@ class OptionableSequence(Optionable):
     def get_option_default(self, opt_name):
         item = self._item_from_option(opt_name)
         return item.get_option_default(opt_name)
+    
+    def clear_options_values(self):
+        for item in self.opt_items:
+            item.clear_options_values()
 
     def set_options_values(self, option_values, parse=True, strict=False):
         if strict:

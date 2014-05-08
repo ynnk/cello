@@ -23,7 +23,7 @@ class CelloFlaskView(Blueprint):
         
         # bind entry points
         self.add_url_rule('/options', 'options', self.options)
-        self.add_url_rule('/play', 'play', self.play,  methods= ["POST", "GET"] )
+        self.add_url_rule('/play', 'play', self.play,  methods= ["POST", "GET"])
 
     def set_input_type(self, type_or_parse):
         """ Set the input type

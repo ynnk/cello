@@ -317,6 +317,7 @@ class Block(object):
         """ returns a dictionary representation of the block and of all
         component options
         """
+        #TODO/FIXME: add selected information
         if self.hidden:
             rdict = {}
         else:
@@ -355,6 +356,7 @@ class Block(object):
         self._selected = []
         for component in self._components.itervalues():
             if isinstance(component, Optionable):
+                self._logger.info("'%s' clear selection an options for '%s'" % (self.name, component.name))
                 component.clear_options_values()
 
     def setup(self, in_name=None, out_name=None, required=None, hidden=None,
@@ -397,7 +399,7 @@ class Block(object):
         
         :param components: components to append Optionables or Composables
         """
-        self._logger.info(" Set '%s': \n\t%s", self.name, "\n\t".join(("%s %s" % (e.name, e) for e in components)))
+        self._logger.info("'%s' set components: \n\t%s", self.name, "\n\t".join(("'%s':%s" % (e.name, e) for e in components)))
         self.reset()
         if len(components) == 1:
             self.append(components[0])
@@ -440,6 +442,7 @@ class Block(object):
         :param options: options to set to the components
         :type options: dict
         """
+        self._logger.info("select comp '%s' for block '%s' (options: %s)" % (comp_name, self._name, options))
         if comp_name not in self._components:
             raise ValueError("'%s' has no component '%s' (components are: %s)"\
                   % (self._name, comp_name, ", ".join(self.component_names())))
@@ -500,7 +503,10 @@ class Block(object):
                 "warnings": [],
                 "time": 0
             }
-            self._logger.info(" playing '%s': %s \n\tcomponent: %s,\n\targs=%s[...], \n\tkwargs=%s" % (self._name, comp.name, comp, "\n\t\t".join(argstr), options))
+            self._logger.info("""'%s' playing: %s
+                component: %s,
+                args=%s,
+                kwargs=%s""" % (self._name, comp.name, comp, "\n\t\t".join(argstr), options))
 
             try:
                 # multi = False or pipeline
@@ -674,11 +680,13 @@ class Engine(object):
                     raise ValueError("Invalid component (%s) for block '%s' "
                         % (req_comp['name'], block.name))
 
+        # clear the current selection and option
+        for block in self:
+            # remove selection and reset to default options
+            block.clear_selections()
         # configure the blocks
         for block_name, request_comps in config.iteritems():
             block = self[block_name]
-            # remove selection and reset to default options
-            block.clear_selections()
             # select and set options
             for req_comp in request_comps:
                 block.select(req_comp['name'], req_comp.get("options", {}))
