@@ -8,44 +8,141 @@ Cello processing system
 code sample
 ~~~~~~~~~~~
 
-Here is a simple exemple of Cellist usage. First you need to setup your Cellist::
+Here is a simple exemple of Cellist usage. First you need to setup your Cellist:
 
-    from cello.engine import Cellist
+>>> from cello.engine import Engine
+>>> cellist = Engine()
+>>> cellist.requires('foo', 'bar', 'boo')
 
-    cellist = Engine()
-    cellist.requires('foo', 'bar', 'boo')
+one can make imaginary components:
 
-    # one can make imaginary components
-    one, two, three = One(), Two(), Three() | plusOne()
+>>> from cello.pipeline import Pipeline, Optionable, Composable
+>>> from cello.types import Numeric
+>>> class One(Optionable):
+...     def __init__(self):
+...         super(One, self).__init__(name="one")
+...         self.add_option("val", Numeric(default=1))
+... 
+...     @Optionable.check
+...     def __call__(self, input, val=None):
+...         return input + val
+... 
+>>> one = One()
+>>> two = Composable(name="two", func=lambda x: x*2)
+>>> three = Composable(lambda x: x - 2) | Composable(lambda x: x/2.)
+>>> three.name = "three"
 
-    # one can configure a block with this three components:
-    foo_comps = [ one, two, three ]
-    foo_options = {'default': two.name }
-    cellist.set('foo', *foo_comps, **foo_options )
+one can configure a block with this three components:
 
-    # or
-    cellist['bar'].append(One(), default=True)
-    cellist['bar'].append(Two(), default=True)
-    cellist['bar'].append(Three(), default=True)
-    cellist["boo"].set_options(multiple = True)
+>>> foo_comps = [one, two, three]
+>>> foo_options = {'defaults': 'two'}
+>>> cellist.set('foo', *foo_comps, **foo_options)
 
-    # or
-    cellist["boo"].set(one, two, three)
-    cellist["boo"].set_options(multiple = True)
-    cellist["boo"].defaults = [lab.name for lab in (one, two, three )]
+or
+
+>>> cellist['bar'].setup(multiple=True)
+>>> cellist['bar'].append(two, default=True)
+>>> cellist['bar'].append(three, default=True)
+
+or
+
+>>> cellist["boo"].set(two, three)
+>>> cellist["boo"].setup(multiple=True)
+>>> cellist["boo"].defaults = [comp.name for comp in (two, three)]
+
+One can have the list of all configurations:
+
+>>> from pprint import pprint
+>>> pprint(cellist.as_dict())
+{'args': None,
+ 'blocks': [{'args': None,
+             'components': [{'default': False,
+                             'name': 'one',
+                             'options': [{'name': 'val',
+                                          'otype': {'choices': None,
+                                                    'default': 1,
+                                                    'help': '',
+                                                    'max': None,
+                                                    'min': None,
+                                                    'multi': False,
+                                                    'type': 'Numeric',
+                                                    'uniq': False,
+                                                    'vtype': 'int'},
+                                          'type': 'value',
+                                          'value': 1}]},
+                            {'default': True,
+                             'name': 'two',
+                             'options': None},
+                            {'default': False,
+                             'name': 'three',
+                             'options': []}],
+             'multiple': False,
+             'name': 'foo',
+             'required': True,
+             'returns': 'foo'},
+            {'args': None,
+             'components': [{'default': True,
+                             'name': 'two',
+                             'options': None},
+                            {'default': True,
+                             'name': 'three',
+                             'options': []}],
+             'multiple': True,
+             'name': 'bar',
+             'required': True,
+             'returns': 'bar'},
+            {'args': None,
+             'components': [{'default': True,
+                             'name': 'two',
+                             'options': None},
+                            {'default': True,
+                             'name': 'three',
+                             'options': []}],
+             'multiple': True,
+             'name': 'boo',
+             'required': True,
+             'returns': 'boo'}]}
 
 
-And then you can configure and run it::
 
-    cellist.configure(request_options)
+And then you can configure and run it:
 
-    # test before running 
-    cellist.validate()
+>>> request_options = {
+...     'foo':[
+...         {
+...             'name': 'one',
+...             'options': {
+...                 'val': 2
+...             }
+...        },     # input + 2
+...     ],
+...     'bar':[
+...         {'name': 'two'},
+...     ],     # input * 2
+...     'boo':[
+...         {'name': 'two'},
+...         {'name': 'three'},
+...     ], # (input - 2) / 2.
+... }
+>>> cellist.configure(request_options)
+>>> # test before running:
+>>> cellist.validate()
 
-    res = cellist['boo'].play( boo_args)
-    
-    # plays all blocks
-    results = cellist.play()
+One can then run only one block:
+
+>>> cellist['boo'].play(10)
+4.0
+
+or all blocks :
+
+>>> res = cellist.play(4)
+>>> res['foo']      # 4 + 2
+6
+>>> res['bar']      # 6 * 2
+12
+>>> res['boo']      # (12 - 2) / 2.0
+5.0
+
 """
 
 import time
@@ -268,8 +365,8 @@ class Block(object):
         :type hidden: bool
         :param multiple: if True more than one component may be selected/ run) 
         :type multiple: bool
-        :param default: names of the selected components
-        :type default: list of str, or str
+        :param defaults: names of the selected components
+        :type defaults: list of str, or str
         """
         if in_name is not None:
             self.in_name = in_name
@@ -421,7 +518,6 @@ class Block(object):
                 # component error handling
                 comp_res['errors'].append("error in component %s %s /n %s" % (comp, comp.name, err.message))
                 self._logger.error(comp_res['errors'])
-                raise
                 if _break_on_error:
                     break
             
@@ -438,8 +534,7 @@ class Block(object):
 
 class Engine(object):
     """ The Cello engine.
-    
-"""
+    """
     @define_logger
     def __init__(self, *names):
         self._blocks = OrderedDict()

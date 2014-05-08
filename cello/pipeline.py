@@ -55,8 +55,8 @@ class Composable(object):
     def __init__(self, func=None, name=None):
         """ You can create a :class:`Composable` from a simple function:
         
-        >>> def square(val, pow=2): \
-                return val ** pow
+        >>> def square(val, pow=2):
+        ...     return val ** pow
         >>> cfct = Composable(square)
         >>> cfct.name
         'square'
