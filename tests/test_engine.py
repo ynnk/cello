@@ -109,6 +109,24 @@ class TestBlock(unittest.TestCase):
             ]
         })
 
+
+    def test_select_and_clear_selection(self):
+        ## select should permits to set options of blocks
+        block = Block("foo")
+        block.set(self.plus_comp, self.mult_comp)
+        self.assertEqual(block.selected(), ['plus_comp'])   #first select by default
+        self.assertEqual(block['mult_opt'].get_option_value("factor"), 5)  # default comp option value is 5
+        # select the second comp
+        block.select("mult_opt", options={"factor": 50})
+        self.assertEqual(block.selected(), ['mult_opt'])
+        self.assertEqual(block['mult_opt'].get_option_value("factor"), 50)
+
+        ## clear selection 
+        block.clear_selections()
+        # we should be in intial state
+        self.assertEqual(block.selected(), ['plus_comp'])   #first select by default
+        self.assertEqual(block['mult_opt'].get_option_value("factor"), 5)  # default comp option value is 5
+
     def test_play(self):
         block = Block("foo")
         block.set(self.mult_comp, self.plus_comp, self.max_comp)
@@ -176,6 +194,7 @@ class TestBlock(unittest.TestCase):
         block.setup(in_name="doclist", out_name="graph")
         self.assertEquals(block.in_name, "doclist")
         self.assertEquals(block.out_name, "graph")
+
 
     def test_multiple(self):
         pass

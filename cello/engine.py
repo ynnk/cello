@@ -342,13 +342,20 @@ class Block(object):
     def reset(self):
         """ Removes all the components of the block
         """
-        self.clear_selections()
         self._components = OrderedDict()
+        self.clear_selections()
 
     def clear_selections(self):
-        """ reset the current selections
+        """ Reset the current selections and **reset option** values to default
+        for all components
+        
+        .. Warning:: This method also reset the components options values to
+            the defaults values.
         """
         self._selected = []
+        for component in self._components.itervalues():
+            if isinstance(component, Optionable):
+                component.clear_options_values()
 
     def setup(self, in_name=None, out_name=None, required=None, hidden=None,
                 multiple=None, defaults=None):
@@ -379,6 +386,7 @@ class Block(object):
         if multiple is not None:
             self.multiple = multiple
         if defaults is not None:
+            #FIXME: what it default is just a 'str'
             self.defaults = defaults
 
         # TODO depends
@@ -420,8 +428,12 @@ class Block(object):
         `options` will be passed to :func:`.Optionable.parse_options` is the
         component is :class:`Optionable`.
 
-        You can use :func:`iter_runnables` to get all selected components
-        and associated options, or :func:`play` to run it.
+        .. Warning:: this function also setup the options (if given) of the
+            selected component. Use :func:`clear_selections` to restore both
+            selection and component's options.
+
+        This method may be call at play 'time', before to call :func:`play` to
+        run all selected components.
 
         :param name: name of the component to select
         :type comp_name: str
@@ -462,7 +474,7 @@ class Block(object):
     def play(self, *args):
         """ Run the selected components of the block
         
-        .. warning:: Defaut multiple behavior is used as **pipeline** !
+        .. warning:: Defaut 'multiple' behavior is a **pipeline** !
         """
         start = time.time()
         # TODO: multi mode option(False, pipeline, map)
@@ -613,8 +625,9 @@ class Engine(object):
     def configure(self, config):
         """ Configure all the blocks from an (horible) configuration dictionary
         this data are coming from a json client request and has to be parsed.
-        It take the default value if missing.
-        
+        It takes the default value if missing (for component selection and 
+        options).
+
         :param config: dictionary that give the component to use for each step
                and the associated options 
         :type config: dict
@@ -661,11 +674,12 @@ class Engine(object):
                     raise ValueError("Invalid component (%s) for block '%s' "
                         % (req_comp['name'], block.name))
 
-        # configures the bloks
+        # configure the blocks
         for block_name, request_comps in config.iteritems():
             block = self[block_name]
-            # remove defaults
+            # remove selection and reset to default options
             block.clear_selections()
+            # select and set options
             for req_comp in request_comps:
                 block.select(req_comp['name'], req_comp.get("options", {}))
 

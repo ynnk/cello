@@ -60,7 +60,12 @@ class CelloFlaskView(Blueprint):
         ### parse options
         if "options" in data:
             options = data["options"]
-            self.engine.configure(options)
+            try:
+                self.engine.configure(options)
+            except ValueError as err:
+                #TODO manage input error
+                # see http://fr.wikipedia.org/wiki/Liste_des_codes_HTTP#Erreur_du_client
+                raise
         ### parse input (and validate)
         input_data = self._in_type.parse(data[self.engine.in_name])
         self._in_type.validate(input_data)

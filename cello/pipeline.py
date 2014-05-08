@@ -187,6 +187,16 @@ class Optionable(Composable):
             raise ValueError("Unknow option name (%s)" % opt_name)
         self._options[opt_name].set(value, parse=parse)
 
+    def clear_option_value(self, opt_name):
+        """ Clear the stored option value (so the default will be used)
+
+        :param opt_name: option name
+        :type opt_name: str
+        """
+        if not self.has_option(opt_name):
+            raise ValueError("Unknow option name (%s)" % opt_name)
+        self._options[opt_name].clear()
+
     def get_option_value(self, opt_name):
         """ Return the value of a given option
         
@@ -235,6 +245,12 @@ class Optionable(Composable):
         if not self.has_option(opt_name):
             raise ValueError("Unknow option name (%s)" % opt_name)
         return self._options[opt_name].default
+
+    def clear_options_values(self):
+        """ Clear all stored option values (so the defaults will be used)
+        """
+        for opt_name, opt in self._options.iteritems():
+            opt.clear()
 
     def set_options_values(self, option_values, parse=False, strict=False):
         """ Set the options from a dict of values (in string).
