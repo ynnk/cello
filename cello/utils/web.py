@@ -85,6 +85,6 @@ class CelloFlaskView(Blueprint):
         ### prepare result json
         outputs = {}
         outputs["results"] = results
-        outputs['meta'] = self.engine.get_play_trace()
+        outputs['meta'] = self.engine.meta.as_dict()
         return jsonify(outputs)
 

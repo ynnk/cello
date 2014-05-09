@@ -130,15 +130,17 @@ class TestBlock(unittest.TestCase):
     def test_play(self):
         block = Block("foo")
         block.set(self.mult_comp, self.plus_comp, self.max_comp)
-        # first by default
+        # Should use the first comp by default
         self.assertListEqual(block.defaults, ["mult_opt"])
         self.assertListEqual(block.selected(), ["mult_opt"])
         self.assertEquals(block.play(3), 15)
-        
+        self.assertTrue(block.meta.time > 0)
+
+        # may be not required then play return None if no selected components
         block.setup(required=False)
         self.assertListEqual(block.selected(), [])
         self.assertEqual(block.play(3), None)
-            
+
         # default
         block.setup(defaults="plus_comp")
         self.assertListEqual(block.selected(), ["plus_comp"])
@@ -160,7 +162,7 @@ class TestBlock(unittest.TestCase):
         self.assertListEqual(block.selected(), ['mult_opt'])
         with self.assertRaises(ValueError):
             block.select("max20", options={'factor':21})
-        
+
         # test run
         self.assertEquals(block.play(10), 210)
         self.assertEquals(block.play(0), 0)

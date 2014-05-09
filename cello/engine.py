@@ -148,6 +148,7 @@ or all blocks :
 import time
 import logging
 import warnings
+import traceback
 import itertools
 from collections import OrderedDict
 
@@ -164,6 +165,76 @@ def define_logger(init):
     return wrapinit 
 
 
+class BasicPlayMeta(object):
+    """ Object to store and manage meta data for one component exec
+    """
+    def __init__(self, component):
+        self.name = component.name
+        self.obj = repr(component)
+        self.inputs = None
+        self.options = None
+        self.time = None
+        self.warnings = None
+        self.errors = None
+
+    def run_with(inputs, options):
+        self.inputs = inputs
+        self.options = options
+
+    def as_dict(self):
+        drepr = {}
+        drepr["name"] = self.name
+        drepr["time"] = self.time
+        return drepr
+
+    def add_error(self, error):
+        #TODO
+        pass
+
+class PlayMeta(BasicPlayMeta):
+    """ Object to store and manage meta data for one component exec
+    """
+
+    def __init__(self, name):
+        self._name = name
+        self.metas = []
+
+    @property
+    def name(self):
+        """ Compute a name according to sub meta results names
+
+        >>> gres = PlayMeta("operation")
+        >>> res_plus = BasicPlayMeta(Composable(name="plus"))
+        >>> res_moins = BasicPlayMeta(Composable(name="moins"))
+        >>> gres.append(res_plus)
+        >>> gres.append(res_moins)
+        >>> gres.name
+        'operation:[plus, moins]'
+        """
+        return "%s:[%s]" % (self._name, ", ".join(meta.name for meta in self.metas))
+
+    @property
+    def time(self):
+        """ Compute the total time
+
+        >>> gres = PlayMeta("operation")
+        >>> res_plus = BasicPlayMeta(Composable(name="plus"))
+        >>> res_plus.time = 1.6
+        >>> res_moins = BasicPlayMeta(Composable(name="moins"))
+        >>> res_moins.time = 5.88
+        >>> gres.append(res_plus)
+        >>> gres.append(res_moins)
+        >>> gres.time
+        7.48
+        """
+        return sum(meta.time for meta in self.metas)
+
+    def append(self, meta):
+        """ Add a :class:`BasicPlayMeta`
+        """
+        assert isinstance(meta, BasicPlayMeta)
+        self.metas.append(meta)
+
 class Result(object):
     """ Block result metadata
     """
@@ -172,7 +243,6 @@ class Result(object):
         self.multiple = block.multiple
         self.hidden = block.hidden
         self.components = {}
-        self.outputs = []
 
     def walltime(self):
         """ Block computation time
@@ -236,7 +306,7 @@ class Block(object):
         self.multiple = False
         self._defaults = []
         #handle results meta
-        self.meta = Result(self)
+        self.meta = None #note: this argument is (re)setted in play
 
         self.reset()
         # Attrs used to build a result object
@@ -479,35 +549,37 @@ class Block(object):
         
         .. warning:: Defaut 'multiple' behavior is a **pipeline** !
         """
-        start = time.time()
         # TODO: multi mode option(False, pipeline, map)
         self.validate() # TODO what if validate fails
-
+        # intialise run meta data
+        start = time.time()
+        self.meta = PlayMeta(self.name)
+        
         _break_on_error = True
         results = None
         # run
         for comp_name in self.selected():
+            # get the component
             comp = self._components[comp_name]
+            # get the options
             if isinstance(comp, Optionable):
                 options = comp.get_options_values(hidden=True)
             else:
                 options = {}
-            # TODO store args and kwargs ?
+            # prepare the Play meta data
+            comp_meta_res = BasicPlayMeta(comp)
+            self.meta.append(comp_meta_res)     #note: it is register right now to be sur to have the data if there is an exception
+            comp_meta_res.inputs = args
+            comp_meta_res.options = options
+            
+            # some logging
             argstr = [str(arg)[:100].replace('\n', '') for arg in args]
-            comp_res = {
-                "name": comp.name,
-                "obj": repr(comp),
-                "args": "".join(argstr),
-                "kwargs": options,
-                "errors": [],
-                "warnings": [],
-                "time": 0
-            }
             self._logger.info("""'%s' playing: %s
                 component: %s,
                 args=%s,
                 kwargs=%s""" % (self._name, comp.name, comp, "\n\t\t".join(argstr), options))
 
+            # run the component !
             try:
                 # multi = False or pipeline
                 # given that the args in input are also the returning value
@@ -534,18 +606,18 @@ class Block(object):
 
             except Exception as err:
                 # component error handling
-                comp_res['errors'].append("error in component %s %s /n %s" % (comp, comp.name, err.message))
-                self._logger.error(comp_res['errors'])
+                comp_meta_res.add_error(err)
+                self._logger.error("error in component '%s': %s\n %s" % (comp.name, err.message, traceback.format_exc()))
                 if _break_on_error:
-                    break
-            
+                    comp_meta_res.time = time.time() - start
+                    raise
+            #finally:
             # component time
             now = time.time()
-            comp_res['time'] = now - start
+            comp_meta_res.time = now - start
             start = now
-            self.meta.components[comp.name] = comp_res
 
-        # XXX may return more than one value with multi=map 
+        #TODO: may return more than one value with multi=map 
         return results
 
 
@@ -655,7 +727,7 @@ class Engine(object):
         .. warning:: values of options in this dictionnary are strings
 
         """
-        self._logger.info("Parsing config, retrieve the components to use")
+        self._logger.info("\n\n\t\t\t ** ============= configure engine ============= ** \n")
         # normalise input format
         for block_name in config.iterkeys():
             if isinstance(config[block_name], dict):
@@ -694,7 +766,7 @@ class Engine(object):
     def validate(self):
         """ Check that the blocks configuration is ok """
         if not len(self._blocks):
-            #XXX: better error than CelloError ?
+            #TODO: find better error than CelloError ?
             raise CelloError("There is no block in this engine")
         for block in self:
             block.validate()
@@ -722,16 +794,21 @@ class Engine(object):
     def play(self, input_data):
         """ Run the engine that should have been configured first
         """
+        self._logger.info("\n\n\t\t\t ** ============= play engine ============= ** \n")
         self.validate()
+        # create data structure for results and metaresults
         results = OrderedDict()
+        self.meta = PlayMeta("engine")
         # prepare the input data
         last_output_name = "input"
-        first_in_name = iter(self).next().in_name or last_output_name
-        results[first_in_name] = input_data # self.first_in_name est une property qui 
+        first_in_name = self.in_name or last_output_name # if no in_name on first comp, then use "input"
+        results[first_in_name] = input_data
         # run the blocks
         for block in self:
-            binput = results[block.in_name or last_output_name]
+            binput = results[block.in_name or last_output_name] # if no in_name then use the last output
             results[block.out_name] = block.play(binput) #le validate par rapport au type est fait dans le run du block
+            # store metadata
+            self.meta.append(block.meta)
             last_output_name = block.out_name
         return results
 
