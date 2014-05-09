@@ -174,8 +174,8 @@ class BasicPlayMeta(object):
         self.inputs = None
         self.options = None
         self.time = None
-        self.warnings = None
-        self.errors = None
+        self.warnings = []
+        self.errors = []
 
     def run_with(inputs, options):
         self.inputs = inputs
@@ -185,19 +185,30 @@ class BasicPlayMeta(object):
         drepr = {}
         drepr["name"] = self.name
         drepr["time"] = self.time
+        #TODO error pre-serialisation
+        #TODO warning  pre-serialisation
         return drepr
 
     def add_error(self, error):
-        #TODO
-        pass
+        self.errors.append(error)
+
+    @property
+    def has_error(self):
+        """ wether any error happened """
+        return len(self.errors) > 0
+
+    @property
+    def has_warning(self):
+        """ wether there where a warning during play """
+        return len(self.warnings) > 0
+
 
 class PlayMeta(BasicPlayMeta):
-    """ Object to store and manage meta data for one component exec
+    """ Object to store and manage meta data for a set of component or block play
     """
-
     def __init__(self, name):
         self._name = name
-        self.metas = []
+        self.metas = []     # list of neested BasicPlayMeta
 
     @property
     def name(self):
@@ -215,7 +226,7 @@ class PlayMeta(BasicPlayMeta):
 
     @property
     def time(self):
-        """ Compute the total time
+        """ Compute the total time (walltime)
 
         >>> gres = PlayMeta("operation")
         >>> res_plus = BasicPlayMeta(Composable(name="plus"))
@@ -235,42 +246,11 @@ class PlayMeta(BasicPlayMeta):
         assert isinstance(meta, BasicPlayMeta)
         self.metas.append(meta)
 
-class Result(object):
-    """ Block result metadata
-    """
-    def __init__(self, block):
-        self.name = block.name
-        self.multiple = block.multiple
-        self.hidden = block.hidden
-        self.components = {}
-
-    def walltime(self):
-        """ Block computation time
+    def add_error(self, error):
+        """ It is not possible to add an error here, you sould add it on a
+        :class:`BasicPlayMeta`
         """
-        return sum(c['time'] for c in self.components)
-
-    @property
-    def errors(self):
-        """ Views on components errors
-        """
-        errors = (c['errors'] for c in self.components)
-        return list(itertools.chain.from_iterable(errors))
-
-    @property
-    def warnings(self):
-        """ Views on components warnings
-        """
-        warnings = (c['warnings'] for c in self.components)
-        return list(itertools.chain.from_iterable(warnings))
-
-    @property
-    def has_error(self):
-        """ wether any error happened in component  """
-        return len(self.errors)
-
-    @property
-    def has_warning(self):
-        return len(self.warnings) > 0
+        raise NotImplementedError
 
 
 class Block(object):
@@ -461,9 +441,6 @@ class Block(object):
             #FIXME: what it default is just a 'str'
             self.defaults = defaults
 
-        # TODO depends
-        # self.depends = depends # *dependence_block_names  
-
     def set(self, *components):
         """ Set the possible components of the block
         
@@ -568,7 +545,8 @@ class Block(object):
                 options = {}
             # prepare the Play meta data
             comp_meta_res = BasicPlayMeta(comp)
-            self.meta.append(comp_meta_res)     #note: it is register right now to be sur to have the data if there is an exception
+            # it is register right now to be sur to have the data if there is an exception
+            self.meta.append(comp_meta_res)
             comp_meta_res.inputs = args
             comp_meta_res.options = options
             
