@@ -167,48 +167,137 @@ def define_logger(init):
 
 class BasicPlayMeta(object):
     """ Object to store and manage meta data for one component exec
+
+    Here is a typical usage :
+
+    >>> import time
+    >>> comp = Composable(name="TheComp", func=lambda x: x)
+    >>> # create the meta result before to use the component
+    >>> meta = BasicPlayMeta(comp)
+    >>> # imagine some input and options for the component
+    >>> args, kwargs = [12], {}
+    >>> # store these data:
+    >>> meta.run_with(args, kwargs)
+    >>> # run the component
+    >>> start = time.time()     # starting time
+    >>> try:
+    ...     output = comp(*args, **kwargs)
+    ... except Exception as error:
+    ...     # store the exception if any
+    ...     meta.add_error(error)
+    ...     # one can raise a custom error (or not)
+    ...     #raise RuntimeError()
+    ... finally:
+    ...     # this will always be executed (even if the exception is not catched)
+    ...     meta.time = time.time() - start
+    ...     # for testing purpose we put a fixed time
+    ...     meta.time = 9.2e-5
+    >>> # one can get a pre-serialization of the collected meta data
+    >>> meta.as_dict()
+    {'errors': [], 'name': 'TheComp', 'warnings': [], 'time': 9.2e-05}
     """
     def __init__(self, component):
-        self.name = component.name
-        self.obj = repr(component)
-        self.inputs = None
-        self.options = None
-        self.time = None
-        self.warnings = []
-        self.errors = []
+        self._name = component.name
+        self._obj = repr(component)
+        self._inputs = None      # correspond to args
+        self._options = None     # kwargs
+        self._time = 0.
+        self._warnings = []
+        self._errors = []
 
-    def run_with(inputs, options):
-        self.inputs = inputs
-        self.options = options
+    @property
+    def name(self):
+        """ Name of the component """
+        return self._name
 
-    def as_dict(self):
-        drepr = {}
-        drepr["name"] = self.name
-        drepr["time"] = self.time
-        #TODO error pre-serialisation
-        #TODO warning  pre-serialisation
-        return drepr
+    @property
+    def time(self):
+        """ Execution time (walltime)
+
+        >>> comp = Composable(name="TheComp", func=lambda x: x)
+        >>> meta = BasicPlayMeta(comp)
+        >>> meta.time = 453.6
+        >>> meta.time
+        453.6
+        """
+        return self._time
+
+    @time.setter
+    def time(self, time):
+        self._time = time
+
+    @property
+    def errors(self):
+        return self._errors
+
+    @property
+    def warnings(self):
+        return self._warnings
+
+    def run_with(self, inputs, options):
+        """ Store the run parameters (inputs and options)
+        """
+        self._inputs = inputs
+        self._options = options
 
     def add_error(self, error):
-        self.errors.append(error)
+        """ Register an error that occurs during component running
+
+        >>> comp = Composable(name="TheComp", func=lambda x: x)
+        >>> meta = BasicPlayMeta(comp)
+        >>> try:
+        ...     output = 1/0
+        ... except Exception as error:
+        ...     # store the exception if any
+        ...     meta.add_error(error)
+        >>> from pprint import pprint
+        >>> pprint(meta.as_dict())
+        {'errors': ['integer division or modulo by zero'],
+         'name': 'TheComp',
+         'time': 0.0,
+         'warnings': []}
+        """
+        self._errors.append(error)
 
     @property
     def has_error(self):
         """ wether any error happened """
-        return len(self.errors) > 0
+        return len(self._errors) > 0
 
     @property
     def has_warning(self):
         """ wether there where a warning during play """
-        return len(self.warnings) > 0
+        return len(self._warnings) > 0
+
+    def as_dict(self):
+        """ Pre-serialisation of the meta data """
+        drepr = {}
+        drepr["name"] = self.name
+        drepr["time"] = self.time
+        # error pre-serialisation
+        drepr["errors"] = [str(err) for err in self.errors]
+        # warning  pre-serialisation
+        drepr["warnings"] = [str(warn) for warn in self.warnings]
+        return drepr
 
 
 class PlayMeta(BasicPlayMeta):
     """ Object to store and manage meta data for a set of component or block play
+    
+    >>> gres = PlayMeta("operation")
+    >>> res_plus = BasicPlayMeta(Composable(name="plus"))
+    >>> res_plus.time = 1.6
+    >>> res_moins = BasicPlayMeta(Composable(name="moins"))
+    >>> res_moins.time = 5.88
+    >>> gres.append(res_plus)
+    >>> gres.append(res_moins)
+    >>> from pprint import pprint
+    >>> pprint(gres.as_dict())
+
     """
     def __init__(self, name):
         self._name = name
-        self.metas = []     # list of neested BasicPlayMeta
+        self._metas = []     # list of neested BasicPlayMeta
 
     @property
     def name(self):
@@ -222,7 +311,7 @@ class PlayMeta(BasicPlayMeta):
         >>> gres.name
         'operation:[plus, moins]'
         """
-        return "%s:[%s]" % (self._name, ", ".join(meta.name for meta in self.metas))
+        return "%s:[%s]" % (self._name, ", ".join(meta.name for meta in self._metas))
 
     @property
     def time(self):
@@ -238,13 +327,21 @@ class PlayMeta(BasicPlayMeta):
         >>> gres.time
         7.48
         """
-        return sum(meta.time for meta in self.metas)
+        return sum(meta.time for meta in self._metas)
+
+    @property
+    def errors(self):
+        return []
+
+    @property
+    def warnings(self):
+        return []
 
     def append(self, meta):
         """ Add a :class:`BasicPlayMeta`
         """
         assert isinstance(meta, BasicPlayMeta)
-        self.metas.append(meta)
+        self._metas.append(meta)
 
     def add_error(self, error):
         """ It is not possible to add an error here, you sould add it on a
@@ -252,14 +349,23 @@ class PlayMeta(BasicPlayMeta):
         """
         raise NotImplementedError
 
+    def as_dict(self):
+        """ Pre-serialisation of the meta data """
+        drepr = super(PlayMeta, self).as_dict()
+        drepr["details"] = [meta.as_dict() for meta in self._metas]
+        return drepr
+
 
 class Block(object):
     """ A block is a processing step realised by one component.
 
-    A component is a callable object that has a *name* attribute,
-    often it is also a :class:`.Optionable` object or a pipeline beeing a :class:`.Composable` .
+    A component is a callable object that has a *name* attribute, often it is
+    also a :class:`.Optionable` object or a pipeline beeing a :class:`.Composable`.
 
     Block object provides methods to discover and parse components options (if any).
+    
+    .. Warning:: You should not have to use a :class:`Block` directly but always
+        throught a :class:`Engine`.
     """
 
     #TODO: ajout validation de type sur input/output
@@ -474,8 +580,8 @@ class Block(object):
     def select(self, comp_name, options=None):
         """ set an component as runnable with given options.
 
-        `options` will be passed to :func:`.Optionable.parse_options` is the
-        component is :class:`Optionable`.
+        `options` will be passed to :func:`.Optionable.parse_options` if the
+        component is a subclass of :class:`Optionable`.
 
         .. Warning:: this function also setup the options (if given) of the
             selected component. Use :func:`clear_selections` to restore both
@@ -522,12 +628,13 @@ class Block(object):
             raise CelloError("No component selected for block '%s'" % self.name)
 
     def play(self, *args):
-        """ Run the selected components of the block
+        """ Run the selected components of the block. The selected components 
+        are run with the already setted options.
         
         .. warning:: Defaut 'multiple' behavior is a **pipeline** !
         """
         # TODO: multi mode option(False, pipeline, map)
-        self.validate() # TODO what if validate fails
+        self.validate() # TODO what if validate fails ?
         # intialise run meta data
         start = time.time()
         self.meta = PlayMeta(self.name)
@@ -547,9 +654,8 @@ class Block(object):
             comp_meta_res = BasicPlayMeta(comp)
             # it is register right now to be sur to have the data if there is an exception
             self.meta.append(comp_meta_res)
-            comp_meta_res.inputs = args
-            comp_meta_res.options = options
-            
+            comp_meta_res.run_with(args, options)
+
             # some logging
             argstr = [str(arg)[:100].replace('\n', '') for arg in args]
             self._logger.info("""'%s' playing: %s
@@ -581,23 +687,19 @@ class Block(object):
             # * deprecation
             # * pipeline inconsistency 
             # * invalid input (graph with no edge ...)
-
             except Exception as err:
                 # component error handling
                 comp_meta_res.add_error(err)
                 self._logger.error("error in component '%s': %s\n %s" % (comp.name, err.message, traceback.format_exc()))
                 if _break_on_error:
-                    comp_meta_res.time = time.time() - start
                     raise
-            #finally:
-            # component time
-            now = time.time()
-            comp_meta_res.time = now - start
-            start = now
-
+            finally:
+                # store component walltime
+                now = time.time()
+                comp_meta_res.time = now - start
+                start = now
         #TODO: may return more than one value with multi=map 
         return results
-
 
 
 class Engine(object):
@@ -606,14 +708,13 @@ class Engine(object):
     @define_logger
     def __init__(self, *names):
         self._blocks = OrderedDict()
-        self.time = 0
         self._logger.info("\n\n\t\t\t ** ============= Init engine ============= ** \n")
         if len(names):
             self.requires(*names)
 
     def requires(self, *names):
         """ Declare what block will be used in this engine.
-    
+
         It should be call before adding or setting any component.
         Blocks order will be preserved for runnning task.
         """
@@ -644,37 +745,39 @@ class Engine(object):
 
     @property
     def in_name(self):
+        """ Give the input name of the first block
+        """
         return iter(self).next().in_name
 
     def __contains__(self, name):
-        """ returns whether a block of the given name exists
+        """ Whether a block of the given name exists
         """
         return name in self._blocks
 
     def __getitem__(self, name):
-        """ returns the block of the given name
+        """ Get the block of the given name
         """
         if name not in self._blocks:
             raise ValueError("'%s' is not a block (%s)" % (name, ",".join(self.names())))
         return self._blocks[name]
 
     def __getattr__(self, name):
-        """ returns the block of the given name
+        """ Get the block of the given name
         """
         return self[name]
 
     def __len__(self):
-        """ returns block count
+        """ Returns block count
         """
         return len(self._blocks)
 
     def __iter__(self):
-        """ iterate over all blocks
+        """ Iterate over all blocks
         """
         return self._blocks.itervalues()
 
     def names(self):
-        """ returns the list of block names
+        """ Returns the list of block names
         """
         return self._blocks.keys()
 
@@ -770,7 +873,7 @@ class Engine(object):
                 available.add(block.out_name)
 
     def play(self, input_data):
-        """ Run the engine that should have been configured first
+        """ Run the engine (that should have been configured first)
         """
         self._logger.info("\n\n\t\t\t ** ============= play engine ============= ** \n")
         self.validate()
@@ -789,9 +892,6 @@ class Engine(object):
             self.meta.append(block.meta)
             last_output_name = block.out_name
         return results
-
-    def get_play_trace(self):
-        return {block.name: block.meta.components for block in self}
 
     def as_dict(self):
         """ dict repr of the components """
