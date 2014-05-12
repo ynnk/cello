@@ -640,9 +640,9 @@ class Block(object):
     def play(self, *inputs):
         """ Run the selected components of the block. The selected components 
         are run with the already setted options.
-        
+
         .. warning:: Defaut 'multiple' behavior is a **pipeline** !
-q        
+
         :param *inputs: arguments (i.e. inputs) to give to the components
         """
         # TODO: multi mode option(False, pipeline, map)
@@ -742,19 +742,24 @@ class Engine(object):
             self._blocks[name] = Block(name)
         self._logger.info(" ** requires ** %s", names)
 
-    def set(self, name, *components, **options):
+    def set(self, name, *components, **parameters):
         """ Set available components and the options of one block.
         
         :param name: block name
-        :param components: a list of components (see :meth:`Block.set`)
-        :param options: options of the block (see :meth:`Block.setup`)
+        :param components: the components (see :meth:`Block.set`)
+        :param parameters: block configuration (see :meth:`Block.setup`)
+        
+        for example :
+        
+        >>> engine = Engine("op1")
+        >>> engine.set("op1", Composable(), required=True, in_name="query", out_name="holygrail")
         """
         self._logger.info(" ** SET ** '%s' "% name)
 
         if name not in self:
             raise ValueError("'%s' is not a block (%s)" % (name, ",".join(self.names())))
         self[name].set(*components)
-        self[name].setup(**options)
+        self[name].setup(**parameters)
 
     @property
     def in_name(self):
@@ -894,7 +899,7 @@ class Engine(object):
     def play(self, *inputs):
         """ Run the engine (that should have been configured first)
         
-        :param *inputs: the data to give as input to the first block
+        :param inputs: the data to give as input to the first block
         """
         self._logger.info("\n\n\t\t\t ** ============= play engine ============= ** \n")
         self.validate()

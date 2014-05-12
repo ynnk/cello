@@ -309,9 +309,8 @@ class Optionable(Composable):
         """
         :param hidden: whether to return hidden option
         :type hidden: bool
-        :returns: **ordered** list of all options (with option's information)
-        :rtype: list ::
-            [(<opt_name>, opt_dict)]
+        :returns: **ordered** list of options pre-serialised (as_dict)
+        :rtype: list `[opt_dict, ...]`
         """
         return [opt.as_dict() for opt in self._options.itervalues() \
                                             if hidden or (not opt.hidden)]
