@@ -11,8 +11,8 @@ Python version of Prox over igraph.
 
 Here is a minimal exemple:
 
->>> import igraph as ig 
->>> graph = ig.Graph.Formula("a-b-c-d")   #TODO: avoir un minigraph a nous non depédendant de igraph
+>>> import igraph as ig
+>>> graph = ig.Graph.Formula("a-b-c-d")   #TODO: avoir un 'Formula' a nous non depédendant de igraph
 >>> prox_markov_dict(graph, [0], 2)
 {0: 0.5, 2: 0.5}
 
@@ -56,6 +56,36 @@ def normalise(p0):
     return {vid: val/vsum for vid, val in p0.iteritems()}
 
 
+def normalize_pzero(graph, p0):
+    """ returns a normalised p0 dict.
+
+    :param p0: `dict` {vid:weight} or `list` [vid, vid, ... ] weight is then 1.
+
+    >>> import igraph as ig
+    >>> graph = ig.Graph.Formula("a--b--c")
+    >>> normalize_pzero(graph, {1:0.5})
+    {1: 1.0}
+    >>> normalize_pzero(graph, {1:0.5, 2:1.5})
+    {1: 0.25, 2: 0.75}
+    >>> normalize_pzero(graph, [0, 1])
+    {0: 0.5, 1: 0.5}
+    
+    If nothing given the start from all vertices :
+    
+    >>> normalize_pzero(graph, {})
+    {0: 0.3333333333333333, 1: 0.3333333333333333, 2: 0.3333333333333333}
+    >>> normalize_pzero(graph, [])
+    {0: 0.3333333333333333, 1: 0.3333333333333333, 2: 0.3333333333333333}
+    """
+    if len(p0) == 0:
+        p0 = range(graph.vcount()) # graph global
+    if isinstance(p0, dict):
+        vect = normalise(p0)
+    else:
+        vect = normalise({vid: 1. for vid in p0})
+    return vect
+
+
 def sortcut(v_extract, vcount):
     """ Gets the first vcount vertex sorted by score from the list or dict of score
 
@@ -67,7 +97,7 @@ def sortcut(v_extract, vcount):
 
     :param v_extract: dict vertex_ids, value or list of values
     :param vcount: vertex count
-    :return: a list of the form: [(vid1, score), (vid2, score), ...]
+    :return: a list of the form: `[(vid1, score), (vid2, score), ...]`
     """
     if type(v_extract) is list:
         v_extract = { i: v for i, v in enumerate(v_extract) }
@@ -79,27 +109,44 @@ def sortcut(v_extract, vcount):
 
 
 def spreading(graph, in_vect, mode, add_loops):
-    """ Basic function: spread value of in_vect throw the graph g. 
-    
-    >>> graph = ig.Graph.Formula("a--b--c")
-    >>> spreading(graph, {1:1}, mode=OUT, add_loops=True)
-    
-    
-    :param graph: graph in igraph format
-    :param in_vect: input vector, a python dictionary : {vertex_id:value, ...}
+    """ Spread value of in_vect throw the graph g.
+
+    :param graph: subclass of :class:`.AbstractGraph`
+    :param in_vect: input vector, a python dictionary: `{vertex_id:value, ...}`
     :param mode: given to neighboors, consider OUT links, IN links our ALL for both
     :param add_loops: if True do as if every vertex hold a self loop
                      (force the graph to be reflexif)
-    :param neighbors: function that override std graph.neighbors fct
-        For `neighbors_fct` you can use :
-        > neighbors_fct = lambda g, from_vertex : g.neighbors(from_vertex)
-        > neighbors_fct = ig.Graph.neighbors
-    :returns: output vector same format as in_vect.
+    :returns: output vector same format as in_vect
+    
+    >>> import igraph as ig
+    >>> graph = ig.Graph.Formula("a--b--c")
+    >>> spreading(graph, {1:1}, mode=OUT, add_loops=False)
+    {0: 0.5, 2: 0.5}
+    >>> spreading(graph, {1:1}, mode=OUT, add_loops=True)
+    {0: 0.3333333333333333, 1: 0.3333333333333333, 2: 0.3333333333333333}
+
+    also works for directed graphs:
+
+    >>> graph = ig.Graph.Formula("a-->b-->c")
+    >>> spreading(graph, {1: 1}, mode=OUT, add_loops=False)
+    {2: 1.0}
+    >>> spreading(graph, {1: 1}, mode=IN, add_loops=False)
+    {0: 1.0}
+    >>> spreading(graph, {1: 1}, mode=ALL, add_loops=False)
+    {0: 0.5, 2: 0.5}
+
+    With `add_loops=True` it add a loops **even if** there is already a loops:
+
+    >>> graph = ig.Graph.Formula("a<->b<->c, b->b", simplify=False)
+    >>> graph.neighbors(1, mode=OUT)
+    [0, 1, 2]
+    >>> spreading(graph, {1:1}, mode=OUT, add_loops=True)
+    {0: 0.25, 1: 0.5, 2: 0.25}
     """
     vect = {}
     for vtx, value in in_vect.iteritems():
-        neighborhood = graph.neighbors(vtx)
-        if add_loops and not vtx in neighborhood:
+        neighborhood = graph.neighbors(vtx, mode=mode)
+        if add_loops:
             neighborhood.append(vtx)
         if len(neighborhood) > 0:
             pvalue = 1. * value / len(neighborhood)
@@ -109,10 +156,10 @@ def spreading(graph, in_vect, mode, add_loops):
 
 
 def spreading_wgt(g, in_vect, wgt=lambda i: 1., epsi=0, false_refl=False):
-    """ Basic function : spread value of in_vect throw the graph g. (weighted version)
+    """ Spread value of in_vect throw the graph g. (weighted version)
     
     :param g: graph in igraph format
-    :param in_vect: input vector, a python dictionary : {vertex_id:value, ...}   
+    :param in_vect: input vector, a python dictionary : {vertex_id:value, ...}
     :param weight: either str then the corresponding edge attribute is use as weight, or a list of weight (`|weight| == g.ecount()`)
     :param false_refl: if True do as if every vertex hold a self loop (reflexif graph)
 
@@ -130,52 +177,60 @@ def spreading_wgt(g, in_vect, wgt=lambda i: 1., epsi=0, false_refl=False):
                 out_vect[neighbor] = out_vect.get(neighbor, 0.) + value * wgts[i] / tot
     return out_vect
 
-def vect_pzero(graph, p0):
-    """ returns a normalised a p0 dict.
-
-    :param p0: `dict` {vid:weight} or `list` [vid, vid, ... ] weight is then 1.
-    """
-    if isinstance(p0, dict):
-        vect = normalise(p0)
-    else : 
-        if len(p0) == 0:
-            p0 = range(graph.vcount()) # graph global
-        vect = normalise({k:1.  for k in p0})
-    return vect
-
 
 def prox_markov_dict(graph, p0, length, mode=OUT, add_loops=False, weight=None,
-                        neighbors=cello.graphs.neighbors):
+                        neighbors=None):
     """ Generic prox implementation
 
-    For `p0` : it is either a list of vertex idx or a dict of vertex associated 
-    with starting weight.
-    If it is a list of vertex idx (`[id_vertex1, id_vertex2, ...]`) then the walk 
-    starts with equal probability on each of theses vertices.
+    For `p0`: it is either a list of vertex idx or a dict of vertex associated 
+    with starting weight. If it is a list of vertex idx (`[id_vertex1, id_vertex2, ...]`)
+    then the walk starts with equal probability on each of theses vertices.
     If it is a dict (`{id_vertex1:0.2, id_vertex2:0.5, ...}`) the the walk starts 
     on of theses vertices with a propability proportional to the associated score.
-    
+
     :param graph: subclass of :class:`.AbstractGraph`
     :param p0: list of starting nodes (see above)
     :param length: random walk length
-    :param _others_: see :func:`spreading`
-    
+    :param mode: given to neighboors, consider OUT links, IN links our ALL for both
+    :param add_loops: if True do as if every vertex hold a self loop
+         (force the graph to be reflexif)
+    :param weight: either str then the corresponding edge attribute is use as weight, or a list of weight (`|weight| == g.ecount()`)
+    :param neighbors: function that override std graph.neighbors fct
+        For `neighbors_fct` you can use :
+        > neighbors_fct = lambda g, from_vertex : g.neighbors(from_vertex)
+        > neighbors_fct = ig.Graph.neighbors
     :returns: result vector, a python dictionary : `{vertex_id:value, ...}`
     """
-    if weight is not None:  #FIXME
+    if weight is not None:
+        #FIXME
         raise NotImplementedError
-    #FIXME: neighbors should be None by default
-    #TODO: ajout du choix de la fct de `spreading` en param (il faut bien normalisé l'interface de spreading)
-    vect = vect_pzero(graph, p0)
+    if neighbors is not None:
+        raise NotImplementedError
+    vect = normalize_pzero(graph, p0)
     for k in xrange(length):
-        vect = spreading(graph, vect, mode, add_loops, weight, neighbors)
+        vect = spreading(graph, vect, mode, add_loops)
     return vect
 
 
 def prox_markov_list(graph, p0, length, mode=OUT, add_loops=False, weight=None,
-                        neighbors=cello.graphs.neighbors):
+                        neighbors=None):
+    """ Same as :func:`prox_markov_dict` except that the output is a list of
+    the order of the graph
+    
+    >>> import igraph as ig
+    >>> graph = ig.Graph.Formula("a--b--c")
+    >>> prox_markov_list(graph, {1:1}, 2, add_loops=False)
+    [0.0, 1.0, 0.0]
+    >>> prox_markov_list(graph, {1:1}, 11, add_loops=False)
+    [0.5, 0.0, 0.5]
+    >>> prox_markov_list(graph, {0:1}, 3, add_loops=True)
+    [0.3472222222222222, 0.4305555555555555, 0.2222222222222222]
+    >>> prox_markov_list(graph, {0:1}, 40, add_loops=True)
+    [0.28571428571474045, 0.42857142857142855, 0.28571428571383095]
+    """
     vect = prox_markov_dict(graph, p0, length, mode, add_loops, weight, neighbors)
     return [vect.get(vidx, 0.) for vidx in xrange(graph.vcount())]
+
 
 
 def prox_markov_mtcl(graph, p0, length, throws, mode=OUT, add_loops=False,
@@ -197,7 +252,7 @@ def prox_markov_mtcl(graph, p0, length, throws, mode=OUT, add_loops=False,
     if weight is not None:  #FIXME
         raise NotImplementedError
     for throw in xrange(throws) :
-        neighborhood = vect_pzero(graph, p0).keys() # FIXME not weighted
+        neighborhood = normalize_pzero(graph, p0).keys() # FIXME not weighted
         for j in xrange(length) :
             len_n = len(neighborhood)
             if len_n  > 0 :
