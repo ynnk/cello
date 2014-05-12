@@ -201,7 +201,7 @@ class Block(object):
             defaults = [defaults]
         for comp_name in defaults:
             if not comp_name in self._components:
-                raise ValueError("Component '%s' doesn't exist it can be setted as default." % comp_name)
+                raise ValueError("Component '%s' doesn't exist it can be set as default." % comp_name)
         self._defaults = defaults
 
     def selected(self):
@@ -272,7 +272,7 @@ class Block(object):
         :type default: list of str, or str
         """
         if in_name is not None:
-            self.in_name = in_name
+            self.in_name = in_name if type(in_name) ==list else [in_name] 
         if out_name is not None:
             self.out_name = out_name
         if required is not None:
@@ -381,7 +381,7 @@ class Block(object):
             else:
                 options = {}
             # TODO store args and kwargs ?
-            argstr = [str(arg)[:100].replace('\n', '') for arg in args]
+            argstr = [repr(arg)[:100].replace('\n', '') for arg in args]
             comp_res = {
                 "name": comp.name,
                 "obj": repr(comp),
@@ -586,15 +586,14 @@ class Engine(object):
         available = set()       # set of available data
         maybe_available = set() # data that are produced be not required blocks
         # add the first block input as available data
-        first_in_name = self.in_name
+        first_in_name = self.in_name[0] 
         if first_in_name is not None:
             available.add(first_in_name)
         for bnum, block in enumerate(self):
-            if block.in_name is not None \
-                    and block.in_name not in available:
-                if block.in_name in maybe_available:
+            if block.in_name is not None:
+                if any( [ e in maybe_available for e in block.in_name ] ):
                     raise CelloError("The block '%s' need an input ('%s') that *may* not be produced before" % (block.name, block.in_name))
-                else:
+                if not all( [ e in available for e in block.in_name ] ):
                     raise CelloError("The block '%s' need an input ('%s') that is not produced before" % (block.name, block.in_name))
             # register the output
             if not block.required:
@@ -608,14 +607,15 @@ class Engine(object):
         self.validate()
         results = OrderedDict()
         # prepare the input data
-        last_output_name = "input"
+        last_output_name = ["input"]
         first_in_name = iter(self).next().in_name or last_output_name
-        results[first_in_name] = input_data # self.first_in_name est une property qui 
+        results[first_in_name[0]] = input_data # self.first_in_name est une property qui 
         # run the blocks
         for block in self:
-            binput = results[block.in_name or last_output_name]
-            results[block.out_name] = block.play(binput) #le validate par rapport au type est fait dans le run du block
-            last_output_name = block.out_name
+            inputs = block.in_name or last_output_name
+            inputs = [results[e] for e in inputs] 
+            results[block.out_name] = block.play(*inputs) #le validate par rapport au type est fait dans le run du block
+            last_output_name = [block.out_name]
         return results
 
     def get_play_trace(self):

@@ -54,7 +54,9 @@ class CelloFlaskView(Blueprint):
         data = request.json
         assert data is not None
         ### check commun errors
-        if self.engine.in_name not in data:
+
+        print "=====================", self.engine.in_name, data
+        if not all( [  e in data for e in self.engine.in_name ]):
             #XXX ERROR should be handle
             raise NotImplementedError
         ### parse options
@@ -62,7 +64,7 @@ class CelloFlaskView(Blueprint):
             options = data["options"]
             self.engine.configure(options)
         ### parse input (and validate)
-        input_data = self._in_type.parse(data[self.engine.in_name])
+        input_data = self._in_type.parse(data[self.engine.in_name[0]])
         self._in_type.validate(input_data)
         ### run the engine
         raw_res = self.engine.play(input_data)
@@ -71,8 +73,8 @@ class CelloFlaskView(Blueprint):
         for out_name, serializer in self._outputs:
             # serialise output
             if serializer is not None:
+                #print "serialize", out_name, "\n" , raw_res[out_name] 
                 results[out_name] = serializer(raw_res[out_name])
-                #print "serialize", out_name, "\n" , results[out_name] 
             else:
                 results[out_name] = raw_res[out_name]
         ### serialise play metadata
