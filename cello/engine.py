@@ -586,7 +586,7 @@ class Engine(object):
         available = set()       # set of available data
         maybe_available = set() # data that are produced be not required blocks
         # add the first block input as available data
-        first_in_name = self.in_name[0] 
+        first_in_name = self.in_name[0] if self.in_name is not None else None 
         if first_in_name is not None:
             available.add(first_in_name)
         for bnum, block in enumerate(self):
