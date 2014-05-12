@@ -1,5 +1,5 @@
 #-*- coding:utf-8 -*-
-
+import re
 from cello.pipeline import Optionable
 
 class AbstractWriter(Optionable):
@@ -37,14 +37,14 @@ class ScreenWriter(AbstractWriter):
     """ Write a repr. of documents on the standart output
     """
     
-    def __init__(self, only_fields = None, outformat=None, encoding='utf8'):
+    def __init__(self, fields=None, outformat=None, encoding='utf8'):
         """
-        @param only_fields: print only the indicated fields (all if None)
+        @param fields: print only the indicated fields (all if None)
         @param outformat : pythonic dict format "docnum:%(docnum)s  title:%(title)s " % {'docnum':'any', 'title': 'boo'}
                 > docnum:any title:boo
         """
         AbstractWriter.__init__(self)
-        self._only_fields = only_fields 
+        self._fields = fields 
         self.fields_format = None
         self.format = outformat
         self.encoding = encoding
@@ -65,13 +65,14 @@ class ScreenWriter(AbstractWriter):
 
         _outformat = self.fields_format
 
-        if self._only_fields is None  and self.format is None:
+        if self._fields is None  and self.format is None:
             doc_repr = repr(kdoc)
         elif self.format is None :
             doc_repr = ("<Doc(\"%s\")>\n" % kdoc.docnum) + "\n".join([ '%s:%s'% (field, _format(kdoc[field])) \
-                          for field in self._only_fields if field in kdoc ])  
+                          for field in self._fields if field in kdoc ])  
         else : 
             doc_repr = _outformat(kdoc)  
+            
         print( ("%s" % doc_repr).encode(self.encoding) )
 
 

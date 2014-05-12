@@ -64,11 +64,11 @@ class CelloFlaskView(Blueprint):
             abort(415) # Unsupported Media Type
         ### get data
         data = request.json
-        assert data is not None
+        assert data is not None #FIXME: better error than assertError ?
         ### check commun errors
-        if self.engine.in_name not in data:
+        if not all([inname in data for inname in self.engine.in_name]):
             #XXX ERROR should be handle
-            raise NotImplementedError
+            raise NotImplementedError()
         ### parse options
         if "options" in data:
             options = data["options"]
@@ -78,11 +78,14 @@ class CelloFlaskView(Blueprint):
                 #TODO beter manage input error: indicate what's wrong
                 abort(406)  # Not Acceptable
         ### parse input (and validate)
-        input_data = self._in_type.parse(data[self.engine.in_name])
-        self._in_type.validate(input_data)  #TODO: what if not ok ?
+        inputs_data = [data[in_name] for in_name in self.engine.in_name]
+        if len(inputs_data):
+            self._in_type.validate(inputs_data[0])
+        else:
+            raise NotImplementedError("le mutlti input est pas encore géré ici...")
         ### run the engine
         try:
-            raw_res = self.engine.play(input_data)
+            raw_res = self.engine.play(*inputs_data)
         #TODO: manage error ?
         finally:
             pass
@@ -91,8 +94,8 @@ class CelloFlaskView(Blueprint):
         for out_name, serializer in self._outputs:
             # serialise output
             if serializer is not None:
+                #print "serialize", out_name, "\n" , raw_res[out_name] 
                 results[out_name] = serializer(raw_res[out_name])
-                #print "serialize", out_name, "\n" , results[out_name] 
             else:
                 results[out_name] = raw_res[out_name]
         ### prepare result json

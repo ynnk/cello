@@ -293,6 +293,12 @@ class PlayMeta(BasicPlayMeta):
     >>> gres.append(res_moins)
     >>> from pprint import pprint
     >>> pprint(gres.as_dict())
+    {'details': [{'errors': [], 'name': 'plus', 'time': 1.6, 'warnings': []},
+                 {'errors': [], 'name': 'moins', 'time': 5.88, 'warnings': []}],
+     'errors': [],
+     'name': 'operation:[plus, moins]',
+     'time': 7.48,
+     'warnings': []}
 
     """
     def __init__(self, name):
@@ -384,8 +390,10 @@ class Block(object):
         # name
         self.name = name
         # input output
-        self.in_name = None
-        self.out_name = self.name
+        self.in_name = None         #list of input names (for play)
+        self.out_name = self.name   #name of the output
+        # ^ note this two information are used by the engine, not directly by Block.play
+        #
         # default value for component options
         self.required = True
         self.hidden = False
@@ -454,7 +462,7 @@ class Block(object):
             defaults = [defaults]
         for comp_name in defaults:
             if not comp_name in self._components:
-                raise ValueError("Component '%s' doesn't exist it can be setted as default." % comp_name)
+                raise ValueError("Component '%s' doesn't exist it can be set as default." % comp_name)
         self._defaults = defaults
 
     def selected(self):
@@ -519,9 +527,11 @@ class Block(object):
                 multiple=None, defaults=None):
         """ Set the options of the block.
         Only the not None given options are set
-        
-        :param in_name: name of the block input data
-        :type in_name: str
+
+        .. note:: a block may have multiple inputs but have only one output (for now)
+
+        :param in_name: name(s) of the block input data
+        :type in_name: str or list of str
         :param out_name: name of the block output data
         :type out_name: str
         :param required: whether the block will be required or not
@@ -534,7 +544,7 @@ class Block(object):
         :type defaults: list of str, or str
         """
         if in_name is not None:
-            self.in_name = in_name
+            self.in_name = in_name if type(in_name) ==list else [in_name]
         if out_name is not None:
             self.out_name = out_name
         if required is not None:
@@ -627,11 +637,13 @@ class Block(object):
         if self.required and len(self.selected()) == 0:
             raise CelloError("No component selected for block '%s'" % self.name)
 
-    def play(self, *args):
+    def play(self, *inputs):
         """ Run the selected components of the block. The selected components 
         are run with the already setted options.
         
         .. warning:: Defaut 'multiple' behavior is a **pipeline** !
+q        
+        :param *inputs: arguments (i.e. inputs) to give to the components
         """
         # TODO: multi mode option(False, pipeline, map)
         self.validate() # TODO what if validate fails ?
@@ -654,10 +666,10 @@ class Block(object):
             comp_meta_res = BasicPlayMeta(comp)
             # it is register right now to be sur to have the data if there is an exception
             self.meta.append(comp_meta_res)
-            comp_meta_res.run_with(args, options)
+            comp_meta_res.run_with(inputs, options)
 
             # some logging
-            argstr = [str(arg)[:100].replace('\n', '') for arg in args]
+            argstr = [repr(arg)[:100].replace('\n', '') for arg in inputs]
             self._logger.info("""'%s' playing: %s
                 component: %s,
                 args=%s,
@@ -666,12 +678,13 @@ class Block(object):
             # run the component !
             try:
                 # multi = False or pipeline
-                # given that the args in input are also the returning value
+                # given that the input is also the returning value
                 # This behavior allows to modify the data given in input.
                 # actually same arg if given several times 
                 # but may be transformed during the process
                 # then finally returned
-                results = comp(*args, **options)
+                results = comp(*inputs, **options)
+                #TODO: add validation on inputs name !
 
                 # TODO implements different mode for multiple 
                 # another way would be declaring a list var outside the loop,
@@ -690,7 +703,7 @@ class Block(object):
             except Exception as err:
                 # component error handling
                 comp_meta_res.add_error(err)
-                self._logger.error("error in component '%s': %s\n %s" % (comp.name, err.message, traceback.format_exc()))
+                self._logger.error("error in component '%s': %s\n%s" % (comp.name, err.message, traceback.format_exc()))
                 if _break_on_error:
                     raise
             finally:
@@ -747,6 +760,9 @@ class Engine(object):
     def in_name(self):
         """ Give the input name of the first block
         """
+        #TODO: faire que cela puisse être configurable au niveau de l'engine
+        # en fait les inputs sont toutes les inputs des blocks qui ne sont pas produit par des blocks avant
+        # mais ca posse question/pb quand les blocks avant sont optionels
         return iter(self).next().in_name
 
     def __contains__(self, name):
@@ -845,10 +861,13 @@ class Engine(object):
                 block.select(req_comp['name'], req_comp.get("options", {}))
 
     def validate(self):
-        """ Check that the blocks configuration is ok """
+        """ Check that the blocks configuration is ok
+        """
+        # if no blocks...
         if not len(self._blocks):
             #TODO: find better error than CelloError ?
             raise CelloError("There is no block in this engine")
+        # it block should be ok with it-self
         for block in self:
             block.validate()
         # check the inputs and outputs
@@ -856,15 +875,15 @@ class Engine(object):
         available = set()       # set of available data
         maybe_available = set() # data that are produced be not required blocks
         # add the first block input as available data
-        first_in_name = self.in_name
-        if first_in_name is not None:
-            available.add(first_in_name)
+        if self.in_name is not None:
+            for in_name in self.in_name:
+                available.add(in_name)
         for bnum, block in enumerate(self):
-            if block.in_name is not None \
-                    and block.in_name not in available:
-                if block.in_name in maybe_available:
+            if block.in_name is not None:
+                # there is to case just to differenciate the error msg
+                if any(in_name in maybe_available for in_name in block.in_name):
                     raise CelloError("The block '%s' need an input ('%s') that *may* not be produced before" % (block.name, block.in_name))
-                else:
+                if not all(in_name in available for in_name in block.in_name):
                     raise CelloError("The block '%s' need an input ('%s') that is not produced before" % (block.name, block.in_name))
             # register the output
             if not block.required:
@@ -872,22 +891,33 @@ class Engine(object):
             else:
                 available.add(block.out_name)
 
-    def play(self, input_data):
+    def play(self, *inputs):
         """ Run the engine (that should have been configured first)
+        
+        :param *inputs: the data to give as input to the first block
         """
         self._logger.info("\n\n\t\t\t ** ============= play engine ============= ** \n")
         self.validate()
         # create data structure for results and metaresults
         results = OrderedDict()
         self.meta = PlayMeta("engine")
-        # prepare the input data
+        # default input name (so also the default last_output_name)
         last_output_name = "input"
-        first_in_name = self.in_name or last_output_name # if no in_name on first comp, then use "input"
-        results[first_in_name] = input_data
+        # prepare the input data
+        first_in_names = self.in_name or [last_output_name]
+        if len(inputs) != len(first_in_names):
+            raise ValueError("%d inputs are needed, but %d given" % (len(first_in_names), len(inputs)))
+        # inputs are store in results dict (then there is no special run for the first block)
+        for input_num, in_name in enumerate(first_in_names):
+            results[in_name] = inputs[input_num]
         # run the blocks
         for block in self:
-            binput = results[block.in_name or last_output_name] # if no in_name then use the last output
-            results[block.out_name] = block.play(binput) #le validate par rapport au type est fait dans le run du block
+            # prepare block ipouts
+            in_names = block.in_name or [last_output_name]
+            inputs = [results[in_name] for in_name in in_names]
+            # run the block
+            results[block.out_name] = block.play(*inputs)
+            #^ Note: le validate par rapport au type est fait dans le run du block
             # store metadata
             self.meta.append(block.meta)
             last_output_name = block.out_name
