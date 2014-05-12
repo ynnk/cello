@@ -287,6 +287,18 @@ class ListField(DocField, list):
             self[xi] = values[x]
 
     def export(self):
+        u""" returns a list pre-seriasation of the field
+        
+        >>> from cello.types import Text
+        >>> doc = Doc(docnum='1')
+        >>> doc.terms = Text(vtype=unicode, multi=True) 
+        >>> doc.terms.add(u'rat')
+        >>> doc.terms.add(u'chien')
+        >>> doc.terms.add(u'chat')
+        >>> doc.terms.add(u'léopart')
+        >>> doc.terms.export()
+        [u'rat', u'chien', u'chat', u'l\\xe9opart']
+        """
         return list(self)
 
 
@@ -404,7 +416,7 @@ class VectorField(DocField):
         return self
 
     def export(self):
-        """ returns a dictionary
+        """ returns a dictionary pre-seriasation of the field
         
         >>> from cello.types import Text, Numeric
         >>> doc = Doc(docnum='1')
