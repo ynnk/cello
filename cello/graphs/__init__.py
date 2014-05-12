@@ -154,11 +154,10 @@ def export_graph(graph, exclude_gattrs=[], exclude_vattrs=[], exclude_eattrs=[])
         vertex = vtx.attributes()
         # _id : structural vertex attr
         vertex["_id"] = _id
-        # transformation des Kodex_Doc en docnum
         if "_doc" in vertex:
             if vertex["_doc"] is not None:
                 assert isinstance(vertex["_doc"], Doc)
-                assert "docnum" not in vertex
+                #assert "docnum" not in vertex
                 docnum = vertex["_doc"].docnum
                 vertex["docnum"] = docnum
             else:
