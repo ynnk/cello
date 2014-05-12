@@ -99,6 +99,11 @@ class ValueOption(object):
             raise ValueError("This option is hidden, you can't change the value")
         self._value = self.validate(value)
 
+    def clear(self):
+        """ Reset the option value (default will be used)
+        """
+        self._value = None
+
     @property
     def default(self):
         """ Default value of the option

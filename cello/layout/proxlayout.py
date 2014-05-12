@@ -6,7 +6,6 @@ Set of 'prox' graphs layout, moslty based on igraph layouts
 """
 
 import igraph as ig
-import cprox
 
 from cello.types import Numeric, Boolean
 from cello.pipeline import Optionable, Composable
@@ -32,7 +31,7 @@ class ProxLayout(Optionable):
 
     @Optionable.check
     def __call__(self, graph, length=None, add_loops=None):
-        coords = [cprox.prox_markov_list_c(graph, [vtx.index], length=length, add_loops=add_loops) \
+        coords = [prox.prox_markov_list(graph, [vtx.index], length=length, add_loops=add_loops) \
                         for vtx in graph.vs]
         return ig.Layout(coords)
 
@@ -97,7 +96,7 @@ class ProxBigraphLayout(Optionable):
         coords = []
         for vtx in graph.vs:
             v_length = length - (length % 2) if vtx["type"] else length - ( length % 2 ) + 1
-            pline = cprox.prox_markov_list_c(graph, [vtx.index], length=v_length, add_loops=False)
+            pline = prox.prox_markov_list(graph, [vtx.index], length=v_length, add_loops=False)
             coords.append(pline)
         return ig.Layout(coords)
 

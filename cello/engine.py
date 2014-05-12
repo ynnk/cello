@@ -8,44 +8,141 @@ Cello processing system
 code sample
 ~~~~~~~~~~~
 
-Here is a simple exemple of Cellist usage. First you need to setup your Cellist::
+Here is a simple exemple of Cellist usage. First you need to setup your Cellist:
 
-    from cello.engine import Cellist
+>>> from cello.engine import Engine
+>>> cellist = Engine()
+>>> cellist.requires('foo', 'bar', 'boo')
 
-    cellist = Engine()
-    cellist.requires('foo', 'bar', 'boo')
+one can make imaginary components:
 
-    # one can make imaginary components
-    one, two, three = One(), Two(), Three() | plusOne()
+>>> from cello.pipeline import Pipeline, Optionable, Composable
+>>> from cello.types import Numeric
+>>> class One(Optionable):
+...     def __init__(self):
+...         super(One, self).__init__(name="one")
+...         self.add_option("val", Numeric(default=1))
+... 
+...     @Optionable.check
+...     def __call__(self, input, val=None):
+...         return input + val
+... 
+>>> one = One()
+>>> two = Composable(name="two", func=lambda x: x*2)
+>>> three = Composable(lambda x: x - 2) | Composable(lambda x: x/2.)
+>>> three.name = "three"
 
-    # one can configure a block with this three components:
-    foo_comps = [ one, two, three ]
-    foo_options = {'default': two.name }
-    cellist.set('foo', *foo_comps, **foo_options )
+one can configure a block with this three components:
 
-    # or
-    cellist['bar'].append(One(), default=True)
-    cellist['bar'].append(Two(), default=True)
-    cellist['bar'].append(Three(), default=True)
-    cellist["boo"].set_options(multiple = True)
+>>> foo_comps = [one, two, three]
+>>> foo_options = {'defaults': 'two'}
+>>> cellist.set('foo', *foo_comps, **foo_options)
 
-    # or
-    cellist["boo"].set(one, two, three)
-    cellist["boo"].set_options(multiple = True)
-    cellist["boo"].defaults = [lab.name for lab in (one, two, three )]
+or
+
+>>> cellist['bar'].setup(multiple=True)
+>>> cellist['bar'].append(two, default=True)
+>>> cellist['bar'].append(three, default=True)
+
+or
+
+>>> cellist["boo"].set(two, three)
+>>> cellist["boo"].setup(multiple=True)
+>>> cellist["boo"].defaults = [comp.name for comp in (two, three)]
+
+One can have the list of all configurations:
+
+>>> from pprint import pprint
+>>> pprint(cellist.as_dict())
+{'args': None,
+ 'blocks': [{'args': None,
+             'components': [{'default': False,
+                             'name': 'one',
+                             'options': [{'name': 'val',
+                                          'otype': {'choices': None,
+                                                    'default': 1,
+                                                    'help': '',
+                                                    'max': None,
+                                                    'min': None,
+                                                    'multi': False,
+                                                    'type': 'Numeric',
+                                                    'uniq': False,
+                                                    'vtype': 'int'},
+                                          'type': 'value',
+                                          'value': 1}]},
+                            {'default': True,
+                             'name': 'two',
+                             'options': None},
+                            {'default': False,
+                             'name': 'three',
+                             'options': []}],
+             'multiple': False,
+             'name': 'foo',
+             'required': True,
+             'returns': 'foo'},
+            {'args': None,
+             'components': [{'default': True,
+                             'name': 'two',
+                             'options': None},
+                            {'default': True,
+                             'name': 'three',
+                             'options': []}],
+             'multiple': True,
+             'name': 'bar',
+             'required': True,
+             'returns': 'bar'},
+            {'args': None,
+             'components': [{'default': True,
+                             'name': 'two',
+                             'options': None},
+                            {'default': True,
+                             'name': 'three',
+                             'options': []}],
+             'multiple': True,
+             'name': 'boo',
+             'required': True,
+             'returns': 'boo'}]}
 
 
-And then you can configure and run it::
 
-    cellist.configure(request_options)
+And then you can configure and run it:
 
-    # test before running 
-    cellist.validate()
+>>> request_options = {
+...     'foo':[
+...         {
+...             'name': 'one',
+...             'options': {
+...                 'val': 2
+...             }
+...        },     # input + 2
+...     ],
+...     'bar':[
+...         {'name': 'two'},
+...     ],     # input * 2
+...     'boo':[
+...         {'name': 'two'},
+...         {'name': 'three'},
+...     ], # (input - 2) / 2.
+... }
+>>> cellist.configure(request_options)
+>>> # test before running:
+>>> cellist.validate()
 
-    res = cellist['boo'].play( boo_args)
-    
-    # plays all blocks
-    results = cellist.play()
+One can then run only one block:
+
+>>> cellist['boo'].play(10)
+4.0
+
+or all blocks :
+
+>>> res = cellist.play(4)
+>>> res['foo']      # 4 + 2
+6
+>>> res['bar']      # 6 * 2
+12
+>>> res['boo']      # (12 - 2) / 2.0
+5.0
+
 """
 
 import time
@@ -220,6 +317,7 @@ class Block(object):
         """ returns a dictionary representation of the block and of all
         component options
         """
+        #TODO/FIXME: add selected information
         if self.hidden:
             rdict = {}
         else:
@@ -245,13 +343,21 @@ class Block(object):
     def reset(self):
         """ Removes all the components of the block
         """
-        self.clear_selections()
         self._components = OrderedDict()
+        self.clear_selections()
 
     def clear_selections(self):
-        """ reset the current selections
+        """ Reset the current selections and **reset option** values to default
+        for all components
+        
+        .. Warning:: This method also reset the components options values to
+            the defaults values.
         """
         self._selected = []
+        for component in self._components.itervalues():
+            if isinstance(component, Optionable):
+                self._logger.info("'%s' clear selection an options for '%s'" % (self.name, component.name))
+                component.clear_options_values()
 
     def setup(self, in_name=None, out_name=None, required=None, hidden=None,
                 multiple=None, defaults=None):
@@ -268,8 +374,8 @@ class Block(object):
         :type hidden: bool
         :param multiple: if True more than one component may be selected/ run) 
         :type multiple: bool
-        :param default: names of the selected components
-        :type default: list of str, or str
+        :param defaults: names of the selected components
+        :type defaults: list of str, or str
         """
         if in_name is not None:
             self.in_name = in_name if type(in_name) ==list else [in_name] 
@@ -282,6 +388,7 @@ class Block(object):
         if multiple is not None:
             self.multiple = multiple
         if defaults is not None:
+            #FIXME: what it default is just a 'str'
             self.defaults = defaults
 
         # TODO depends
@@ -292,7 +399,7 @@ class Block(object):
         
         :param components: components to append Optionables or Composables
         """
-        self._logger.info(" Set '%s': \n\t%s", self.name, "\n\t".join(("%s %s" % (e.name, e) for e in components)))
+        self._logger.info("'%s' set components: \n\t%s", self.name, "\n\t".join(("'%s':%s" % (e.name, e) for e in components)))
         self.reset()
         if len(components) == 1:
             self.append(components[0])
@@ -323,14 +430,19 @@ class Block(object):
         `options` will be passed to :func:`.Optionable.parse_options` is the
         component is :class:`Optionable`.
 
-        You can use :func:`iter_runnables` to get all selected components
-        and associated options, or :func:`play` to run it.
+        .. Warning:: this function also setup the options (if given) of the
+            selected component. Use :func:`clear_selections` to restore both
+            selection and component's options.
+
+        This method may be call at play 'time', before to call :func:`play` to
+        run all selected components.
 
         :param name: name of the component to select
         :type comp_name: str
         :param options: options to set to the components
         :type options: dict
         """
+        self._logger.info("select comp '%s' for block '%s' (options: %s)" % (comp_name, self._name, options))
         if comp_name not in self._components:
             raise ValueError("'%s' has no component '%s' (components are: %s)"\
                   % (self._name, comp_name, ", ".join(self.component_names())))
@@ -365,7 +477,7 @@ class Block(object):
     def play(self, *args):
         """ Run the selected components of the block
         
-        .. warning:: Defaut multiple behavior is used as **pipeline** !
+        .. warning:: Defaut 'multiple' behavior is a **pipeline** !
         """
         start = time.time()
         # TODO: multi mode option(False, pipeline, map)
@@ -391,7 +503,10 @@ class Block(object):
                 "warnings": [],
                 "time": 0
             }
-            self._logger.info(" playing '%s': %s \n\tcomponent: %s,\n\targs=%s[...], \n\tkwargs=%s" % (self._name, comp.name, comp, "\n\t\t".join(argstr), options))
+            self._logger.info("""'%s' playing: %s
+                component: %s,
+                args=%s,
+                kwargs=%s""" % (self._name, comp.name, comp, "\n\t\t".join(argstr), options))
 
             try:
                 # multi = False or pipeline
@@ -421,7 +536,6 @@ class Block(object):
                 # component error handling
                 comp_res['errors'].append("error in component %s %s /n %s" % (comp, comp.name, err.message))
                 self._logger.error(comp_res['errors'])
-                raise
                 if _break_on_error:
                     break
             
@@ -438,8 +552,7 @@ class Block(object):
 
 class Engine(object):
     """ The Cello engine.
-    
-"""
+    """
     @define_logger
     def __init__(self, *names):
         self._blocks = OrderedDict()
@@ -518,8 +631,9 @@ class Engine(object):
     def configure(self, config):
         """ Configure all the blocks from an (horible) configuration dictionary
         this data are coming from a json client request and has to be parsed.
-        It take the default value if missing.
-        
+        It takes the default value if missing (for component selection and 
+        options).
+
         :param config: dictionary that give the component to use for each step
                and the associated options 
         :type config: dict
@@ -566,11 +680,14 @@ class Engine(object):
                     raise ValueError("Invalid component (%s) for block '%s' "
                         % (req_comp['name'], block.name))
 
-        # configures the bloks
+        # clear the current selection and option
+        for block in self:
+            # remove selection and reset to default options
+            block.clear_selections()
+        # configure the blocks
         for block_name, request_comps in config.iteritems():
             block = self[block_name]
-            # remove defaults
-            block.clear_selections()
+            # select and set options
             for req_comp in request_comps:
                 block.select(req_comp['name'], req_comp.get("options", {}))
 

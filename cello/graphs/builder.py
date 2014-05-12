@@ -98,7 +98,7 @@ class GraphBuilder(object):
     ####### Vertices ########
     def add_get_vertex(self, vident):
         """ Add the vertex *vident* if not already present.
-        
+
         :param vident: the identifier of the vertex (will be a key in a dict)
         :return: the id of the vertex in the graph
         """
@@ -112,7 +112,16 @@ class GraphBuilder(object):
 
     def declare_vattr(self, attrs_name):
         """ Declare attributes of graph's vertices.
-        
+
+        It add it only of if it has not yet be declared :
+
+        >>> builder = GraphBuilder()
+        >>> builder.declare_vattr('name')
+        >>> builder.declare_vattr('name')
+        >>> builder.reset()
+        >>> builder.create_graph().vs.attributes()
+        ['name']
+
         :param attrs_name: names of vertex attributes
         :type attrs_name: str or list of str
         """
@@ -121,8 +130,9 @@ class GraphBuilder(object):
             for attrs_n in attrs_name:
                 self.declare_vattr(attrs_n)
         else:
-            assert attrs_name not in self._vertex_attrs_name
-            self._vertex_attrs_name.append(attrs_name)
+            # add it only if it doesn't already exist
+            if attrs_name not in self._vertex_attrs_name:
+                self._vertex_attrs_name.append(attrs_name)
 
     def set_vattr(self, vid, attr_name, value):
         """ Set the attribut *attr_name* of the vertex *vid*
@@ -152,7 +162,7 @@ class GraphBuilder(object):
         """ Add the edges if not already present.
         Note: if the graph is set to be undirected (in the __init__) then the 
         vertex ids *vid_from* and *vid_to* may be swapped.
-        
+
         :param vid_from: source of the edge
         :param vid_to: target of the edge
         :return: the id of the edges in the graph
@@ -169,7 +179,17 @@ class GraphBuilder(object):
 
     def declare_eattr(self, attrs_name):
         """ Declare attributes of graph's edges
-        
+
+        It add it only of if it has not yet be declared :
+
+        >>> builder = GraphBuilder()
+        >>> builder.declare_eattr('weight')
+        >>> builder.declare_eattr('weight')
+        >>> builder.reset()
+        >>> builder.create_graph().es.attributes()
+        ['weight']
+
+    
         :params attrs_name: names of edge attributes
         :type  attrs_name: str or list of str
         """
@@ -178,8 +198,8 @@ class GraphBuilder(object):
             for attr_n in attrs_name:
                 self.declare_eattr(attr_n)
         else:
-            assert attrs_name not in self._edges_attrs_name
-            self._edges_attrs_name.append(attrs_name)
+            if attrs_name not in self._edges_attrs_name:
+                self._edges_attrs_name.append(attrs_name)
 
     def set_eattr(self, eid, attr_name, value):
         """ Set the attribut *attr_name* of the edge *eid*

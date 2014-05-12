@@ -23,8 +23,6 @@ import igraph as ig
 from cello.clustering.core import OneCluster, ConnectedComponents, MaximalCliques
 from cello.clustering.common import Walktrap, Infomap
 
-from cello.clustering.filter import basic_cover_filter
-
 #{ Pack of methods
 def unipartite_clustering_methods():
     """ Returns standart clustering method for unipartite graphs
@@ -34,8 +32,8 @@ def unipartite_clustering_methods():
     2
     """
     methods = []
-    methods.append(Infomap() | basic_cover_filter())
-    methods.append(Walktrap() | basic_cover_filter())
+    methods.append(Infomap())
+    methods.append(Walktrap())
     return methods
 
 
@@ -86,6 +84,11 @@ def export_clustering(vertex_cover):
     >>> from cello.clustering import MaximalCliques
     >>> clustering = MaximalCliques()
     >>> cover = clustering(g)
+    >>> print(cover)
+    Cover with 3 clusters
+    [0] a, d, f
+    [1] a, c
+    [2] a, b
 
     and then export the clustering this way:
 
@@ -111,7 +114,8 @@ def export_clustering(vertex_cover):
 
     >>> from cello.clustering.labelling import Label
     >>> from cello.clustering.labelling.basic import VertexAsLabel
-    >>> labelling = VertexAsLabel(lambda g, clust, vtx: Label(vtx['_doc'].docnum, role='doc_title') if vtx['_doc'] is not None else None)
+    >>> label_builder = lambda g, clust, vtx: Label(vtx['_doc'].docnum, role='doc_title') if vtx['_doc'] is not None else None
+    >>> labelling = VertexAsLabel(label_builder)
     >>> cover = labelling(cover)
     >>> cover_dict = export_clustering(cover)
     >>> pprint(cover_dict)
@@ -136,7 +140,7 @@ def export_clustering(vertex_cover):
                                'role': 'doc_title',
                                'score': 1.0}],
                    'vids': [0, 1]}],
-     'misc': -1}
+     'misc': 2}
 
     """
     from cello.clustering.labelling.model import LabelledVertexCover

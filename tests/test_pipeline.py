@@ -146,6 +146,14 @@ class TestOptionable(unittest.TestCase):
         self.assertEquals(comp.get_option_value("alpha"), 4)
         self.assertEquals(comp.get_option_default("alpha"), 4)
 
+        # test clear options values
+        self.assertEquals(comp.get_option_value("name"), u"chien")
+        comp.clear_option_value("name")
+        self.assertEquals(comp.get_option_value("name"), u"chat")
+        comp.set_option_value("name", "chien", parse=True)
+        comp.clear_options_values()
+        self.assertEquals(comp.get_option_value("name"), u"chat")
+
     def testBooleanOption(self):
         comp = Optionable("composant")
         comp.add_option("filtering", Boolean(default=True, help="whether to activate a funcky filter !"))
@@ -264,5 +272,4 @@ class TestOptionableSequence(unittest.TestCase):
                     'value': False
                 }
             ]
-        ) 
-
+        )

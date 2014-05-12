@@ -6,11 +6,9 @@ Set of basic graphs layout, moslty based on igraph layouts
 """
 
 import igraph as ig
-import cprox
 
 from cello.types import Numeric, Boolean
 from cello.pipeline import Optionable, Composable
-
 
 class KamadaKawaiLayout(Composable):
     """ Kamada Kawai layout

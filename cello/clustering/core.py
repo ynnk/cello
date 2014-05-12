@@ -2,7 +2,8 @@
 """ :mod:`cello.clustering.core`
 ================================
 
-Define abstract clustering class and some trivial ones
+Define abstract clustering class (:class:`ClusteringMethod` and
+:class:`BigraphClusteringMethod`) and some trivial ones
 """
 import igraph as ig
 
@@ -148,10 +149,10 @@ class ConnectedComponents(ClusteringMethod):
 
 class MaximalCliques(ClusteringMethod):
     """ Maximal cliques
-    
-    Available options are :
 
     >>> clustering = MaximalCliques()
+
+    Available options are :
     >>> clustering.print_options()
     min (Numeric, default=0): Minimum cliques size
     max (Numeric, default=10): Maximal cliques size

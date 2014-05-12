@@ -90,13 +90,35 @@ class LabelledVertexCover(ig.VertexCover):
     [1] c, C, D (labels: cluster two)
     >>> vcover.labels[0]
     [Label('cluster one', 1, role='demo'), Label('other label', 0.5, role='demo')]
-
     """
-    def __init__(self, graph, clusters=None, labels=None):
+    def __init__(self, graph, clusters=None, labels=None, misc_cluster=None):
         super(LabelledVertexCover, self).__init__(graph, clusters=clusters)
+        self.misc_cluster = misc_cluster
         self._labels = [[] for _ in xrange(len(clusters))]
         #note: on peut ajouter/enlevé des labels sur chaque clusters, mais si
         #on veux modifier le clustering il faut faire une nouvel VertexCover
+
+    @staticmethod
+    def FromVertexCover(cover):
+        """ Create a  :class:`LabelledVertexCover` from a  :class:`igraph.VertexCover`
+        
+        >>> g = ig.Graph.Formula("a--A:B:C, b--A:B, c--C:D")
+        >>> vcover = ig.VertexCover(g, [[0,1,2,3,4], [5,3,6]])
+        >>> print(vcover)
+        Cover with 2 clusters
+        [0] a, A, B, C, b
+        [1] c, C, D
+        >>> lvcover = LabelledVertexCover.FromVertexCover(vcover)
+        >>> print(lvcover)
+        Cover with 2 clusters
+        [0] a, A, B, C, b (labels: )
+        [1] c, C, D (labels: )
+
+        """
+        misc_cluster = -1
+        if hasattr(cover, "misc_cluster"):
+            misc_cluster = cover.misc_cluster
+        return LabelledVertexCover(cover.graph, cover, misc_cluster=misc_cluster)
 
     @property
     def labels(self):
@@ -147,12 +169,10 @@ class LabelledVertexCover(ig.VertexCover):
         """
         if self._graph.is_named():
             names = self._graph.vs["name"]
-            for cid, cluster in enumerate(self):
-                vertices = ", ".join(str(names[member]) for member in cluster)
-                labels = "(labels: %s)" % (", ".join(map(str, self.labels[cid])))
-                yield "%s %s" % (vertices, labels)
         else:
-            for cid, cluster in enumerate(self):
-                vertices = ", ".join(str(member) for member in cluster)
-                labels = "(labels: %s)" % (", ".join(map(str, self.labels[cid])))
-                yield "%s %s" % (vertices, labels)
+            names = range(self._graph.vcount())
+        for cid, cluster in enumerate(self):
+            misc = "{Misc}" if cid == self.misc_cluster else ""
+            vertices = ", ".join(str(names[member]) for member in cluster)
+            labels = "(labels: %s)" % (", ".join(map(str, self.labels[cid])))
+            yield "%s%s %s" % (misc, vertices, labels)

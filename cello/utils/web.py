@@ -23,7 +23,7 @@ class CelloFlaskView(Blueprint):
         
         # bind entry points
         self.add_url_rule('/options', 'options', self.options)
-        self.add_url_rule('/play', 'play', self.play,  methods= ["POST", "GET"] )
+        self.add_url_rule('/play', 'play', self.play,  methods= ["POST", "GET"])
 
     def set_input_type(self, type_or_parse):
         """ Set the input type
@@ -62,7 +62,12 @@ class CelloFlaskView(Blueprint):
         ### parse options
         if "options" in data:
             options = data["options"]
-            self.engine.configure(options)
+            try:
+                self.engine.configure(options)
+            except ValueError as err:
+                #TODO manage input error
+                # see http://fr.wikipedia.org/wiki/Liste_des_codes_HTTP#Erreur_du_client
+                raise
         ### parse input (and validate)
         input_data = self._in_type.parse(data[self.engine.in_name[0]])
         self._in_type.validate(input_data)
