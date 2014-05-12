@@ -174,7 +174,7 @@ class TestBlock(unittest.TestCase):
         self.assertEquals(block.in_name, None)
         self.assertEquals(block.out_name, "foo")
         block.setup(in_name="doclist", out_name="graph")
-        self.assertEquals(block.in_name, "doclist")
+        self.assertEquals(block.in_name, ["doclist"])
         self.assertEquals(block.out_name, "graph")
 
     def test_multiple(self):
