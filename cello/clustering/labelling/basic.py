@@ -26,7 +26,7 @@ class VertexAsLabel(Optionable):
     [0] a, A, B, C, b (labels: A, B, C)
     [1] c, C, D (labels: C, D)
     >>> vcover.labels[1]
-    [Label('C', 1.2), Label('D', 1.2)]
+    [Label(u'C', 1.2), Label(u'D', 1.2)]
     
     Here is an other example:
     
@@ -132,9 +132,9 @@ class TypeFalseLabel(VertexAsLabel):
     [0] a, A, B, C, b (labels: A, B, C)
     [1] c, C, D (labels: C, D)
     >>> vcover.labels[0]
-    [Label('A', 1.0, role='terms'), Label('B', 1.0, role='terms'), Label('C', 0.5, role='terms')]
+    [Label(u'A', 1.0, role='terms'), Label(u'B', 1.0, role='terms'), Label(u'C', 0.5, role='terms')]
     >>> vcover.labels[1]
-    [Label('C', 1.0, role='terms'), Label('D', 1.0, role='terms')]
+    [Label(u'C', 1.0, role='terms'), Label(u'D', 1.0, role='terms')]
 
     also note that the index of the original vertex is stored in each label:
 
@@ -163,7 +163,7 @@ class TypeFalseLabel(VertexAsLabel):
     >>> vcover = ig.VertexCover(g, [[0,1,2,3,4], [5,3,6]])
     >>> vcover = labeller(vcover, score="precision")
     >>> vcover.labels[1]
-    [Label('C', 0.5, role='terms'), Label('D', 1.0, role='terms')]
+    [Label(u'C', 0.5, role='terms'), Label(u'D', 1.0, role='terms')]
 
     """
     def __init__(self, vtx_attr, role=None, name=None):

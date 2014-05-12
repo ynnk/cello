@@ -120,23 +120,23 @@ def export_clustering(vertex_cover):
     >>> cover_dict = export_clustering(cover)
     >>> pprint(cover_dict)
     {'clusters': [{'docnums': ['d_0', 'd_4'],
-                   'labels': [{'label': 'd_0',
+                   'labels': [{'label': u'd_0',
                                'role': 'doc_title',
                                'score': 1.0},
-                              {'label': 'd_4',
+                              {'label': u'd_4',
                                'role': 'doc_title',
                                'score': 1.0}],
                    'vids': [0, 3, 4]},
                   {'docnums': ['d_0', 'd_2'],
-                   'labels': [{'label': 'd_0',
+                   'labels': [{'label': u'd_0',
                                'role': 'doc_title',
                                'score': 1.0},
-                              {'label': 'd_2',
+                              {'label': u'd_2',
                                'role': 'doc_title',
                                'score': 1.0}],
                    'vids': [0, 2]},
                   {'docnums': ['d_0'],
-                   'labels': [{'label': 'd_0',
+                   'labels': [{'label': u'd_0',
                                'role': 'doc_title',
                                'score': 1.0}],
                    'vids': [0, 1]}],
@@ -169,7 +169,7 @@ def export_clustering(vertex_cover):
             cluster['docnums'] = [gid_to_doc[gid] for gid in vids if gid in gid_to_doc]
         # labels ?
         if labels:
-            cluster['labels'] = [label.export() for label in vertex_cover.labels[cnum]]
+            cluster['labels'] = [label.as_dict() for label in vertex_cover.labels[cnum]]
         # add the cluster
         clusters.append(cluster)
     cover['clusters'] = clusters

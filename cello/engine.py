@@ -734,7 +734,7 @@ class Engine(object):
         # run the blocks
         for block in self:
             inputs = block.in_name or last_output_name
-            inputs = [results[in_name] for name in inputs]
+            inputs = [results[name] for name in inputs]
             results[block.out_name] = block.play(*inputs)
             #^ Note: le validate par rapport au type est fait dans le run du block
             last_output_name = [block.out_name]
