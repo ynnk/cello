@@ -478,6 +478,8 @@ class Block(object):
         """ Run the selected components of the block
         
         .. warning:: Defaut 'multiple' behavior is a **pipeline** !
+q        
+        :param *args: arguments (i.e. inputs) to give to the components
         """
         start = time.time()
         # TODO: multi mode option(False, pipeline, map)
@@ -720,6 +722,8 @@ class Engine(object):
 
     def play(self, input_data):
         """ Run the engine that should have been configured first
+        
+        :param input_data: 
         """
         self.validate()
         results = OrderedDict()
@@ -730,8 +734,9 @@ class Engine(object):
         # run the blocks
         for block in self:
             inputs = block.in_name or last_output_name
-            inputs = [results[e] for e in inputs] 
-            results[block.out_name] = block.play(*inputs) #le validate par rapport au type est fait dans le run du block
+            inputs = [results[in_name] for name in inputs]
+            results[block.out_name] = block.play(*inputs)
+            #^ Note: le validate par rapport au type est fait dans le run du block
             last_output_name = [block.out_name]
         return results
 
