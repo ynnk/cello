@@ -10,9 +10,21 @@ from flask import abort, request, jsonify
 from cello.types import GenericType, Text
 from cello.engine import Engine
 
+# for error code see http://fr.wikipedia.org/wiki/Liste_des_codes_HTTP#Erreur_du_client
+
+
 class CelloFlaskView(Blueprint):
+    """ Standart Flask json API view over a Cello :class:`.Engine`.
+
+    This is a Flask Blueprint.
+    """
 
     def __init__(self, engine):
+        """ Build the Blueprint
+        
+        :param engine: the cello engine to serve through an json API
+        :type engine: :class:`.Engine`.
+        """
         super(CelloFlaskView, self).__init__("cello", __name__)
         self.engine = engine
         # default input
@@ -49,30 +61,34 @@ class CelloFlaskView(Blueprint):
 
     def play(self):
         if not request.headers['Content-Type'].startswith('application/json'):
-            abort(415)
+            abort(415) # Unsupported Media Type
         ### get data
         data = request.json
-        assert data is not None
+        assert data is not None #FIXME: better error than assertError ?
         ### check commun errors
-
-        print "=====================", self.engine.in_name, data
-        if not all( [  e in data for e in self.engine.in_name ]):
+        if not all([inname in data for inname in self.engine.in_name]):
             #XXX ERROR should be handle
-            raise NotImplementedError
+            raise NotImplementedError()
         ### parse options
         if "options" in data:
             options = data["options"]
             try:
                 self.engine.configure(options)
             except ValueError as err:
-                #TODO manage input error
-                # see http://fr.wikipedia.org/wiki/Liste_des_codes_HTTP#Erreur_du_client
-                raise
+                #TODO beter manage input error: indicate what's wrong
+                abort(406)  # Not Acceptable
         ### parse input (and validate)
-        input_data = self._in_type.parse(data[self.engine.in_name[0]])
-        self._in_type.validate(input_data)
+        inputs_data = [data[in_name] for in_name in self.engine.in_name]
+        if len(inputs_data):
+            self._in_type.validate(inputs_data[0])
+        else:
+            raise NotImplementedError("le mutlti input est pas encore géré ici...")
         ### run the engine
-        raw_res = self.engine.play(input_data)
+        try:
+            raw_res = self.engine.play(*inputs_data)
+        #TODO: manage error ?
+        finally:
+            pass
         ### prepare outputs
         results = {}
         for out_name, serializer in self._outputs:
@@ -82,11 +98,10 @@ class CelloFlaskView(Blueprint):
                 results[out_name] = serializer(raw_res[out_name])
             else:
                 results[out_name] = raw_res[out_name]
-        ### serialise play metadata
-        # TODO
         ### prepare result json
         outputs = {}
         outputs["results"] = results
-        outputs['meta'] = self.engine.get_play_trace()
+        ### serialise play metadata
+        outputs['meta'] = self.engine.meta.as_dict()
         return jsonify(outputs)
 

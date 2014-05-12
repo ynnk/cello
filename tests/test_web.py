@@ -71,7 +71,7 @@ class TestCelloFlaskView(unittest.TestCase):
             resp = self.app.get('api/play', data=json_data, content_type='application/json')
 
         json_data = json.dumps({'in': "chat"})
-        with self.assertRaises(ValueError):
+        with self.assertRaises(ValidationError):
             resp = self.app.get('api/play', data=json_data, content_type='application/json')
 
         json_data = json.dumps({'in': 1})

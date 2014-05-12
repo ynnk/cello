@@ -80,6 +80,8 @@ class ReduceRandProj(Composable):
     >>> rproj = ReduceRandProj(dim=3)
     >>> rproj(layout)
     <Layout with 5 vertices and 3 dimensions>
+    >>> rproj(ig.Layout([]))
+    <Layout with no vertices and 2 dimensions>
     """
     #TODO use http://scikit-learn.org/stable/modules/random_projection.html
     def __init__(self, dim=3):
@@ -89,6 +91,8 @@ class ReduceRandProj(Composable):
     def __call__(self, layout):
         """ Process the random projection
         """
+        if len(layout) == 0:
+            return layout
         mat = np.array(layout.coords)
         mat_r = sc.rand(layout.dim, self.out_dim)
         result = mat.dot(mat_r)
@@ -101,12 +105,15 @@ def normalise(layout):
     >>> import igraph as ig
     >>> import numpy as np
     >>> layout = ig.Layout([[10,  0,  0], [0,  10,  0], [0,   0,  0], [0,   0, 10], [0,  -10,  0]])
-    
     >>> np.array(normalise(layout).coords).max()
     0.5
     >>> np.array(normalise(layout).coords).min()
     -0.5
+    >>> normalise(ig.Layout([]))
+    <Layout with no vertices and 2 dimensions>
     """
+    if len(layout) == 0:
+        return layout
     layout.fit_into([1.] * layout.dim)
     layout.center()
     return layout

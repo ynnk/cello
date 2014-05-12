@@ -90,7 +90,7 @@ class Label(object):
         return lcopy
 
 class LabelledVertexCover(ig.VertexCover):
-    """ :class:`igraph.VertexCover` with labels on clusters.
+    """ Sub class of :class:`igraph.VertexCover` with labels on clusters.
 
     >>> g = ig.Graph.Formula("a--A:B:C, b--A:B, c--C:D")
     >>> vcover = LabelledVertexCover(g, [[0,1,2,3,4], [5,3,6]])
