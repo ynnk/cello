@@ -14,7 +14,55 @@ import logging
 
 import igraph as ig
 
-from cello.pipeline import Optionable
+from cello.pipeline import Optionable, Composable
+
+
+class Subgraph(Composable):
+    """ Build a local graph by extracting a subgraph from a global one
+
+    >>> import igraph as ig
+    >>> global_graph = ig.Graph.Formula("a--b--c--d, b--d, b--e")
+    >>> subgraph_builder = Subgraph(global_graph)
+    >>> # then at run time
+    >>> graph = subgraph_builder([0,1,3])
+    >>> print(graph.summary(1))
+    IGRAPH UN-- 3 2 -- 
+    + attr: gid (v), name (v)
+    + edges (vertex names):
+    a--b, b--d
+    >>> graph.vs["gid"]
+    [0, 1, 3]
+    >>> [vtx.index for vtx in graph.vs]
+    [0, 1, 2]
+
+
+    if the input is a list of tupple `[(vid, score), ...]` then the score is stored
+    on an vertex attribute
+
+    >>> subgraph_builder = Subgraph(global_graph, score_attr="prox")
+    >>> # then at run time
+    >>> graph = subgraph_builder([(0, 0.02), (1, 0.0015), (3, 0.00102)])
+    >>> graph.vs["gid"]
+    [0, 1, 3]
+    >>> graph.vs["prox"]
+    [0.02, 0.0015, 0.00102]
+    """
+    def __init__(self, graph, score_attr="score", name=None):
+        super(Subgraph, self).__init__(name=name)
+        self._graph = graph
+        self._score_attr = score_attr
+
+    def __call__(self, vids):
+        scores = None
+        if len(vids) != 0 and isinstance(vids[0], tuple):
+            scores = [score for vid, score in vids]
+            vids = [vid for vid, score in vids]
+        subgraph = self._graph.subgraph(vids)
+        subgraph.vs["gid"] = vids
+        if scores is not None:
+            subgraph.vs[self._score_attr] = scores
+        return subgraph
+
 
 class GraphBuilder(object):
     """ Abstract class to build a igraph graph object by parsing a source.

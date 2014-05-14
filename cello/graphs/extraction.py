@@ -30,7 +30,7 @@ from cello.pipeline import Composable, Optionable
 from cello.graphs import prox, IN, OUT, ALL, neighbors
 
 class VertexIds(Optionable):
-    """ Extract only vertex ids from a dict of `{vid: score}`
+    """ Extract only vertex ids from a list of `[(vid, score), ...]`
     
     >>> vtxid = VertexIds()
     >>> vtxid([(21, 1.), (541, .8), (2, .45)])
