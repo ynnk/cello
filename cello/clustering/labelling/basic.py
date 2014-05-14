@@ -6,6 +6,7 @@ Classes
 -------
 """
 import igraph as ig
+from itertools import chain
 
 from cello.pipeline import Optionable
 from cello.types import Text
@@ -104,9 +105,11 @@ class VertexAsLabel(Optionable):
         # compute labels for each cluster
         graph = vertex_cover.graph
         vs = graph.vs
+        aslist = lambda x : x if type(x) == list else [x] 
         for cid, cluster in enumerate(vertex_cover):
-            labels = (self.vtx_to_label(graph, cluster, vs[vtx], **kwargs) for vtx in cluster)
-            labels = [label for label in labels if label is not None]
+            alllabels = ( aslist(self.vtx_to_label(graph, cluster, vs[vtx], **kwargs)) for vtx in cluster)
+            labels = [label for labels in alllabels for label in labels if label is not None]
+            print labels
             vertex_cover.add_labels(cid, labels)
         return vertex_cover
 
