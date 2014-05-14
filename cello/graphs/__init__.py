@@ -11,7 +11,7 @@ SubModules
     cello.graphs.filter
     cello.graphs.transform
     cello.graphs.prox
-
+    cello.graphs.extraction
 
 Helpers
 -------
