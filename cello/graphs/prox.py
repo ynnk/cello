@@ -24,18 +24,25 @@ On can also use a dict for `p0`:
 {1: 0.5, 2: 0.5}
 >>> prox_markov_list(graph, {0:1, 3:1}, 1)
 [0.0, 0.5, 0.5, 0.0]
->>> res = prox_markov_mtcl(graph, [0, 3], 1, 10)
 
 Zachary :
 
->>> g = ig.Graph.Famous("Zachary")
->>> p4 = prox_markov_dict(g, [0], 4)
+>>> graph = ig.Graph.Famous("Zachary")
+>>> p4 = prox_markov_dict(graph, [0], 4)
 >>> len(p4)
 34
 >>> p4[0]
 0.20139916513480394
 >>> p4[2]
 0.06625652318218955
+
+
+There is also a monte carlo version :
+
+>>> import random; random.seed(0) # for testing purpose
+>>> graph = ig.Graph.Formula("a-b-c-d")
+>>> prox_markov_mtcl(graph, [0, 3], 1, 10)
+{1: 0.3, 2: 0.7}
 
 """
 from random import randint
@@ -47,8 +54,10 @@ from cello.graphs import IN, OUT, ALL
 
 def normalise(p0):
     """ normalise p0 dict vector 
-    
-    >>> p0 = {0:1, 3:1}
+
+    :param p0: `dict` {vid: weight}.
+
+    >>> p0 = {0: 1, 3: 1}
     >>> normalise(p0)
     {0: 0.5, 3: 0.5}
     """
@@ -59,13 +68,13 @@ def normalise(p0):
 def normalize_pzero(graph, p0):
     """ returns a normalised p0 dict.
 
-    :param p0: `dict` {vid:weight} or `list` [vid, vid, ... ] weight is then 1.
+    :param p0: `dict` {vid: weight} or `list` [vid, vid, ... ] weight is then 1 on each indicated vertex.
 
     >>> import igraph as ig
     >>> graph = ig.Graph.Formula("a--b--c")
     >>> normalize_pzero(graph, {1:0.5})
     {1: 1.0}
-    >>> normalize_pzero(graph, {1:0.5, 2:1.5})
+    >>> normalize_pzero(graph, {1: 0.5, 2: 1.5})
     {1: 0.25, 2: 0.75}
     >>> normalize_pzero(graph, [0, 1])
     {0: 0.5, 1: 0.5}
@@ -94,7 +103,6 @@ def sortcut(v_extract, vcount):
     >>> sortcut([0.02, 0.12, 0.82, 0.001, 0.18], 3)
     [(2, 0.82), (4, 0.18), (1, 0.12)]
 
-
     :param v_extract: dict vertex_ids, value or list of values
     :param vcount: vertex count
     :return: a list of the form: `[(vid1, score), (vid2, score), ...]`
@@ -109,7 +117,7 @@ def sortcut(v_extract, vcount):
 
 
 def spreading(graph, in_vect, mode, add_loops):
-    """ Spread value of in_vect throw the graph g.
+    """ Spread value of in_vect throw the graph.
 
     :param graph: subclass of :class:`.AbstractGraph`
     :param in_vect: input vector, a python dictionary: `{vertex_id:value, ...}`
@@ -117,7 +125,7 @@ def spreading(graph, in_vect, mode, add_loops):
     :param add_loops: if True do as if every vertex hold a self loop
                      (force the graph to be reflexif)
     :returns: output vector same format as in_vect
-    
+
     >>> import igraph as ig
     >>> graph = ig.Graph.Formula("a--b--c")
     >>> spreading(graph, {1:1}, mode=OUT, add_loops=False)
@@ -155,31 +163,82 @@ def spreading(graph, in_vect, mode, add_loops):
     return vect
 
 
-def spreading_wgt(g, in_vect, wgt=lambda i: 1., epsi=0, false_refl=False):
-    """ Spread value of in_vect throw the graph g. (weighted version)
+def spreading_wgt(graph, in_vect, mode, add_loops, weight, loops_weight):
+    """ Spread value of in_vect throw the graph. (weighted version)
     
-    :param g: graph in igraph format
+    :param graph: subclass of :class:`.AbstractGraph`
     :param in_vect: input vector, a python dictionary : {vertex_id:value, ...}
-    :param weight: either str then the corresponding edge attribute is use as weight, or a list of weight (`|weight| == g.ecount()`)
-    :param false_refl: if True do as if every vertex hold a self loop (reflexif graph)
+    :param mode: given to neighboors, consider OUT links, IN links our ALL for both
+    :param add_loops: if True do as if every vertex hold a self loop (loops_weight is then used)
+    :param weight: a list of weight (`|weight| == graph.ecount()`)
+    :param loops_weight: list of weights for loops
 
     :returns: output vector same format as in_vect.
+
+
+    >>> import igraph as ig
+    >>> graph = ig.Graph.Formula("a--b--c")
+    >>> weight = [3., 1.]
+    >>> spreading_wgt(graph, {1:1.0}, mode=OUT, add_loops=False, weight=weight, loops_weight=None)
+    {0: 0.75, 2: 0.25}
+    >>> spreading_wgt(graph, {0:2.0}, mode=OUT, add_loops=False, weight=weight, loops_weight=None)
+    {1: 2.0}
+
+    also works for directed graphs:
+
+    >>> graph = ig.Graph.Formula("a-->b-->c")
+    >>> weight = [3., 1.]
+    >>> spreading_wgt(graph, {1:1.0}, mode=OUT, add_loops=False, weight=weight, loops_weight=None)
+    {2: 1.0}
+    >>> spreading_wgt(graph, {1:1.0}, mode=IN, add_loops=False, weight=weight, loops_weight=None)
+    {0: 1.0}
+    >>> spreading_wgt(graph, {1:1.0}, mode=ALL, add_loops=False, weight=weight, loops_weight=None)
+    {0: 0.75, 2: 0.25}
+
+    It is possible to force the graphe to be reflexif and then to specify the 
+    weight on each loop:
+    >>> graph = ig.Graph.Formula("a-->b-->c")
+    >>> weight = [3., 1.]
+    >>> loops_weight = [0, 1., 2.]  # no loops on a, loops with weight 1 and 2 on b and c
+    >>> spreading_wgt(graph, {1:1.0}, mode=OUT, add_loops=True, weight=weight, loops_weight=loops_weight)
+    {1: 0.5, 2: 0.5}
+    >>> spreading_wgt(graph, {1:1.0}, mode=IN, add_loops=True, weight=weight, loops_weight=loops_weight)
+    {0: 0.75, 1: 0.25}
+    >>> spreading_wgt(graph, {1:1.0}, mode=ALL, add_loops=True, weight=weight, loops_weight=loops_weight)
+    {0: 0.6, 1: 0.2, 2: 0.2}
+    >>> spreading_wgt(graph, {0:0.5, 2:0.5}, mode=OUT, add_loops=True, weight=weight, loops_weight=loops_weight)
+    {1: 0.5, 2: 0.5}
+
+    With `add_loops=True` it add a loops **even if** there is already a loops:
+
+    >>> graph = ig.Graph.Formula("a<->b<->c, c->c", simplify=False)
+    >>> weight = [3., 3., 1., 1., 2.]  # [a->b,  b->a, b->c, c->b, c->c]
+    >>> loops_weight = [1., 1., 1.]    # [a->a, b->b, c->c]
+    >>> graph.neighbors(2, mode=OUT)
+    [1, 2]
+    >>> spreading_wgt(graph, {2:1.0}, mode=OUT, add_loops=True, weight=weight, loops_weight=loops_weight)
+    {1: 0.25, 2: 0.75}
     """
     out_vect = {}
+    es = graph.es    # get a ref to edge sequence
     for from_vertex, value in in_vect.iteritems():
-        if value <= epsi : continue
-        neighborhood = g.neighbors(from_vertex)
-        if false_refl: neighborhood.append(from_vertex)
-        wgts = [wgt(from_vertex, v) for v in neighborhood]
-        tot = 1. * sum(wgts)
+        incident_edges = graph.incident(from_vertex, mode=mode)
+        wgts = [weight[edg] for edg in incident_edges]
+        # add the loop weight
+        loop_wgt = loops_weight[from_vertex] if add_loops else 0
+        tot = 1. * sum(wgts) + loop_wgt
         if tot > 0:
-            for i, neighbor in enumerate(neighborhood):
+            for i, edge in enumerate(incident_edges):
+                target = es[edge].target
+                neighbor = target if from_vertex != target else es[edge].source
                 out_vect[neighbor] = out_vect.get(neighbor, 0.) + value * wgts[i] / tot
+            if add_loops and loop_wgt > 0:
+                out_vect[from_vertex] = out_vect.get(from_vertex, 0.) + value * loop_wgt / tot
     return out_vect
 
 
 def prox_markov_dict(graph, p0, length, mode=OUT, add_loops=False, weight=None,
-                        neighbors=None):
+                        loops_weight=None, neighbors=None):
     """ Generic prox implementation
 
     For `p0`: it is either a list of vertex idx or a dict of vertex associated 
@@ -194,21 +253,75 @@ def prox_markov_dict(graph, p0, length, mode=OUT, add_loops=False, weight=None,
     :param mode: given to neighboors, consider OUT links, IN links our ALL for both
     :param add_loops: if True do as if every vertex hold a self loop
          (force the graph to be reflexif)
-    :param weight: either str then the corresponding edge attribute is use as weight, or a list of weight (`|weight| == g.ecount()`)
+    :param weight: if None the graph is not weighting, else it could be:
+        * a str corresponding to an edge attribute to use as weight,
+        * or a list of weight (`|weight| == graph.ecount()`),
+        * or a callable `lambda graph, source, target: wgt`
+    :param loops_weight: only if `add_loops`, weight for added loops, it may be :
+        * a str corresponding to a vertex attribute,
+        * or a list of weight (`|loops_weight| == graph.vcount()`),
+        * or a callable `lambda graph, vid: wgt`
     :param neighbors: function that override std graph.neighbors fct
-        For `neighbors_fct` you can use :
-        > neighbors_fct = lambda g, from_vertex : g.neighbors(from_vertex)
-        > neighbors_fct = ig.Graph.neighbors
     :returns: result vector, a python dictionary : `{vertex_id:value, ...}`
+    
+    For `neighbors_fct` you can use:
+
+    neighbors_fct = lambda graph, from_vertex: graph.neighbors(from_vertex)
+    neighbors_fct = ig.Graph.neighbors
+
+    Without weights:
+
+    >>> import igraph as ig
+    >>> graph = ig.Graph.Formula("a--b--c")
+    >>> prox_markov_dict(graph, [1], 2, add_loops=False)
+    {1: 1.0}
+    >>> graph = ig.Graph.Formula("a--b--c--a")
+    >>> prox_markov_dict(graph, [0], 2, add_loops=False)
+    {0: 0.5, 1: 0.25, 2: 0.25}
+    >>> prox_markov_dict(graph, [0], 3, add_loops=True)
+    {0: 0.3333333333333333, 1: 0.3333333333333333, 2: 0.3333333333333333}
+
+    and with weights:
+
+    >>> graph = ig.Graph.Formula("a--b--c")
+    >>> graph.es["wgt"] = [3, 1]
+    >>> prox_markov_dict(graph, [0], 2, add_loops=False, weight="wgt")
+    {0: 0.75, 2: 0.25}
+    >>> wgt_array = [1, 3]
+    >>> prox_markov_dict(graph, [0], 2, add_loops=False, weight=wgt_array)
+    {0: 0.25, 2: 0.75}
+    >>> wgt_fct = lambda graph, source, target: 2
+    >>> prox_markov_dict(graph, [0], 2, add_loops=False, weight=wgt_fct)
+    {0: 0.5, 2: 0.5}
+
     """
-    if weight is not None:
-        #FIXME
-        raise NotImplementedError
+    #TODO: add doctest with add_loops and weights
+    vect = normalize_pzero(graph, p0)
     if neighbors is not None:
         raise NotImplementedError
-    vect = normalize_pzero(graph, p0)
-    for k in xrange(length):
-        vect = spreading(graph, vect, mode, add_loops)
+    if weight is None:
+        ## Not weighted version
+        for k in xrange(length):
+            vect = spreading(graph, vect, mode, add_loops)
+    else:
+        ## Weighted version
+        # prepare the weights (if needed)
+        if isinstance(weight, basestring):
+            weight = graph.es[weight]
+        elif callable(weight):
+            weight = [weight(graph, edge.source, edge.target) for edge in graph.es]
+        # prepare the weights for loops (if any)
+        if add_loops:
+            #TODO: use a np.array not a list, to save memory
+            if isinstance(loops_weight, basestring):
+                loops_weight = graph.vs[weight]
+            elif callable(loops_weight):
+                loops_weight = [loops_weight(graph, vtx.index) for vtx in graph.vs]
+        else:
+            loops_weight = None
+        # compute prox it self
+        for k in xrange(length):
+            vect = spreading_wgt(graph, vect, mode, add_loops, weight, loops_weight)
     return vect
 
 
@@ -237,7 +350,7 @@ def prox_markov_mtcl(graph, p0, length, throws, mode=OUT, add_loops=False,
                         weight=None, neighbors=cello.graphs.neighbors):
     """ Prox 'classic' by an approximate method montecarlo with nb_throw throws
 
-    :param g: graph in igraph format
+    :param graph: graph in igraph format
     :param p0: list of starting nodes : [id_vertex1, id_vertex2, ...]
     :parma l: random walk length
     :param nb_throw: the number of throws in montecarlo process
@@ -278,33 +391,6 @@ def prox_markov_mtcl(graph, p0, length, throws, mode=OUT, add_loops=False,
 
 
 ################################################################################
-# Prow weighted 
-
-
-
-
-def prox_markov_wgt(g, p0, l=3, wgt=None, epsi=0, false_refl=False):
-    """ Prox 'classic'
-        
-    :param g: graph in igraph format
-    :param p0: list of starting nodes : [id_vertex1, id_vertex2, ...]
-    :param l: random walk length
-    :param wgt: weighting fuction, given a edge id return the weight of the edge 
-    :param false_refl: if True do as if every vertex hold a self loop (reflexif graph)
-
-    :returns: result vector, a python dictionary : {vertex_id:value, ...}
-    """
-    
-    v0 = 1./len(p0)
-    prox_vect = dict((id, v0) for id in p0)
-
-    if not wgt: _spreading = lambda vect : spreading(g, vect, epsi, false_refl)
-    else: _spreading = lambda vect : spreading_wgt(g, vect, wgt, epsi, false_refl)
-
-    for k in range(l):
-        prox_vect = _spreading(prox_vect)
-    return prox_vect
-
 
 def confluence(graph, vtxa, vtxb, length=3, add_loops=True, remove_edge=False, 
             prox_markov_list=prox_markov_list, neighbors=cello.graphs.neighbors):
@@ -335,8 +421,8 @@ def confluence(graph, vtxa, vtxb, length=3, add_loops=True, remove_edge=False,
     return sim
 
 
-def confluence_simple(g, p0, length=3 , method=prox_markov_dict, neighbors=cello.graphs.neighbors):
-    pm = method(g, p0, length=length, neighbors=neighbors )
-    conf =  { k: 1.*v / (v+(1.*len(neighbors(g,k))/(2*g.ecount()))) for k,v in pm.iteritems()}
-    return conf 
+def confluence_simple(graph, p0, length=3, method=prox_markov_dict, neighbors=cello.graphs.neighbors):
+    pm = method(graph, p0, length=length, neighbors=neighbors )
+    conf =  { k: 1.*v / (v+(1.*len(neighbors(graph,k))/(2*graph.ecount()))) for k,v in pm.iteritems()}
+    return conf
 

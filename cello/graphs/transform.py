@@ -10,7 +10,7 @@ from cello.pipeline import Composable, Optionable
 from cello.types import Text
 
 from cello.graphs import EDGE_WEIGHT_ATTR
-from cello.graphs.prox import prox_markov_wgt
+from cello.graphs.prox import prox_markov_dict
 
 
 _logger = logging.getLogger("cello.graphs.transform")
@@ -155,7 +155,6 @@ class GraphProjection(Optionable):
     >>> gp.es["weight"]
     [0.5555555555555556, 0.5, 0.25, 0.5, 0.25, 0.4444444444444445]
     """
-    #TODO add test
     def __init__(self, name=None):
         """ Projection of a bipartite graph to a unipartite graph
         """
@@ -204,8 +203,7 @@ class GraphProjection(Optionable):
         multiplicity = True if weight == "count" else False
         pg, _ = graph.bipartite_projection(types="type", multiplicity=multiplicity, probe1=0)
         if weight in ["p", "pmin", "pmax", "pavg", "confl"]:
-            _wgt = lambda v1,v2: graph.es[graph.get_eid(v1,v2)][wgt_attr]
-            P = [prox_markov_wgt(graph, [vid.index], l=2, wgt=_wgt, false_refl=False) for vid in pg.vs]
+            P = [prox_markov_dict(graph, [vid.index], length=2, weight=wgt_attr, add_loops=False) for vid in pg.vs]
             if weight == "p":
                 pwgt = lambda a, b: P[a].get(b, 0.) * graph.degree(a)
             elif weight == "confl":
