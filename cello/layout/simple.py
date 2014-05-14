@@ -9,6 +9,7 @@ import igraph as ig
 
 from cello.types import Numeric, Boolean
 from cello.pipeline import Optionable, Composable
+from cello.layout.transform import normalise
 
 class KamadaKawaiLayout(Composable):
     """ Kamada Kawai layout
@@ -29,7 +30,7 @@ class KamadaKawaiLayout(Composable):
         self.dimensions = dim
 
     def __call__(self, graph):
-        return graph.layout_kamada_kawai(dim=self.dimensions)
+        return normalise(graph.layout_kamada_kawai(dim=self.dimensions))
 
 class FruchtermanReingoldLayout(Composable):
     """ Fruchterman Reingold layout
