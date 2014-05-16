@@ -109,7 +109,6 @@ class VertexAsLabel(Optionable):
         for cid, cluster in enumerate(vertex_cover):
             alllabels = ( aslist(self.vtx_to_label(graph, cluster, vs[vtx], **kwargs)) for vtx in cluster)
             labels = [label for labels in alllabels for label in labels if label is not None]
-            print labels
             vertex_cover.add_labels(cid, labels)
         return vertex_cover
 
