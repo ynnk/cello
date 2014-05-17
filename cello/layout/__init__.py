@@ -9,7 +9,7 @@ SubModules
 .. toctree::
 
     cello.layout.simple
-    cello.layout.prox
+    cello.layout.proxlayout
     cello.layout.transform
 
 Helpers
