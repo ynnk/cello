@@ -9,8 +9,6 @@ Helper function to setup a basic logger for a cello app
 """
 
 import logging
-    
-#{ logging
 
 # NullHandler is not defined in python < 2.6
 try:
@@ -76,8 +74,6 @@ class ColorFormatter(logging.Formatter):
         return message + ColorFormatter.RESET_SEQ
 
 
-
-
 def get_app_logger_color(appname, app_log_level=logging.INFO, log_level=logging.WARN):
     """ Configure the logging for an app using cello
     """
@@ -107,4 +103,3 @@ def get_app_logger_color(appname, app_log_level=logging.INFO, log_level=logging.
     app_logger.addHandler(app_stderr_handler)
     return app_logger
 
-#}

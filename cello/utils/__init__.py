@@ -8,6 +8,9 @@
 .. toctree::
 
     cello.utils.log
+    cello.utils.i18n
+    cello.utils.cli
+    cello.utils.web
 
 """
 
