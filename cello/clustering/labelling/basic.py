@@ -14,12 +14,15 @@ from cello.clustering.labelling import Label, LabelledVertexCover
 
 class VertexAsLabel(Optionable):
     """ Create labels by transforming cluster vertices
-    
-    >>> g = ig.Graph.Formula("a--A:B:C, b--A:B, c--C:D")
+
+    One can create a :class:`VertexAsLabel` this way:
+
     >>> vtx_to_label = lambda graph, cluster, vtx: None if vtx["name"].islower() else Label(vtx["name"], 1.2)
-    
     >>> labeller = VertexAsLabel(vtx_to_label)
 
+    and then use it:
+
+    >>> g = ig.Graph.Formula("a--A:B:C, b--A:B, c--C:D")
     >>> vcover = ig.VertexCover(g, [[0,1,2,3,4], [5,3,6]])
     >>> vcover = labeller(vcover)
     >>> print(vcover)
@@ -30,15 +33,29 @@ class VertexAsLabel(Optionable):
     [Label(u'C', 1.2), Label(u'D', 1.2)]
     
     Here is an other example:
-    
+
     >>> g = ig.Graph.Full(4)
-    >>> labeller = VertexAsLabel(lambda _, __, vtx: Label("--%s--" % vtx.index) if vtx.index % 2 == 0 else None)
+    >>> vtx_to_label = lambda _, __, vtx: Label("--%s--" % vtx.index) if vtx.index % 2 == 0 else None
+    >>> labeller = VertexAsLabel(vtx_to_label)
     >>> vcover = ig.VertexCover(g, [[0,1,2,3]])
     >>> vcover = labeller(vcover)
     >>> print(vcover)
     Cover with 1 clusters
     [0] 0, 1, 2, 3 (labels: --0--, --2--)
-    
+
+    It is also possible to generate more than one label per vertex :
+
+    >>> vtx_to_label = lambda graph, cluster, vtx: (Label(cat, 1.) for cat in vtx["cat"])
+    >>> labeller = VertexAsLabel(vtx_to_label)
+    >>> g = ig.Graph.Formula("a, b, A, B, C, a--A:C, b--B")
+    >>> g.vs["cat"] = [[], [], ["one", "two"], ["b", "Bé"], ["one", "three"]]
+    >>> vcover = ig.VertexCover(g, [[0,2,4], [1,3]])
+    >>> vcover = labeller(vcover)
+    >>> print(vcover)
+    Cover with 2 clusters
+    [0] a, A, C (labels: one, two, one, three)
+    [1] b, B (labels: b, Bé)
+
     .. note:: this class may also be use by inheritance, see
         :class:`TypeFalseLabel` for an example.
 
@@ -103,12 +120,14 @@ class VertexAsLabel(Optionable):
         if not isinstance(vertex_cover, LabelledVertexCover):
             vertex_cover = LabelledVertexCover.FromVertexCover(vertex_cover)
         # compute labels for each cluster
+        # keep ref for optimisation
         graph = vertex_cover.graph
         vs = graph.vs
-        aslist = lambda x : x if type(x) == list else [x] 
+        # use tuple either of list : more efficient
+        astuple = lambda x: (x, ) if type(x) == Label else x
         for cid, cluster in enumerate(vertex_cover):
-            alllabels = ( aslist(self.vtx_to_label(graph, cluster, vs[vtx], **kwargs)) for vtx in cluster)
-            labels = [label for labels in alllabels for label in labels if label is not None]
+            alllabels = (astuple(self.vtx_to_label(graph, cluster, vs[vtx], **kwargs)) for vtx in cluster)
+            labels = [label for labels in alllabels if labels is not None for label in labels if label is not None]
             vertex_cover.add_labels(cid, labels)
         return vertex_cover
 
