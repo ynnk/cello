@@ -426,6 +426,7 @@ class DocumentFieldBigraph(OptionableGraphBuilder):
         self.field_names = fields
         # declare std attributs
         self.declare_vattr("type")
+        self.declare_vattr("_source")
         self.declare_vattr("_doc")
         self.declare_vattr(self.field_vtx)
         # declare user selected attr
@@ -452,6 +453,7 @@ class DocumentFieldBigraph(OptionableGraphBuilder):
             doc_gid = self.add_get_vertex((True, doc.docnum))
             self.set_vattr(doc_gid, "type", True)
             self.set_vattr(doc_gid, "_doc", doc)
+            self.set_vattr(doc_gid, "_source", None)
             self.set_vattr(doc_gid, field_vtx, None)
             for doc_attr in doc_vtx:
                 self.set_vattr(doc_gid, doc_attr, doc[doc_attr])
@@ -464,6 +466,7 @@ class DocumentFieldBigraph(OptionableGraphBuilder):
                     term_gid = self.add_get_vertex((False, term))
                     self.set_vattr(term_gid, "type", False)
                     self.set_vattr(term_gid, "_doc", None)
+                    self.set_vattr(term_gid, "_source", field)
                     self.set_vattr(term_gid, field_vtx, term)
                     # add / merge score
                     for source_attr, init, merge, dest_attr in other_field_vtx:
