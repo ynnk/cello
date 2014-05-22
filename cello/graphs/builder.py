@@ -387,10 +387,15 @@ class DocumentFieldBigraph(OptionableGraphBuilder):
     
     >>> cat_vtx = g.vs.select(label='cat')[0]
     >>> cat_vtx.attributes()
-    {'TF_RD': 13, 'title': None, '_doc': None, 'label': 'cat', 'df_RD': 2, 'type': False}
+    {'TF_RD': 13, 'title': None, '_doc': None, 'label': 'cat', 'df_RD': 2, '_source': 'terms', 'type': False}
     >>> [vtx['_doc'].docnum for vtx in cat_vtx.neighbors()]
     ['un', 'trois']
-    
+
+    note that for each object-vertex there is a '_source' attr that indicate the name of the document field where the vertex cam's from :
+    >>> cat_vtx["_source"]
+    'terms'
+
+
     and then an edge:
     
     >>> edge = g.es[g.get_eid(cat_vtx.index, doc_un_vtx.index)]
