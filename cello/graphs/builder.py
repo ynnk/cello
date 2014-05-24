@@ -14,7 +14,55 @@ import logging
 
 import igraph as ig
 
-from cello.pipeline import Optionable
+from cello.pipeline import Optionable, Composable
+
+
+class Subgraph(Composable):
+    """ Build a local graph by extracting a subgraph from a global one
+
+    >>> import igraph as ig
+    >>> global_graph = ig.Graph.Formula("a--b--c--d, b--d, b--e")
+    >>> subgraph_builder = Subgraph(global_graph)
+    >>> # then at run time
+    >>> graph = subgraph_builder([0,1,3])
+    >>> print(graph.summary(1))
+    IGRAPH UN-- 3 2 -- 
+    + attr: gid (v), name (v)
+    + edges (vertex names):
+    a--b, b--d
+    >>> graph.vs["gid"]
+    [0, 1, 3]
+    >>> [vtx.index for vtx in graph.vs]
+    [0, 1, 2]
+
+
+    if the input is a list of tupple `[(vid, score), ...]` then the score is stored
+    on an vertex attribute
+
+    >>> subgraph_builder = Subgraph(global_graph, score_attr="prox")
+    >>> # then at run time
+    >>> graph = subgraph_builder([(0, 0.02), (1, 0.0015), (3, 0.00102)])
+    >>> graph.vs["gid"]
+    [0, 1, 3]
+    >>> graph.vs["prox"]
+    [0.02, 0.0015, 0.00102]
+    """
+    def __init__(self, graph, score_attr="score", name=None):
+        super(Subgraph, self).__init__(name=name)
+        self._graph = graph
+        self._score_attr = score_attr
+
+    def __call__(self, vids):
+        scores = None
+        if len(vids) != 0 and isinstance(vids[0], tuple):
+            scores = [score for vid, score in vids]
+            vids = [vid for vid, score in vids]
+        subgraph = self._graph.subgraph(vids)
+        subgraph.vs["gid"] = vids
+        if scores is not None:
+            subgraph.vs[self._score_attr] = scores
+        return subgraph
+
 
 class GraphBuilder(object):
     """ Abstract class to build a igraph graph object by parsing a source.
@@ -339,10 +387,15 @@ class DocumentFieldBigraph(OptionableGraphBuilder):
     
     >>> cat_vtx = g.vs.select(label='cat')[0]
     >>> cat_vtx.attributes()
-    {'TF_RD': 13, 'title': None, '_doc': None, 'label': 'cat', 'df_RD': 2, 'type': False}
+    {'TF_RD': 13, 'title': None, '_doc': None, 'label': 'cat', 'df_RD': 2, '_source': 'terms', 'type': False}
     >>> [vtx['_doc'].docnum for vtx in cat_vtx.neighbors()]
     ['un', 'trois']
-    
+
+    note that for each object-vertex there is a '_source' attr that indicate the name of the document field where the vertex cam's from :
+    >>> cat_vtx["_source"]
+    'terms'
+
+
     and then an edge:
     
     >>> edge = g.es[g.get_eid(cat_vtx.index, doc_un_vtx.index)]
@@ -378,6 +431,7 @@ class DocumentFieldBigraph(OptionableGraphBuilder):
         self.field_names = fields
         # declare std attributs
         self.declare_vattr("type")
+        self.declare_vattr("_source")
         self.declare_vattr("_doc")
         self.declare_vattr(self.field_vtx)
         # declare user selected attr
@@ -404,6 +458,7 @@ class DocumentFieldBigraph(OptionableGraphBuilder):
             doc_gid = self.add_get_vertex((True, doc.docnum))
             self.set_vattr(doc_gid, "type", True)
             self.set_vattr(doc_gid, "_doc", doc)
+            self.set_vattr(doc_gid, "_source", None)
             self.set_vattr(doc_gid, field_vtx, None)
             for doc_attr in doc_vtx:
                 self.set_vattr(doc_gid, doc_attr, doc[doc_attr])
@@ -416,6 +471,7 @@ class DocumentFieldBigraph(OptionableGraphBuilder):
                     term_gid = self.add_get_vertex((False, term))
                     self.set_vattr(term_gid, "type", False)
                     self.set_vattr(term_gid, "_doc", None)
+                    self.set_vattr(term_gid, "_source", field)
                     self.set_vattr(term_gid, field_vtx, term)
                     # add / merge score
                     for source_attr, init, merge, dest_attr in other_field_vtx:

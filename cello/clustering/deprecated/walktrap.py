@@ -6,7 +6,7 @@ from math import sqrt
 from numpy import zeros
 import igraph
 
-from cello.graphs.prox import prox_markov_wgt
+from cello.graphs.prox import prox_markov_dict
 
 ################################################################################
 

@@ -52,7 +52,7 @@ def ProxLayoutPCA(name="prox_layout_PCA", dim=3):
     return layout_cpt
 
 
-def ProxLayoutRandomProj(name="prox_layout_PCA", dim=3):
+def ProxLayoutRandomProj(name="prox_layout_Random_Proj", dim=3):
     """ Prox layout with a random projection to reduce dimentions
     
     :param name: name of the component
@@ -119,7 +119,7 @@ def ProxBigraphLayoutPCA(name="prox_bigraph_layout_PCA", dim=3):
     return layout_cpt
 
 
-def ProxBigraphLayoutRandomProj(name="prox_layout_PCA", dim=3):
+def ProxBigraphLayoutRandomProj(name="prox_layout_bigraph_PCA", dim=3):
     """ Prox layout with a random projection to reduce dimentions
     
     :param name: name of the component
@@ -132,7 +132,7 @@ def ProxBigraphLayoutRandomProj(name="prox_layout_PCA", dim=3):
     >>> layout(g)
     <Layout with 6 vertices and 2 dimensions>
     """
-    layout_cpt = ProxLayout() | ReduceRandProj(dim=dim) | normalise
+    layout_cpt = ProxBigraphLayout() | ReduceRandProj(dim=dim) | normalise
     #TODO: on ajoute un truc du genre:
     #layout_cpt |= maybe(Shaker(), default=True, help="'Shake' the layout to ensure no overlaping vertices")
     layout_cpt.name = name

@@ -1,4 +1,9 @@
 #-*- coding:utf-8 -*-
+""" :mod:`cello.layout.web`
+===========================
+
+helpers to build HTTP/Json Api from cello engines
+"""
 
 import sys
 import json
