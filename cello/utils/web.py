@@ -13,6 +13,7 @@ from flask import Blueprint
 from flask import abort, request, jsonify
 
 from cello.types import GenericType, Text
+from cello.exceptions import CelloPlayError
 from cello.engine import Engine
 
 # for error code see http://fr.wikipedia.org/wiki/Liste_des_codes_HTTP#Erreur_du_client
@@ -89,24 +90,33 @@ class CelloFlaskView(Blueprint):
         else:
             raise NotImplementedError("le mutlti input est pas encore géré ici...")
         ### run the engine
+        error = False #by default ok
         try:
             raw_res = self.engine.play(*inputs_data)
-        #TODO: manage error ?
+        except CelloPlayError as err:
+            # this is the cello error that we can handle
+            error = True
         finally:
             pass
         ### prepare outputs
-        results = {}
-        for out_name, serializer in self._outputs:
-            # serialise output
-            if serializer is not None:
-                #print "serialize", out_name, "\n" , raw_res[out_name] 
-                results[out_name] = serializer(raw_res[out_name])
-            else:
-                results[out_name] = raw_res[out_name]
-        ### prepare result json
         outputs = {}
+        rcode = 200     #default return code if no errors
+        results = {}
+        if not error:
+            # prepare the outputs
+            for out_name, serializer in self._outputs:
+                # serialise output
+                if serializer is not None:
+                    results[out_name] = serializer(raw_res[out_name])
+                else:
+                    results[out_name] = raw_res[out_name]
+        else:          # custom return code if managed error
+            rcode = 530
+        ### prepare the retourning json
+        # add the results
         outputs["results"] = results
         ### serialise play metadata
         outputs['meta'] = self.engine.meta.as_dict()
-        return jsonify(outputs)
+        #note: meta contains the error (if any)
+        return jsonify(outputs), rcode
 

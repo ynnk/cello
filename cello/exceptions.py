@@ -5,9 +5,6 @@
 :copyright: (c) 2013 - 2014 by Yannick Chudy, Emmanuel Navarro.
 :license: ${LICENSE}
 
-Class
------
-
 """
 
 class CelloError(Exception):
@@ -15,6 +12,19 @@ class CelloError(Exception):
 
 class CelloValueError(CelloError, ValueError):
     """Cello value error: one value (attribute) was wrong"""
+
+
+class CelloPlayError(Exception):
+    """Error occuring at engine 'play' time
+    
+    This errors can be show to the user
+    """
+    #TODO: manage i18n
+    def __init__(self, msg):
+        self.msg = msg
+
+    def __str__(self):
+        return self.msg
 
 
 class SchemaError(Exception):
