@@ -100,7 +100,6 @@ class CelloFlaskView(Blueprint):
             pass
         ### prepare outputs
         outputs = {}
-        rcode = 200     #default return code if no errors
         results = {}
         if not error:
             # prepare the outputs
@@ -110,13 +109,11 @@ class CelloFlaskView(Blueprint):
                     results[out_name] = serializer(raw_res[out_name])
                 else:
                     results[out_name] = raw_res[out_name]
-        else:          # custom return code if managed error
-            rcode = 530
         ### prepare the retourning json
         # add the results
         outputs["results"] = results
         ### serialise play metadata
         outputs['meta'] = self.engine.meta.as_dict()
         #note: meta contains the error (if any)
-        return jsonify(outputs), rcode
+        return jsonify(outputs)
 
