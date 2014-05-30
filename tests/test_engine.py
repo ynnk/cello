@@ -315,7 +315,7 @@ class TestEngine(unittest.TestCase):
         engine.set("op1", self.plus_comp, self.mult_opt, self.max_comp)
         engine.set("op2", self.plus_comp)
         self.assertDictEqual(engine.as_dict(), {
-            'args': None,
+            'args': ['input'],
             'blocks': [
                 {
                     'components': [

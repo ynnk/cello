@@ -54,7 +54,7 @@ One can have the list of all configurations:
 
 >>> from pprint import pprint
 >>> pprint(cellist.as_dict())
-{'args': None,
+{'args': ['input'],
  'blocks': [{'args': None,
              'components': [{'default': False,
                              'name': 'one',
@@ -796,12 +796,12 @@ class Engine(object):
 
     @property
     def in_name(self):
-        """ Give the input name of the first block
+        """ Give the input name of the **first** block.
+        
+        If this first block is not required or if other block need some inputs
+        then you beter have to look at :func:`needed_inputs`.
         """
-        #TODO: faire que cela puisse être configurable au niveau de l'engine
-        # en fait les inputs sont toutes les inputs des blocks qui ne sont pas produit par des blocks avant
-        # mais ca posse question/pb quand les blocks avant sont optionels
-        return iter(self).next().in_name
+        return iter(self).next().in_name or [Engine.DEFAULT_IN_NAME]
 
     def __contains__(self, name):
         """ Whether a block of the given name exists
