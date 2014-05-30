@@ -470,10 +470,14 @@ class Block(object):
 
     @property
     def defaults(self):
-        """ component selected by default
+        """ component default component
+
+        .. Note:: default components is just an indication for user and the
+            views, except if the Block is required. If required then default is
+            selected if nothing explisitely selected.
         """
         default = self._defaults
-        # if require and no default, th first component as default
+        # if require and no default, the first component as default
         if not len(default) and self.required and len(self._components):
             default = [self._components.itervalues().next().name]
         return default
@@ -495,7 +499,8 @@ class Block(object):
         then the first component is selected.
         """
         selected = self._selected
-        if len(self._selected) == 0: # nothing has been selected yet
+        if len(self._selected) == 0 and self.required:
+            # nothing has been selected yet BUT the component is required
             selected = self.defaults
         return selected
 
@@ -576,7 +581,7 @@ class Block(object):
         if multiple is not None:
             self.multiple = multiple
         if defaults is not None:
-            #FIXME: what it default is just a 'str'
+            #if default is just a 'str' it is managed in setter
             self.defaults = defaults
 
     def set(self, *components):
@@ -599,7 +604,10 @@ class Block(object):
         :type default: bool
         """
         if not isinstance(component, Composable):
-            raise ValueError("component '%s' is not type of Optionable or Composable" % component)
+            if callable(component):
+                component = Composable(component)
+            else:
+                raise ValueError("component '%s' is not Optionable nor Composable and even not callable" % component)
         if component.name in self._components:
             raise ValueError("We already have a component with the name '%s'" % component.name)
         self._components[component.name] = component
@@ -610,7 +618,7 @@ class Block(object):
                 self.defaults = component.name
 
     def select(self, comp_name, options=None):
-        """ set an component as runnable with given options.
+        """ Select the components that will by played (with given options).
 
         `options` will be passed to :func:`.Optionable.parse_options` if the
         component is a subclass of :class:`Optionable`.
@@ -887,8 +895,11 @@ class Engine(object):
             for req_comp in request_comps:
                 block.select(req_comp['name'], req_comp.get("options", {}))
 
-    def validate(self):
+    def validate(self, inputs=None):
         """ Check that the blocks configuration is ok
+        
+        :param inputs: the names of the play inputs
+        :type inputs: list of str
         """
         # if no blocks...
         if not len(self._blocks):
@@ -902,9 +913,20 @@ class Engine(object):
         available = set()       # set of available data
         maybe_available = set() # data that are produced be not required blocks
         # add the first block input as available data
-        if self.in_name is not None:
-            for in_name in self.in_name:
+        if inputs is not None:
+            for in_name in inputs:
                 available.add(in_name)
+        else:
+            # no inputs given, then consider that the first block input will be given
+            if self.in_name is not None:
+                for in_name in self.in_name:
+                    available.add(in_name)
+        miss = self.needed_inputs().difference(available)
+        if len(miss):
+            raise CelloError("The following inputs are needed and not given: %s" % (",".join("'%s'" % in_name for in_name in miss)))
+        return
+        ##XXX ##XXX
+        ##XXX ##XXX
         for bnum, block in enumerate(self):
             if block.in_name is not None:
                 # there is to case just to differenciate the error msg
@@ -918,27 +940,87 @@ class Engine(object):
             else:
                 available.add(block.out_name)
 
-    def play(self, *inputs):
+    def needed_inputs(self):
+        """ List all the needed inputs of a configured engine
+
+        >>> engine = Engine("op1", "op2")
+        >>> engine.op1.setup(in_name="in", out_name="middle", required=False)
+        >>> engine.op2.setup(in_name="middle", out_name="out")
+        >>> engine.op1.append(lambda x:x+2)
+        >>> engine.op2.append(lambda x:x*2)
+        >>> engine.op1.select('<lambda>')
+        >>> engine.needed_inputs()
+        set(['in'])
+
+        But now if we unactivate the first component:
+
+        >>> engine.op1.clear_selections()
+        >>> engine.needed_inputs()
+        set(['middle'])
+
+        More complex example:
+        >>> engine = Engine("op1", "op2")
+        >>> engine.op1.setup(in_name="in", out_name="middle")
+        >>> engine.op2.setup(in_name=["middle", "in2"], out_name="out")
+        >>> engine.op1.append(lambda x:x+2)
+        >>> engine.op2.append(lambda x, y:x*y)
+        >>> engine.needed_inputs()
+        set(['in2', 'in'])
+        """
+        needed = set()
+        available = set()       # set of available data
+        for bnum, block in enumerate(self):
+            if not block.selected():    # if the block will not be used
+                continue
+            if block.in_name is not None:
+                for in_name in block.in_name:
+                    if not in_name in available:
+                        needed.add(in_name)
+            # register the output
+            available.add(block.out_name)
+        return needed
+
+    def play(self, *inputs, **named_inputs):
         """ Run the engine (that should have been configured first)
         
+        if the inputs are given without name it should be the inputs of the
+        first block.
+        
+        .. note:: Either `inputs` or `named_inputs` should be provided, not both
+        
         :param inputs: the data to give as input to the first block
+        :param named_inputs: named input data should match with
+            :func:`needed_inputs` result.
         """
         self._logger.info("\n\n\t\t\t ** ============= play engine ============= ** \n")
-        self.validate()
+        #
         # create data structure for results and metaresults
         results = OrderedDict()
         self.meta = PlayMeta("engine")
+        ### manage inputs
+        if len(inputs) and len(named_inputs):
+            raise ValueError("Either `inputs` or `named_inputs` should be provided, not both !")
         # default input name (so also the default last_output_name)
         last_output_name = "input"
-        # prepare the input data
-        first_in_names = self.in_name or [last_output_name]
-        if len(inputs) != len(first_in_names):
-            raise ValueError("%d inputs are needed, but %d given" % (len(first_in_names), len(inputs)))
-        # inputs are store in results dict (then there is no special run for the first block)
-        for input_num, in_name in enumerate(first_in_names):
-            results[in_name] = inputs[input_num]
-        # run the blocks
+        if len(inputs):
+            # prepare the input data
+            first_in_names = self.in_name or [last_output_name]
+            if len(inputs) != len(first_in_names):
+                raise ValueError("%d inputs are needed for first block, but %d given" % (len(first_in_names), len(inputs)))
+            # inputs are store in results dict (then there is no special run for the first block)
+            for input_num, in_name in enumerate(first_in_names):
+                results[in_name] = inputs[input_num]
+        else:
+            results.update(named_inputs)
+        #
+        ## validate
+        self.validate(results.keys())
+        #
+        ### run the blocks
         for block in self:
+            # continue if block is not selected (note: if require the validate should have faild before)
+            if not len(block.selected()):
+                continue
             # prepare block ipouts
             in_names = block.in_name or [last_output_name]
             inputs = [results[name] for name in in_names]
