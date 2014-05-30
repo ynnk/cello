@@ -748,6 +748,9 @@ class Block(object):
 class Engine(object):
     """ The Cello engine.
     """
+    
+    DEFAULT_IN_NAME = 'input'   # default input name for first component
+    
     @define_logger
     def __init__(self, *names):
         self._blocks = OrderedDict()
@@ -921,24 +924,17 @@ class Engine(object):
             if self.in_name is not None:
                 for in_name in self.in_name:
                     available.add(in_name)
-        miss = self.needed_inputs().difference(available)
+            else:
+                # default input name if nothing specified
+                available.add(Engine.DEFAULT_IN_NAME)
+        needed = self.needed_inputs()
+        miss = needed.difference(available)
         if len(miss):
             raise CelloError("The following inputs are needed and not given: %s" % (",".join("'%s'" % in_name for in_name in miss)))
+        no_need = available.difference(needed)
+        if len(no_need):
+            raise CelloError("The following inputs are given but not needed: %s" % (",".join("'%s'" % in_name for in_name in no_need)))
         return
-        ##XXX ##XXX
-        ##XXX ##XXX
-        for bnum, block in enumerate(self):
-            if block.in_name is not None:
-                # there is to case just to differenciate the error msg
-                if any(in_name in maybe_available for in_name in block.in_name):
-                    raise CelloError("The block '%s' need an input ('%s') that *may* not be produced before" % (block.name, block.in_name))
-                if not all(in_name in available for in_name in block.in_name):
-                    raise CelloError("The block '%s' need an input ('%s') that is not produced before" % (block.name, block.in_name))
-            # register the output
-            if not block.required:
-                maybe_available.add(block.out_name)
-            else:
-                available.add(block.out_name)
 
     def needed_inputs(self):
         """ List all the needed inputs of a configured engine
@@ -959,6 +955,7 @@ class Engine(object):
         set(['middle'])
 
         More complex example:
+
         >>> engine = Engine("op1", "op2")
         >>> engine.op1.setup(in_name="in", out_name="middle")
         >>> engine.op2.setup(in_name=["middle", "in2"], out_name="out")
@@ -966,6 +963,14 @@ class Engine(object):
         >>> engine.op2.append(lambda x, y:x*y)
         >>> engine.needed_inputs()
         set(['in2', 'in'])
+
+        Note that by default the needed input is 'input':
+        
+        >>> engine = Engine("op1", "op2")
+        >>> engine.op1.append(lambda x:x+2)
+        >>> engine.op2.append(lambda x:x*2)
+        >>> engine.needed_inputs()
+        set(['input'])
         """
         needed = set()
         available = set()       # set of available data
@@ -976,6 +981,9 @@ class Engine(object):
                 for in_name in block.in_name:
                     if not in_name in available:
                         needed.add(in_name)
+            elif bnum == 0:
+                # if the first block
+                needed.add(Engine.DEFAULT_IN_NAME)
             # register the output
             available.add(block.out_name)
         return needed
@@ -983,8 +991,9 @@ class Engine(object):
     def play(self, *inputs, **named_inputs):
         """ Run the engine (that should have been configured first)
         
-        if the inputs are given without name it should be the inputs of the
-        first block.
+        if the `inputs` are given without name it should be the inputs of the
+        first block, ig `named_inputs` are used it may be the inputs of any
+        block.
         
         .. note:: Either `inputs` or `named_inputs` should be provided, not both
         
@@ -1001,10 +1010,9 @@ class Engine(object):
         if len(inputs) and len(named_inputs):
             raise ValueError("Either `inputs` or `named_inputs` should be provided, not both !")
         # default input name (so also the default last_output_name)
-        last_output_name = "input"
         if len(inputs):
             # prepare the input data
-            first_in_names = self.in_name or [last_output_name]
+            first_in_names = self.in_name or [Engine.DEFAULT_IN_NAME]
             if len(inputs) != len(first_in_names):
                 raise ValueError("%d inputs are needed for first block, but %d given" % (len(first_in_names), len(inputs)))
             # inputs are store in results dict (then there is no special run for the first block)
@@ -1017,17 +1025,19 @@ class Engine(object):
         self.validate(results.keys())
         #
         ### run the blocks
+        last_output_name = Engine.DEFAULT_IN_NAME
         for block in self:
             # continue if block is not selected (note: if require the validate should have faild before)
             if not len(block.selected()):
                 continue
             # prepare block ipouts
             in_names = block.in_name or [last_output_name]
+            # ^ note: if the block has no named input then the last block output is used
             inputs = [results[name] for name in in_names]
             # run the block
             try:
                 results[block.out_name] = block.play(*inputs)
-                #^ Note: le validate par rapport au type est fait dans le run du block
+                # ^ note: le validate par rapport au type est fait dans le run du block
             finally:
                 # store metadata
                 self.meta.append(block.meta)

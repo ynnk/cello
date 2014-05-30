@@ -511,7 +511,7 @@ class TestEngine(unittest.TestCase):
 
     def test_engine_multi_entry_point(self):
         engine = Engine("op1", "op2")
-        engine.op1.setup(in_name="in", out_name="middle", required=False)
+        engine.op1.setup(in_name="in1", out_name="middle", required=False)
         engine.op2.setup(in_name="middle", out_name="out")
         engine.op1.append(self.mult_opt)
         engine.op2.append(self.plus_comp)
@@ -521,10 +521,18 @@ class TestEngine(unittest.TestCase):
         res = engine.play(10)
         self.assertEquals(res["out"], 52)
         self.assertEquals(res["middle"], 50)
+        # should be possible to named the input of the 1st block
+        res = engine.play(in1=10)
+        self.assertEquals(res["out"], 52)
+        self.assertEquals(res["middle"], 50)
 
         # should need input 'in'
         with self.assertRaises(CelloError):
             res = engine.play(middle=10)
+
+        # should not be possible to give to many inputs
+        with self.assertRaises(CelloError):
+            res = engine.play(middle=10, in1=10)
 
         # should be possible to not play the op1 block
         engine.op1.clear_selections()
