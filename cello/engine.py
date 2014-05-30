@@ -1050,7 +1050,7 @@ class Engine(object):
             'blocks': [
                 block.as_dict() for block in self if block.hidden == False
             ],
-            'args': self.in_name
+            'args': list(self.needed_inputs())
         }
         return drepr
 

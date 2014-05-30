@@ -135,7 +135,7 @@ class TestCelloFlaskViewMultiInputs(unittest.TestCase):
         data = json.loads(resp.data)
         # check we have the same than in engine
         self.assertListEqual(data["blocks"], self.engine.as_dict()["blocks"])
-        self.assertEqual(data["args"], ["in"])
+        self.assertEqual(data["args"], ["in", "middle"])
         self.assertListEqual(data["returns"], ["in", "middle", "out"])
 
     def test_play_simple(self):

@@ -77,6 +77,7 @@ class CelloFlaskView(Blueprint):
         conf = self.engine.as_dict()
         #TODO add possible inputs
         conf["returns"] = [oname for oname in self._outputs.iterkeys()]
+        conf["args"] = [iname for iname in self._inputs.iterkeys()]
         return jsonify(conf)
 
     def play(self):
