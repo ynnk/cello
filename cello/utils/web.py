@@ -75,8 +75,8 @@ class CelloFlaskView(Blueprint):
         """ Engine options discover HTTP entry point
         """
         conf = self.engine.as_dict()
-        #TODO add possible inputs
         conf["returns"] = [oname for oname in self._outputs.iterkeys()]
+        # Note: we overide args to only list the ones that are declared in this view
         conf["args"] = [iname for iname in self._inputs.iterkeys()]
         return jsonify(conf)
 
