@@ -337,11 +337,33 @@ class PlayMeta(BasicPlayMeta):
 
     @property
     def errors(self):
-        return []
+        """ get all the errors
+
+        >>> gres = PlayMeta("operation")
+        >>> res_plus = BasicPlayMeta(Composable(name="plus"))
+        >>> gres.append(res_plus)
+        >>> res_plus.add_error(ValueError("invalid data"))
+        >>> res_moins = BasicPlayMeta(Composable(name="moins"))
+        >>> gres.append(res_moins)
+        >>> res_plus.add_error(RuntimeError("server not anwsering"))
+        >>> gres.errors
+        [ValueError('invalid data',), RuntimeError('server not anwsering',)]
+        """
+        errors = []
+        for meta in self:
+            errors.extend(meta.errors)
+        return errors
 
     @property
     def warnings(self):
-        return []
+        #TODO add test
+        warnings = []
+        for meta in self:
+            warnings.extend(meta.warnings)
+        return warnings
+
+    def __iter__(self):
+        return iter(self._metas)
 
     def append(self, meta):
         """ Add a :class:`BasicPlayMeta`
@@ -921,10 +943,12 @@ class Engine(object):
             in_names = block.in_name or [last_output_name]
             inputs = [results[name] for name in in_names]
             # run the block
-            results[block.out_name] = block.play(*inputs)
-            #^ Note: le validate par rapport au type est fait dans le run du block
-            # store metadata
-            self.meta.append(block.meta)
+            try:
+                results[block.out_name] = block.play(*inputs)
+                #^ Note: le validate par rapport au type est fait dans le run du block
+            finally:
+                # store metadata
+                self.meta.append(block.meta)
             last_output_name = block.out_name
         return results
 

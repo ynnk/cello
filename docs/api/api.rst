@@ -10,6 +10,7 @@ Voir :mod:`cello.pipeline` par exemple, ou meme :class:`cello.pipeline.Optionabl
     cello.types
     cello.options
     cello.validators
+    cello.exceptions
     cello.schema
     cello.engine
     cello.search
