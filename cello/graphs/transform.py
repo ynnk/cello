@@ -41,6 +41,56 @@ class EdgeAttr(Composable):
         return graph
 
 
+def bipartit_linw(graph, edge):
+    """ Ad-Hoc method to weight a bipartite (tag-document) graph
+
+    Linear weight according to nb of neighbors ot the tag compared to the
+    total nuber of documents:
+     * a tag present in only 1 document has small edge weight
+     * a tag present in all documents has small edge weight
+     * optimal (=1) is form nb_doc/4.
+    
+    Here is an ascii art plot ::
+    
+            1-|     *,
+              |   / ! \,
+        wgt   |  /  !   \, 
+              | /   !     \,
+            0-|/____!_______\,
+              0   nb_opt   nb_doc
+             nb of neigh of the tag
+     
+    This method 'seems' to work prety well but can clearly be improved !
+     
+    It sould be used with :class:`EdgeAttr` :
+    
+    >>> weighter = EdgeAttr(weight=bipartit_linw)
+    >>> # then at run time
+    >>> g = ig.Graph.Formula("a:b--B:C:D, c:d:e:f:g--C, h--D")
+    >>> g.vs["type"] = [v["name"].islower() for v in g.vs]
+    >>> g = weighter(g)
+    >>> ["%s-%s w:%1.3f" % (g.vs[e.source]["name"], g.vs[e.target]["name"], e["weight"]) for e in g.es]
+    ['a-B w:1.000', 'a-C w:0.167', 'a-D w:0.833', 'b-B w:1.000', 'b-C w:0.167', 'b-D w:0.833', 'C-c w:0.167', 'C-d w:0.167', 'C-e w:0.167', 'C-f w:0.167', 'C-g w:0.167', 'D-h w:0.833']
+    
+    """
+    # get the doc (top) and tag (bot) vertex of the edge
+    source, target = graph.vs[edge.source], graph.vs[edge.target]
+    if source["type"]:
+        top, bot = source, target
+    else:
+        top, bot = target, source
+    # compute basic values
+    nb_vois_tag = 1.*len(bot.neighbors())
+    nb_doc = 1.*len(graph.vs.select(type=True))
+    # Optiomal number if neighbours :
+    nb_opt = nb_doc/4.
+    #print top, bot
+    #print top["name"], bot["name"]
+    #print nb_vois_tag, nb_doc, min(nb_vois_tag/nb_opt, 1 - (nb_vois_tag-nb_opt)/(nb_doc-nb_opt))
+    return min(nb_vois_tag/nb_opt, 1 - (nb_vois_tag-nb_opt)/(nb_doc-nb_opt))
+
+
+
 class VtxAttr(Composable):
     """ Add one or more attributes to the vertices of the graph
     
@@ -218,5 +268,7 @@ class GraphProjection(Optionable):
         
         pg.delete_edges(null_edges)
         return pg
+
+
 
 

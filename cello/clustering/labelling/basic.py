@@ -206,31 +206,33 @@ class TypeFalseLabel(VertexAsLabel):
         ))
 
     @staticmethod
-    def scoring_prop_inclust(graph, cover, vtx):
+    def scoring_prop_inclust(graph, cluster, vtx):
         """ precision: prop of neighbours that are in cluster
         """
         vois = set(nei.index for nei in vtx.neighbors())
-        commun = vois.intersection(cover)
+        commun = vois.intersection(cluster)
         return len(commun) / (1.*len(vois))
 
     @staticmethod
-    def scoring_prop_ofclust(graph, cover, vtx):
+    def scoring_prop_ofclust(graph, cluster, vtx):
         """ recall: prop of cluster doc that are in neighbours
         """
-        cover_doc = [1 for c in cover if graph.vs[c]["type"]]
+        cluster_doc = [1 for c in cluster if graph.vs[c]["type"]]
+        if len(cluster_doc) == 0:
+            return 0.
         vois = set(nei.index for nei in vtx.neighbors())
-        commun = vois.intersection(cover)
-        return len(commun) / (1.*len(cover_doc))
+        commun = vois.intersection(cluster)
+        return len(commun) / (1.*len(cluster_doc))
 
-    def vtx_to_label(self, graph, cover, vtx, score=None):
+    def vtx_to_label(self, graph, cluster, vtx, score=None):
         label = None
         if not 'type' in graph.vs.attributes():
             raise ValueError("The graph should be bipartite, and have a 'type' attribute on each vertex")
         if not vtx['type']:
             if score == "precision":
-                wgt = TypeFalseLabel.scoring_prop_inclust(graph, cover, vtx)
+                wgt = TypeFalseLabel.scoring_prop_inclust(graph, cluster, vtx)
             else:
-                wgt = TypeFalseLabel.scoring_prop_ofclust(graph, cover, vtx)
+                wgt = TypeFalseLabel.scoring_prop_ofclust(graph, cluster, vtx)
             label = Label(vtx[self.vtx_attr], wgt, self.role)
             label.vtx = vtx.index
         return label
