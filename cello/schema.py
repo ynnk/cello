@@ -18,7 +18,7 @@ Class
 """
 from collections import OrderedDict
 from cello.types import GenericType, Numeric, Text
-from cello.exceptions import SchemaError
+from cello.exceptions import SchemaError, ValidationError, FieldValidationError
 
 
 class Schema(object):
@@ -719,9 +719,8 @@ class Doc(dict):
         # fields value(s)
         for key, ftype in schema.iter_fields():
             self[key] = DocField.FromType(ftype)
-            if data.has_key(key):
-                # explicit getitem needed for ValueField
-                dict.__getitem__(self, key).set(data[key])
+            if key in data:
+                self.set_field(key,data[key])
 
     def add_field(self, name, ftype, docfield=None):
         """ Add a field to the document (and to the underlying schema)
@@ -741,6 +740,14 @@ class Doc(dict):
         except KeyError as err:
             raise SchemaError("'%s' is not a document field (existing attributes are: %s)" % (err, self.keys()))
 
+    def set_field(self, name, value):
+        """ set field """
+        # explicit getitem needed for ValueField
+        try: 
+            dict.__getitem__(self, name).set(value)
+        except ValidationError as err:
+            raise FieldValidationError(name, value, list(err))
+            
     def __getitem__(self, name):
         return getattr(self, name)
 
@@ -771,7 +778,7 @@ class Doc(dict):
             dict.__setitem__(self, name, value)
         elif name in self.schema.field_names():
             # set a value to one field
-            dict.__getitem__(self, name).set(value)
+            self.set_field(name, value)
         else:
             raise SchemaError("'%s' is not a document field (existing attributes are: %s)" % (name, self.keys()))
 
