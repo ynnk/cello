@@ -31,7 +31,7 @@ class CelloFlaskView(Blueprint):
         :param engine: the cello engine to serve through an json API
         :type engine: :class:`.Engine`.
         """
-        super(CelloFlaskView, self).__init__("cello", __name__)
+        super(CelloFlaskView, self).__init__(repr(self), __name__)
         self.engine = engine
         # default input
         self._in_type = None
@@ -53,6 +53,15 @@ class CelloFlaskView(Blueprint):
         else:
             raise ValueError("the given 'type_or_parse' is invalid")
 
+    def set_outputs(self, outputs):
+        """ :param outputs: dict {name: serializer} """
+        if outputs is None:
+            raise ValueError("Invalid outputs should not be none.")
+            
+        self._outputs = []
+        for name, serializer in  outputs.iteritems():
+            self.add_output(name, serializer)
+        
     def add_output(self, out_name, serializer=None):
         """ add an output
         """
@@ -65,7 +74,8 @@ class CelloFlaskView(Blueprint):
         conf["returns"] = [oname for oname, _ in self._outputs]
         return jsonify(conf)
 
-    def play(self):
+
+    def parse_request(self):
         if not request.headers['Content-Type'].startswith('application/json'):
             abort(415) # Unsupported Media Type
         ### get data
@@ -75,30 +85,34 @@ class CelloFlaskView(Blueprint):
         if not all([inname in data for inname in self.engine.in_name]):
             #XXX ERROR should be handle
             raise NotImplementedError()
-        ### parse options
-        if "options" in data:
-            options = data["options"]
-            try:
-                self.engine.configure(options)
-            except ValueError as err:
-                #TODO beter manage input error: indicate what's wrong
-                abort(406)  # Not Acceptable
         ### parse input (and validate)
+
         inputs_data = [data[in_name] for in_name in self.engine.in_name]
-        if len(inputs_data):
+        if len(inputs_data) == 1: # TODO !
             self._in_type.validate(inputs_data[0])
         else:
             raise NotImplementedError("le mutlti input est pas encore géré ici...")
+
+        options = data.get("options", {}) 
+        return inputs_data, options
+
+    def run_engine(self, data, options):
+        try:
+            self.engine.configure(options)
+        except ValueError as err:
+            #TODO beter manage input error: indicate what's wrong
+            abort(406)  # Not Acceptable
         ### run the engine
         error = False #by default ok
         try:
-            raw_res = self.engine.play(*inputs_data)
+            raw_res = self.engine.play(*data)
         except CelloPlayError as err:
             # this is the cello error that we can handle
             error = True
         finally:
             pass
-        ### prepare outputs
+        
+        # prepare outputs
         outputs = {}
         results = {}
         if not error:
@@ -115,5 +129,11 @@ class CelloFlaskView(Blueprint):
         ### serialise play metadata
         outputs['meta'] = self.engine.meta.as_dict()
         #note: meta contains the error (if any)
+        return outputs
+        
+    def play(self):
+        data, options = self.parse_request()
+        outputs = self.run_engine(data, options)
         return jsonify(outputs)
+
 

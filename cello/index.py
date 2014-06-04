@@ -29,7 +29,7 @@ class Index:
         """
         raise NotImplementedError
 
-    def has_document(self, docnum):
+    def has_document(self, *args, **kwargs):
         """ Whether a document is in the index
         
         :param docnum: the document uniq identifier (in the collection).
