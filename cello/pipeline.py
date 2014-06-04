@@ -26,30 +26,25 @@ class Composable(object):
     
     Composable is abstract, you need to implemented the :meth:`__call__` method
     
-    >>> e1 = Composable(lambda iterable: (element**2 for element in iterable))
-    >>> e2 = Composable(lambda iterable: (element + 10 for element in iterable))
+    >>> e1 = Composable(lambda element: element**2)
+    >>> e2 = Composable(lambda element: element + 10)
     
-    Then Composable can be pipelined this way :
+    Then :class:`Composable` can be pipelined this way :
 
     >>> chain = e1 | e2
+    >>> # so yo got:
+    >>> chain(2)
+    14
+    >>> # which is equivalent to :
+    >>> e2(e1(2))
+    14
 
-    So yo got :
-    
-    >>> iterable = xrange(0, 6, 2)
-    >>> for e in chain(iterable):
-    ...     print("result: %s" % e)
-    result: 10
-    result: 14
-    result: 26
+    It also possible to 'map' the composables
+    >>> cmap = e1 & e2
+    >>> # so you got:
+    >>> cmap(2)
+    [4, 12]
 
-    which is equivalent to :
-
-    >>> iterable = xrange(0, 6, 2)
-    >>> for e in e2(e1(iterable)):
-    ...     print("result: %s" % e)
-    result: 10
-    result: 14
-    result: 26
     """
 
     def __init__(self, func=None, name=None):
@@ -511,10 +506,10 @@ class Pipeline(OptionableSequence):
 class MapSeq(OptionableSequence):
     """ Map implentation for components
     
-    >>> mapseq = MapSeq( lambda x: x+1, lambda x: x+2, lambda x: x+3 )
-    >>> mapseq( 10 )
+    >>> mapseq = MapSeq(lambda x: x+1, lambda x: x+2, lambda x: x+3)
+    >>> mapseq(10)
     [11, 12, 13]
-    >>> sum(mapseq( 10 ))
+    >>> sum(mapseq(10))
     36
     """
     @OptionableSequence.check
