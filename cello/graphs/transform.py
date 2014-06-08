@@ -11,9 +11,132 @@ from cello.types import Text
 
 from cello.graphs import EDGE_WEIGHT_ATTR
 from cello.graphs.prox import prox_markov_dict
-
+from cello.graphs.builder import GraphBuilder
 
 _logger = logging.getLogger("cello.graphs.transform")
+
+
+class MergeGraphs(Composable):
+    """ Merge a list of graph into one.
+    
+    By default no vertices are merged (each vertex in each graph is keeped).
+    However one can specify a vertex 'hash' function (`vertex_id`) that is used
+    to identify vertices. If two vertices have the same 'vertex_id' they will 
+    be merged.
+    
+    If we have two graphs like:
+    
+    >>> import igraph as ig
+    >>> g1 = ig.Graph.Formula("a--b--c--a")
+    >>> g3 = ig.Graph.Formula("a--B--C--a")
+
+    is is possible to merge it with:
+
+    >>> merger = MergeGraphs(vertex_id=lambda graph, vtx: vtx["name"])
+
+    that give:
+
+    >>> g = merger([g1, g3])
+    >>> print(g.summary(verbosity=1))
+    IGRAPH UN-- 5 6 -- 
+    + attr: name (v)
+    + edges (vertex names):
+    a--b, a--c, b--c, a--B, a--C, B--C
+
+    This composant is usefull when you have different graph builders that work
+    from a same input.
+
+    To illustrate it, we can take the two following simple (and useless) graph
+    builders:
+
+    >>> @Composable
+    ... def lower_seq(string):
+    ...     letters = [letter for letter in string if letter.islower()]
+    ...     return ig.Graph.Formula("--".join(letters))
+    >>> @Composable
+    ... def upper_seq(string):
+    ...     letters = [letter for letter in string if letter.isupper()]
+    ...     return ig.Graph.Formula("--".join(letters))
+
+    They build graphs from a sequence of char, taking into acount only upper or
+    lower chars. Here is an exemple:
+
+    >>> g1 = upper_seq("gBrIaphG")
+    >>> print(g1.summary(verbosity=1))
+    IGRAPH UN-- 3 2 -- 
+    + attr: name (v)
+    + edges (vertex names):
+    B--I, I--G
+    >>> g2 = lower_seq("gBrIaphG")
+    >>> print(g2.summary(verbosity=1))
+    IGRAPH UN-- 5 4 -- 
+    + attr: name (v)
+    + edges (vertex names):
+    g--r, r--a, a--p, p--h
+
+    We can now build a meta composant that use this two graph builders and then
+    merge it in one graph.
+
+    >>> gbuilder = (upper_seq & lower_seq) | MergeGraphs()
+
+    This component can be used this way:
+
+    >>> g = gbuilder("gBrIaphG")
+    >>> print(g.summary(verbosity=1))
+    IGRAPH UN-- 8 6 -- 
+    + attr: name (v)
+    + edges (vertex names):
+    B--I, I--G, g--r, r--a, a--p, p--h
+
+    """
+    def __init__(self, name=None, vertex_id=None):
+        """
+        :param vertex_id: function to identify vertices
+        :type vertex_id: (graph, vertex) -> str
+        """
+        super(MergeGraphs, self).__init__(name=name)
+        if vertex_id is None:
+            vertex_id = lambda graph, vtx: "%s-%s" % (hash(graph), vtx.index)
+        self.vertex_id = vertex_id
+
+    def __call__(self, graph_list):
+        vertex_id = self.vertex_id
+        # create the graph builder
+        gbuilder = GraphBuilder(directed=False) #TODO: directed ?
+        # declar attrs
+        for graph in graph_list:
+            # vtx_attr
+            for vattr in graph.vs.attributes():
+                gbuilder.declare_vattr(vattr)
+            # edge_attr
+            for eattr in graph.es.attributes():
+                gbuilder.declare_eattr(eattr)
+        #
+        gbuilder.reset()
+        # build the vertices of the merged graph
+        for graph in graph_list:
+            for vtx in graph.vs:
+                vid = vertex_id(graph, vtx)
+                vgid = gbuilder.add_get_vertex(vid)
+                # add attributes
+                for vattr, val in vtx.attributes().iteritems():
+                    gbuilder.set_vattr(vgid, vattr, val)
+        #
+        # build the edges
+        for graph in graph_list:
+            for edge in graph.es:
+                sid = vertex_id(graph, graph.vs[edge.source])
+                sgid = gbuilder.add_get_vertex(sid)
+                tid = vertex_id(graph, graph.vs[edge.target])
+                tgid = gbuilder.add_get_vertex(tid)
+                eid = gbuilder.add_get_edge(sgid, tgid)
+                # add attributes
+                for eattr, val in edge.attributes().iteritems():
+                    #gbuilder.set_eattr(egid, vattr, val)
+                    pass
+        #
+        # Creates and returns the graph
+        return gbuilder.create_graph()
 
 
 class EdgeAttr(Composable):
