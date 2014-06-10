@@ -17,7 +17,7 @@
 import re
 import urllib2
 import logging
-import simplejson as json
+import json
 
 def parse_bool(value):
     """ Convert a string to a boolean
