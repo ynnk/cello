@@ -98,11 +98,11 @@ def export_graph(graph, exclude_gattrs=[], exclude_vattrs=[], exclude_eattrs=[])
             {'s': 0, 't': 3},
             {'s': 0, 't': 4},
             {'s': 3, 't': 4}],
-     'vs': [{'_id': 0, 'docnum': 1, 'name': 'a'},
-            {'_id': 1, 'docnum': None, 'name': 'b'},
-            {'_id': 2, 'docnum': 3, 'name': 'c'},
-            {'_id': 3, 'docnum': None, 'name': 'd'},
-            {'_id': 4, 'docnum': 5, 'name': 'f'}]}
+     'vs': [{'docnum': 1, 'id': 0, 'name': 'a'},
+            {'docnum': None, 'id': 1, 'name': 'b'},
+            {'docnum': 3, 'id': 2, 'name': 'c'},
+            {'docnum': None, 'id': 3, 'name': 'd'},
+            {'docnum': 5, 'id': 4, 'name': 'f'}]}
 
     The '_doc' vertex attribute is converted into a 'docnum' attribut:
 
@@ -121,15 +121,26 @@ def export_graph(graph, exclude_gattrs=[], exclude_vattrs=[], exclude_eattrs=[])
             {'s': 0, 't': 3, 'weight': 5},
             {'s': 0, 't': 4, 'weight': 5},
             {'s': 3, 't': 4, 'weight': 1}],
-     'vs': [{'_id': 0, 'docnum': 'd_0', 'name': 'a'},
-            {'_id': 1, 'docnum': None, 'name': 'b'},
-            {'_id': 2, 'docnum': 'd_2', 'name': 'c'},
-            {'_id': 3, 'docnum': None, 'name': 'd'},
-            {'_id': 4, 'docnum': 'd_4', 'name': 'f'}]}
+     'vs': [{'docnum': 'd_0', 'id': 0, 'name': 'a'},
+            {'docnum': None, 'id': 1, 'name': 'b'},
+            {'docnum': 'd_2', 'id': 2, 'name': 'c'},
+            {'docnum': None, 'id': 3, 'name': 'd'},
+            {'docnum': 'd_4', 'id': 4, 'name': 'f'}]}
 
+    If you have an id 
+
+    >>> g = IgraphGraph.Formula("a--b, a--c, a--d, a--f, d--f")
+    >>> g.vs['id'] = [45, 56, 342, 56, 558]
+    >>> graph_dict = export_graph(g)
+    Traceback (most recent call last):
+    ...
+    ValueError: The graph already have a vetrex attribute 'id'
     """
     import igraph
+    # some check
     assert isinstance(graph, igraph.Graph)
+    if 'id' in graph.vs.attributes():
+        raise ValueError("The graph already have a vetrex attribute 'id'")
     # create the graph dict
     graph_dict = {}
     graph_dict['vs'] = []
@@ -151,10 +162,10 @@ def export_graph(graph, exclude_gattrs=[], exclude_vattrs=[], exclude_eattrs=[])
     graph_dict['attributes']['v_attrs'] = sorted(graph_dict['attributes']['v_attrs'])
 
     # vertices
-    for _id, vtx in enumerate(graph.vs):
+    for vid, vtx in enumerate(graph.vs):
         vertex = vtx.attributes()
         # _id : structural vertex attr
-        vertex["_id"] = _id
+        vertex["id"] = vid
         if "_doc" in vertex:
             if vertex["_doc"] is not None:
                 assert isinstance(vertex["_doc"], Doc)
@@ -171,11 +182,11 @@ def export_graph(graph, exclude_gattrs=[], exclude_vattrs=[], exclude_eattrs=[])
     for edg in graph.es:
         edge = edg.attributes() # recopie tous les attributs
         # add source et target
-        edge["s"] = edg.source # match with '_id' vertex attributs
+        edge["s"] = edg.source # match with 'id' vertex attributs
         edge["t"] = edg.target
         #TODO check il n'y a pas de 's' 't' dans attr
         graph_dict['es'].append(edge)
-    
+
     return graph_dict
 
 
@@ -202,7 +213,7 @@ def read_json(data):
           
           'vs': [ # vertices list
             { # vertex
-              '_id': id,    # protected vertex id should not be editable 
+              'id': id,    # protected vertex id should not be editable 
               'key': value,  # any pair of key value may match a type
             }, ...
           ],
@@ -227,11 +238,11 @@ def read_json(data):
     ...        {'s': 0, 't': 3, 'weight': 5},
     ...        {'s': 0, 't': 4, 'weight': 5},
     ...        {'s': 3, 't': 4, 'weight': 1}],
-    ... 'vs': [{'_id': 0, 'docnum': 'd_0', 'name': 'a'},
-    ...        {'_id': 1, 'docnum': None, 'name': 'b'},
-    ...        {'_id': 2, 'docnum': 'd_2', 'name': 'c'},
-    ...        {'_id': 3, 'docnum': None, 'name': 'd'},
-    ...        {'_id': 4, 'docnum': 'd_4', 'name': 'f'}]}
+    ... 'vs': [{'id': 0, 'docnum': 'd_0', 'name': 'a'},
+    ...        {'id': 1, 'docnum': None, 'name': 'b'},
+    ...        {'id': 2, 'docnum': 'd_2', 'name': 'c'},
+    ...        {'id': 3, 'docnum': None, 'name': 'd'},
+    ...        {'id': 4, 'docnum': 'd_4', 'name': 'f'}]}
     >>> graph = read_json(graph_data)
     >>> print(graph.summary())
     IGRAPH UNW- 5 5 -- 
@@ -256,7 +267,7 @@ def read_json(data):
     builder.set_gattrs(**g_attrs)
 
     for v in data['vs']:
-        vid = builder.add_get_vertex(v['_id'])
+        vid = builder.add_get_vertex(v['id'])
         for attr in v_attrs:
             builder.set_vattr(vid, attr, v[attr])
 

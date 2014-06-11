@@ -54,7 +54,7 @@ One can have the list of all configurations:
 
 >>> from pprint import pprint
 >>> pprint(cellist.as_dict())
-{'args': None,
+{'args': ['input'],
  'blocks': [{'args': None,
              'components': [{'default': False,
                              'name': 'one',
@@ -470,10 +470,14 @@ class Block(object):
 
     @property
     def defaults(self):
-        """ component selected by default
+        """ component default component
+
+        .. Note:: default components is just an indication for user and the
+            views, except if the Block is required. If required then default is
+            selected if nothing explisitely selected.
         """
         default = self._defaults
-        # if require and no default, th first component as default
+        # if require and no default, the first component as default
         if not len(default) and self.required and len(self._components):
             default = [self._components.itervalues().next().name]
         return default
@@ -495,7 +499,8 @@ class Block(object):
         then the first component is selected.
         """
         selected = self._selected
-        if len(self._selected) == 0: # nothing has been selected yet
+        if len(self._selected) == 0 and self.required:
+            # nothing has been selected yet BUT the component is required
             selected = self.defaults
         return selected
 
@@ -576,7 +581,7 @@ class Block(object):
         if multiple is not None:
             self.multiple = multiple
         if defaults is not None:
-            #FIXME: what it default is just a 'str'
+            #if default is just a 'str' it is managed in setter
             self.defaults = defaults
 
     def set(self, *components):
@@ -599,7 +604,10 @@ class Block(object):
         :type default: bool
         """
         if not isinstance(component, Composable):
-            raise ValueError("component '%s' is not type of Optionable or Composable" % component)
+            if callable(component):
+                component = Composable(component)
+            else:
+                raise ValueError("component '%s' is not Optionable nor Composable and even not callable" % component)
         if component.name in self._components:
             raise ValueError("We already have a component with the name '%s'" % component.name)
         self._components[component.name] = component
@@ -610,7 +618,7 @@ class Block(object):
                 self.defaults = component.name
 
     def select(self, comp_name, options=None):
-        """ set an component as runnable with given options.
+        """ Select the components that will by played (with given options).
 
         `options` will be passed to :func:`.Optionable.parse_options` if the
         component is a subclass of :class:`Optionable`.
@@ -743,6 +751,9 @@ class Block(object):
 class Engine(object):
     """ The Cello engine.
     """
+    
+    DEFAULT_IN_NAME = 'input'   # default input name for first component
+    
     @define_logger
     def __init__(self, *names):
         self._blocks = OrderedDict()
@@ -788,12 +799,12 @@ class Engine(object):
 
     @property
     def in_name(self):
-        """ Give the input name of the first block
+        """ Give the input name of the **first** block.
+        
+        If this first block is not required or if other block need some inputs
+        then you beter have to look at :func:`needed_inputs`.
         """
-        #TODO: faire que cela puisse être configurable au niveau de l'engine
-        # en fait les inputs sont toutes les inputs des blocks qui ne sont pas produit par des blocks avant
-        # mais ca posse question/pb quand les blocks avant sont optionels
-        return iter(self).next().in_name
+        return iter(self).next().in_name or [Engine.DEFAULT_IN_NAME]
 
     def __contains__(self, name):
         """ Whether a block of the given name exists
@@ -890,8 +901,11 @@ class Engine(object):
             for req_comp in request_comps:
                 block.select(req_comp['name'], req_comp.get("options", {}))
 
-    def validate(self):
+    def validate(self, inputs=None):
         """ Check that the blocks configuration is ok
+        
+        :param inputs: the names of the play inputs
+        :type inputs: list of str
         """
         # if no blocks...
         if not len(self._blocks):
@@ -905,50 +919,128 @@ class Engine(object):
         available = set()       # set of available data
         maybe_available = set() # data that are produced be not required blocks
         # add the first block input as available data
-        if self.in_name is not None:
-            for in_name in self.in_name:
+        if inputs is not None:
+            for in_name in inputs:
                 available.add(in_name)
-        for bnum, block in enumerate(self):
-            if block.in_name is not None:
-                # there is to case just to differenciate the error msg
-                if any(in_name in maybe_available for in_name in block.in_name):
-                    raise CelloError("The block '%s' need an input ('%s') that *may* not be produced before" % (block.name, block.in_name))
-                if not all(in_name in available for in_name in block.in_name):
-                    raise CelloError("The block '%s' need an input ('%s') that is not produced before" % (block.name, block.in_name))
-            # register the output
-            if not block.required:
-                maybe_available.add(block.out_name)
+        else:
+            # no inputs given, then consider that the first block input will be given
+            if self.in_name is not None:
+                for in_name in self.in_name:
+                    available.add(in_name)
             else:
-                available.add(block.out_name)
+                # default input name if nothing specified
+                available.add(Engine.DEFAULT_IN_NAME)
+        needed = self.needed_inputs()
+        miss = needed.difference(available)
+        if len(miss):
+            raise CelloError("The following inputs are needed and not given: %s" % (",".join("'%s'" % in_name for in_name in miss)))
+        no_need = available.difference(needed)
+        if len(no_need):
+            raise CelloError("The following inputs are given but not needed: %s" % (",".join("'%s'" % in_name for in_name in no_need)))
+        return
 
-    def play(self, *inputs):
+    def needed_inputs(self):
+        """ List all the needed inputs of a configured engine
+
+        >>> engine = Engine("op1", "op2")
+        >>> engine.op1.setup(in_name="in", out_name="middle", required=False)
+        >>> engine.op2.setup(in_name="middle", out_name="out")
+        >>> engine.op1.append(lambda x:x+2)
+        >>> engine.op2.append(lambda x:x*2)
+        >>> engine.op1.select('<lambda>')
+        >>> engine.needed_inputs()
+        set(['in'])
+
+        But now if we unactivate the first component:
+
+        >>> engine.op1.clear_selections()
+        >>> engine.needed_inputs()
+        set(['middle'])
+
+        More complex example:
+
+        >>> engine = Engine("op1", "op2")
+        >>> engine.op1.setup(in_name="in", out_name="middle")
+        >>> engine.op2.setup(in_name=["middle", "in2"], out_name="out")
+        >>> engine.op1.append(lambda x:x+2)
+        >>> engine.op2.append(lambda x, y:x*y)
+        >>> engine.needed_inputs()
+        set(['in2', 'in'])
+
+        Note that by default the needed input is 'input':
+        
+        >>> engine = Engine("op1", "op2")
+        >>> engine.op1.append(lambda x:x+2)
+        >>> engine.op2.append(lambda x:x*2)
+        >>> engine.needed_inputs()
+        set(['input'])
+        """
+        needed = set()
+        available = set()       # set of available data
+        for bnum, block in enumerate(self):
+            if not block.selected():    # if the block will not be used
+                continue
+            if block.in_name is not None:
+                for in_name in block.in_name:
+                    if not in_name in available:
+                        needed.add(in_name)
+            elif bnum == 0:
+                # if the first block
+                needed.add(Engine.DEFAULT_IN_NAME)
+            # register the output
+            available.add(block.out_name)
+        return needed
+
+    def play(self, *inputs, **named_inputs):
         """ Run the engine (that should have been configured first)
         
+        if the `inputs` are given without name it should be the inputs of the
+        first block, ig `named_inputs` are used it may be the inputs of any
+        block.
+        
+        .. note:: Either `inputs` or `named_inputs` should be provided, not both
+        
         :param inputs: the data to give as input to the first block
+        :param named_inputs: named input data should match with
+            :func:`needed_inputs` result.
         """
         self._logger.info("\n\n\t\t\t ** ============= play engine ============= ** \n")
-        self.validate()
+        #
         # create data structure for results and metaresults
         results = OrderedDict()
         self.meta = PlayMeta("engine")
+        ### manage inputs
+        if len(inputs) and len(named_inputs):
+            raise ValueError("Either `inputs` or `named_inputs` should be provided, not both !")
         # default input name (so also the default last_output_name)
-        last_output_name = "input"
-        # prepare the input data
-        first_in_names = self.in_name or [last_output_name]
-        if len(inputs) != len(first_in_names):
-            raise ValueError("%d inputs are needed, but %d given" % (len(first_in_names), len(inputs)))
-        # inputs are store in results dict (then there is no special run for the first block)
-        for input_num, in_name in enumerate(first_in_names):
-            results[in_name] = inputs[input_num]
-        # run the blocks
+        if len(inputs):
+            # prepare the input data
+            first_in_names = self.in_name or [Engine.DEFAULT_IN_NAME]
+            if len(inputs) != len(first_in_names):
+                raise ValueError("%d inputs are needed for first block, but %d given" % (len(first_in_names), len(inputs)))
+            # inputs are store in results dict (then there is no special run for the first block)
+            for input_num, in_name in enumerate(first_in_names):
+                results[in_name] = inputs[input_num]
+        else:
+            results.update(named_inputs)
+        #
+        ## validate
+        self.validate(results.keys())
+        #
+        ### run the blocks
+        last_output_name = Engine.DEFAULT_IN_NAME
         for block in self:
+            # continue if block is not selected (note: if require the validate should have faild before)
+            if not len(block.selected()):
+                continue
             # prepare block ipouts
             in_names = block.in_name or [last_output_name]
+            # ^ note: if the block has no named input then the last block output is used
             inputs = [results[name] for name in in_names]
             # run the block
             try:
                 results[block.out_name] = block.play(*inputs)
-                #^ Note: le validate par rapport au type est fait dans le run du block
+                # ^ note: le validate par rapport au type est fait dans le run du block
             finally:
                 # store metadata
                 self.meta.append(block.meta)
@@ -961,7 +1053,7 @@ class Engine(object):
             'blocks': [
                 block.as_dict() for block in self if block.hidden == False
             ],
-            'args': self.in_name
+            'args': list(self.needed_inputs())
         }
         return drepr
 
