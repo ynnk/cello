@@ -13,9 +13,18 @@ class OptProductEx(Optionable):
         super(OptProductEx, self).__init__("mult_opt")
         self.add_option("factor", Numeric(default=5, help="multipliation factor", vtype=int))
 
-    def __call__(self, arg, factor=5):
+    @Optionable.check
+    def __call__(self, arg, factor=None):
         return arg * factor
 
+# same component than OptProductEx except that the call is not decoreted by a check
+class OptProductExNoCheck(Optionable):
+    def __init__(self):
+        super(OptProductExNoCheck, self).__init__("mult_opt")
+        self.add_option("factor", Numeric(default=5, help="multipliation factor", vtype=int))
+
+    def __call__(self, arg, factor=5):
+        return arg * factor
 
 class CompAddTwoExample(Composable):
     def __init__(self):
@@ -177,7 +186,10 @@ class TestBlock(unittest.TestCase):
         self.assertEquals(block.play(10), 210)
         self.assertEquals(block.play(0), 0)
         # run a la main
-        self.assertEquals(block['mult_opt'](1), 5)
+        # it should keep the option value setted before
+        self.assertEquals(block['mult_opt'](1), 21)
+        # but it could be possible to force it
+        self.assertEquals(block['mult_opt'](1, factor=11), 11)
 
     def test_play_force_option(self):
         # block should work with a option forced to a special value
@@ -185,7 +197,17 @@ class TestBlock(unittest.TestCase):
         comp.force_option_value("factor", 4)
         block = Block("foo")
         block.set(comp)
-        self.assertEquals(block.play(10), 40)
+        res = block.play(10)
+        self.assertEquals(res, 40)
+
+    def test_play_force_option_without_check(self):
+        # block should work with a option forced to a special value EVEN when the call is not "checked"
+        comp = OptProductExNoCheck()
+        comp.force_option_value("factor", 4)
+        block = Block("foo")
+        block.set(comp)
+        res = block.play(10)
+        self.assertEquals(res, 40)
 
     def test_set_options(self):
         block = Block("foo")

@@ -681,7 +681,10 @@ class Block(object):
             comp = self._components[comp_name]
             # get the options
             if isinstance(comp, Optionable):
-                options = comp.get_options_values(hidden=True)
+                # note: we force the hidden values only if the call is not
+                # decorated by a "check" (that already force the hidden values)
+                force_hidden = not (hasattr(comp.__call__, '_checked') and comp.__call__._checked)
+                options = comp.get_options_values(hidden=force_hidden)
             else:
                 options = {}
             # prepare the Play meta data
