@@ -68,9 +68,8 @@ class CelloFlaskView(Blueprint):
         """ :param outputs: dict {name: serializer} """
         if outputs is None:
             raise ValueError("Invalid outputs should not be none.")
-            
-        self._outputs = []
-        for name, serializer in  outputs.iteritems():
+        self._outputs = OrderedDict()
+        for name, serializer in outputs.iteritems():
             self.add_output(name, serializer)
         
     def add_output(self, out_name, serializer=None):
