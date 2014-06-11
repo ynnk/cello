@@ -40,6 +40,7 @@ class ReducePCA(Composable):
             warnings.filterwarnings('error')
             nb_dim = mat.shape[1]
             try:
+                mat_saved = mat.copy()  #Note save the matrix because it may me modified in PCA
                 # normalisation
                 mat = mat / np.sqrt((mat**2).sum(1))[:, np.newaxis]
                 # centrage
@@ -50,7 +51,7 @@ class ReducePCA(Composable):
             except np.linalg.LinAlgError as err: # uniform matrix
                 self._logger.warn("pca() np.linalg.LinAlgError : %s" % (err))
                 # retry
-                result = self.robust_pca(mat + np.identity(nb_dim), nb_fail=nb_fail+1)
+                result = self.robust_pca(mat_saved + np.identity(nb_dim), nb_fail=nb_fail+1)
             except Warning as warn: # catch warnings as error
                 self._logger.warn('pca() %s' % warn)
                 if nb_dim <= 3:
