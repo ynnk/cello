@@ -269,14 +269,14 @@ class GraphProjection(Optionable):
     proj_wgt (Text, default=p, in: {no, count, p, pmin, pmax, pavg, confl}): projection weighting method
 
     .. Warning:: The bipartite graph should have True vertices in first in
-        vertex sequence, if not see  :class:`TrueInFirst`:.
+        vertex sequence, if not use  :class:`TrueInFirst`:.
 
     This could be used without weights on original graph:
 
     >>> g = ig.Graph.Formula("a:b:c--A:B:C:D, d--D:E, c:d--F")
     >>> g.vs["type"] = [vtx["name"].islower() for vtx in g.vs]
 
-    As the graph do not have True vertices in first we add :class:`TrueInFirst`:
+    As the graph do not have True vertices in first we have to use :class:`TrueInFirst`:
 
     >>> projection = TrueInFirst() | GraphProjection()
 
@@ -290,8 +290,11 @@ class GraphProjection(Optionable):
     
     >>> gp.es["weight"]
     [1, 1, 1, 1, 1, 1]
+	>>>  # also note that no loops are created
+    >>> gp.is_loop()
+    [False, False, False, False, False, False]
 
-    One can also use the weight to coun the number of commun neighbors in the
+    One can also use the weight to count the number of commun neighbors in the
     original bipartite graph:
     
     >>> gp = projection(g, proj_wgt='count')
@@ -307,7 +310,7 @@ class GraphProjection(Optionable):
     [1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]
 
 
-    Then different weight are possible (see :meth:`GraphProjection.bigraph_projection`):
+    Then different weights are possible (see :meth:`GraphProjection.bigraph_projection`):
     
     >>> gp = projection(g, proj_wgt='p')
     >>> gp.es["weight"]
@@ -346,22 +349,22 @@ class GraphProjection(Optionable):
     def bigraph_projection(graph, weight=None, wgt_attr=EDGE_WEIGHT_ATTR):
         """ Projection of a bipartite graph
     
-            .. note:: this method is static it may be use independently
+        .. note:: this method is static so it may be use independently
 
-            weight:
-                - 'count': number of neighbors in commun
-                - 'p': 
-                    :math:`w(u, v) = p(u\\rightarrow v, t=2) . deg(u) = p(v \\rightarrow u, t=2) . deg(v)`
-                - 'confl': 
-                    :math:`w(u, v) = \\frac{ p(u\\rightarrow v, t=2) }{p(u \\rightarrow v, t=2) + \\pi_v} \\quad`
-                    avec 
-                    :math:`\\quad \\pi_v = \\frac{deg(v)}{ \\sum_j deg(j)}`
-                - 'pmin': 
-                    :math:`w(u, v) = \\min\\big(p(u\\rightarrow v, t=2), \quad p(v \\rightarrow u, t=2) \\big )`
-                - 'pmax':  
-                    :math:`w(u, v) = \\max\\big(p(u\\rightarrow v, t=2), \quad p(v \\rightarrow u, t=2) \\big )`
-                - 'pavg':
-                    :math:`w(u, v) = \\frac{1}{2} . \\big ( p(u\\rightarrow v, t=2) + p(v \\rightarrow u, t=2)\\big )`
+        weight:
+            - 'count': number of neighbors in commun
+            - 'p': 
+                :math:`w(u, v) = p(u\\rightarrow v, t=2) . deg(u) = p(v \\rightarrow u, t=2) . deg(v)`
+            - 'confl': 
+                :math:`w(u, v) = \\frac{ p(u\\rightarrow v, t=2) }{p(u \\rightarrow v, t=2) + \\pi_v} \\quad`
+                avec 
+                :math:`\\quad \\pi_v = \\frac{deg(v)}{ \\sum_j deg(j)}`
+            - 'pmin': 
+                :math:`w(u, v) = \\min\\big(p(u\\rightarrow v, t=2), \quad p(v \\rightarrow u, t=2) \\big )`
+            - 'pmax':  
+                :math:`w(u, v) = \\max\\big(p(u\\rightarrow v, t=2), \quad p(v \\rightarrow u, t=2) \\big )`
+            - 'pavg':
+                :math:`w(u, v) = \\frac{1}{2} . \\big ( p(u\\rightarrow v, t=2) + p(v \\rightarrow u, t=2)\\big )`
                 - else: no weight
         """
         multiplicity = True if weight == "count" else False
