@@ -155,7 +155,7 @@ from collections import OrderedDict
 from cello.exceptions import CelloError
 from cello.pipeline import Pipeline, Optionable, Composable
 
-#XXX move it in cello/__init__
+#XXX move it in cello/utils__init__
 def define_logger(init):
     from functools import wraps
     @wraps(init)
