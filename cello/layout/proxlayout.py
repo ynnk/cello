@@ -54,18 +54,20 @@ class ProxLayout(Optionable):
         return ig.Layout(coords)
 
 
-def ProxLayoutPCA(name="ProxLayoutPCA", dim=3):
+def ProxLayoutPCA(name="ProxLayoutPCA", dim=3, weighted=False):
     """ Std Prox layout
     
     :param name: name of the component
     :param dim: number of dimentions of the output layouts
+    :param weighted: whether to use the weight of the graph, is True the edge
+        attribute `cello.graphs.EDGE_WEIGHT_ATTR` is used.
 
     >>> g = ig.Graph.Formula("a--b, a--c, a--d, a--f")
     >>> layout = ProxLayoutPCA(dim=2)
     >>> layout(g)
     <Layout with 5 vertices and 2 dimensions>
     """
-    layout_cpt = ProxLayout() | ReducePCA(dim=dim) | normalise
+    layout_cpt = ProxLayout(weighted=weighted) | ReducePCA(dim=dim) | normalise
     layout_cpt.name = name
     return layout_cpt
 
@@ -134,11 +136,13 @@ class ProxBigraphLayout(Optionable):
         return ig.Layout(coords)
 
 
-def ProxBigraphLayoutPCA(name="ProxBigraphLayoutPCA", dim=3):
+def ProxBigraphLayoutPCA(name="ProxBigraphLayoutPCA", dim=3, weighted=False):
     """ Std Prox layout for bipartite graphs
     
     :param name: name of the component
     :param dim: number of dimentions of the output layouts
+    :param weighted: whether to use the weight of the graph, is True the edge
+        attribute `cello.graphs.EDGE_WEIGHT_ATTR` is used.
 
     >>> g = ig.Graph.Formula("A--a, A--b, A--c, B--b, B--f")
     >>> g.vs['type'] = [vtx['name'].isupper() for vtx in g.vs]
@@ -147,7 +151,7 @@ def ProxBigraphLayoutPCA(name="ProxBigraphLayoutPCA", dim=3):
     >>> layout(g)
     <Layout with 6 vertices and 3 dimensions>
     """
-    layout_cpt = ProxBigraphLayout() | ReducePCA(dim=dim) | normalise
+    layout_cpt = ProxBigraphLayout(weighted=weighted) | ReducePCA(dim=dim) | normalise
     layout_cpt.name = name
     return layout_cpt
 
