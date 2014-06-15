@@ -11,6 +11,7 @@ from cello.types import Numeric, Boolean
 from cello.pipeline import Optionable, Composable
 
 from cello.graphs import prox
+from cello.graphs import EDGE_WEIGHT_ATTR
 from cello.layout.transform import ReducePCA, ReduceRandProj, normalise
 
 
@@ -24,15 +25,31 @@ class ProxLayout(Optionable):
     >>> layout = ProxLayout()
     >>> layout(g)
     <Layout with 5 vertices and 5 dimensions>
+    
+    >>> import cello.graphs
+    >>> g.es[cello.graphs.EDGE_WEIGHT_ATTR] = [10, 10, 1, 1]
+    >>> layout_wgt = ProxLayout(weighted=True)
+    >>> layout_wgt(g)
+    <Layout with 5 vertices and 5 dimensions>
     """
-    def __init__(self, name="prox_layout"):
+    def __init__(self, name="prox_layout", weighted=False):
+        """
+        :param weighted: whether to use the weight of the graph, is True the edge
+            attribute `cello.graphs.EDGE_WEIGHT_ATTR` is used.
+        :type weighted: boolean
+        """
         super(ProxLayout, self).__init__(name=name)
         self.add_option("length", Numeric(default=3, min=1, max=50, help="Random walks length"))
         self.add_option("add_loops", Boolean(default=True, help="Wether to add self loop on all vertices"))
+        self.weighted = weighted
 
     @Optionable.check
     def __call__(self, graph, length=None, add_loops=None):
-        coords = [prox.prox_markov_list(graph, [vtx.index], length=length, add_loops=add_loops) \
+        weight = None
+        if self.weighted:
+            weight = EDGE_WEIGHT_ATTR
+        #TODO: manage loops weight !
+        coords = [prox.prox_markov_list(graph, [vtx.index], weight=weight, length=length, add_loops=add_loops) \
                         for vtx in graph.vs]
         return ig.Layout(coords)
 
@@ -83,19 +100,36 @@ class ProxBigraphLayout(Optionable):
     >>> layout = ProxBigraphLayout()
     >>> layout(g, length=1)
     <Layout with 6 vertices and 6 dimensions>
+
+    Works also with weighted graph:
+
+    >>> import cello.graphs
+    >>> g.es[cello.graphs.EDGE_WEIGHT_ATTR] = [10, 10, 1, 1, 10]
+    >>> layout_wgt = ProxBigraphLayout(weighted=True)
+    >>> layout_wgt(g)
+    <Layout with 6 vertices and 6 dimensions>
     """
-    def __init__(self, name=None):
+    def __init__(self, name=None, weighted=False):
+        """
+        :param weighted: whether to use the weight of the graph, is True the edge
+            attribute `cello.graphs.EDGE_WEIGHT_ATTR` is used.
+        :type weighted: boolean
+        """
         super(ProxBigraphLayout, self).__init__(name=name)
         self.add_option("length", Numeric(default=3, min=1, max=50, help="Random walks length"))
+        self.weighted = weighted
 
     @Optionable.check
     def __call__(self, graph, length=None, add_loops=None):
         assert "type" in graph.vs.attributes()
+        weight = None
+        if self.weighted:
+            weight = EDGE_WEIGHT_ATTR
 
         coords = []
         for vtx in graph.vs:
             v_length = length - (length % 2) if vtx["type"] else length - ( length % 2 ) + 1
-            pline = prox.prox_markov_list(graph, [vtx.index], length=v_length, add_loops=False)
+            pline = prox.prox_markov_list(graph, [vtx.index], length=v_length, add_loops=False, weight=weight)
             coords.append(pline)
         return ig.Layout(coords)
 
