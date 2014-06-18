@@ -338,9 +338,12 @@ class GraphProjection(Optionable):
         # this two points are checked with following assert
         if __debug__:
             docids = [vtx.index for vtx in graph.vs.select(type=True)]
-            assert sorted(docids) == range(max(docids) + 1), \
+            assert len(docids) == 0 or sorted(docids) == range(max(docids) + 1), \
                 "Documents should be the first veritces of the graph"
-        pgraph = GraphProjection.bigraph_projection(graph, proj_wgt, wgt_attr=EDGE_WEIGHT_ATTR)
+        if graph.vcount() == 0:
+            pgraph = graph.copy()
+        else:
+            pgraph = GraphProjection.bigraph_projection(graph, proj_wgt, wgt_attr=EDGE_WEIGHT_ATTR)
         if __debug__ and "_doc" in graph.vs.attributes():
             assert pgraph.vs["_doc"] == graph.vs.select(type=True)["_doc"]
         return pgraph

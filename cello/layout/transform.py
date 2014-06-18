@@ -18,16 +18,20 @@ from cello.pipeline import Composable
 class ReducePCA(Composable):
     """ Reduce a layout dimention by a PCA
 
+    .. note:: the input layout should have the same number of dim than vertices
+
     >>> import igraph as ig
     >>> layout = ig.Layout([[1, 0, 0, 0, 0], [1, 1, 0, 0, 0], [1, 0, 1, 0, 0], [1, 0, 0, 1, 0], [1, 0, 0, 0, 1]])
     >>> layout
     <Layout with 5 vertices and 5 dimensions>
-
+    >>> # we can then reduce it with a PCA:
     >>> pca = ReducePCA(2)
     >>> pca(layout)
     <Layout with 5 vertices and 2 dimensions>
 
-    .. note:: the input layout should have the same number of dim than vertices
+    Note that if the input layout is empty nothing is done:
+    >>> pca(ig.Layout())
+    <Layout with no vertices and 2 dimensions>
     """
     def __init__(self, dim=3):
         super(ReducePCA, self).__init__()
@@ -63,11 +67,14 @@ class ReducePCA(Composable):
     def __call__(self, layout):
         """ Process a PCA
         """
-        if len(layout) != layout.dim:
+        if len(layout) > 0 and len(layout) != layout.dim:
             raise ValueError('The layout should have same number of vertices and dimentions')
         mat = np.array(layout.coords)
-        result = self.robust_pca(mat)
-        return ig.Layout(result.tolist())
+        if len(layout) == 0:
+            result = []
+        else:
+            result = self.robust_pca(mat).tolist()
+        return ig.Layout(result, dim=self.out_dim)
 
 
 class ReduceRandProj(Composable):
@@ -132,6 +139,10 @@ class Shaker(Composable):
     >>> layout = shaker(layout)
     >>> layout.coords
     [[-0.6666666666666666, -0.33333333333333337], [0.33333333333333337, 0.6666666666666666], [0.33333333333333337, -0.33333333333333337]]
+
+    If the layout is empty:
+    >>> shaker(ig.Layout())
+    <Layout with no vertices and 2 dimensions>
     """
     def __init__(self, kelastic=0.3):
         """
@@ -140,10 +151,7 @@ class Shaker(Composable):
         super(Shaker, self).__init__(name='shake')
         self.kelastic = kelastic
 
-    def __call__(self, layout):
-        """ Process the shaking !
-        """
-
+    def shake(self, layout):
         from scipy.spatial.distance import pdist, squareform
         iter_max = 50  # try to keep low
 
@@ -191,8 +199,14 @@ class Shaker(Composable):
             # mise a jour des positions
             layout_mat += deplacements
 
-            layout = ig.Layout(layout_mat.tolist())
-            layout = normalise(layout)
-            return layout
+        layout = ig.Layout(layout_mat.tolist())
+        layout = normalise(layout)
+        return layout
 
+    def __call__(self, layout):
+        """ Process the shaking !
+        """
+        if len(layout) == 0:
+            return layout
+        return self.shake(layout)
 

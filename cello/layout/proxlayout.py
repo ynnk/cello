@@ -51,7 +51,7 @@ class ProxLayout(Optionable):
         #TODO: manage loops weight !
         coords = [prox.prox_markov_list(graph, [vtx.index], weight=weight, length=length, add_loops=add_loops) \
                         for vtx in graph.vs]
-        return ig.Layout(coords)
+        return ig.Layout(coords, dim=len(coords))
 
 
 def ProxLayoutPCA(name="ProxLayoutPCA", dim=3, weighted=False):
