@@ -10,6 +10,7 @@ import os.path
 import logging
 
 import elasticsearch
+import elasticsearch.helpers as ESH
 
 from cello.schema import Doc
 from cello.pipeline import Optionable
@@ -52,14 +53,23 @@ class EsIndex(Index):
         # FIXME raise error
         assert host is not None
         # create a connection to a es server and retrive mapping and  uniq key
-        self._es_conn = elasticsearch.Elasticsearch(hosts=host)
+        self._es = elasticsearch.Elasticsearch(hosts=host)
                 
         # override specific params for optimizations
         self.cache = kwargs.get("cache", 100)
         self.fl = kwargs.get("fl", "*") # will return all field of 
         
+    def create_index(idx, doc_type, schema):
+        self._es.indices.create(idx, ignore=400)
+        self._es.indices.put_mapping(index=idx, doc_type=doc_type, body=schema)
+    
+    def drop_index():
+        self._es.indices.delete_mapping(INDEX, doc_type="_all", ignore=400)
+        self._es.indices.delete(INDEX,ignore=400)
+
+        
     def get_mappings(self, idx):
-        return self._es_conn.indices.get_mapping(index=idx)[idx]['mappings']
+        return self._es.indices.get_mapping(index=idx)[idx]['mappings']
     
     def get_uniq_key(self, idx, doc_type):
         uniq_key = None
@@ -96,7 +106,7 @@ class EsIndex(Index):
         """ fetch a set of documents given a docnum list or iterator.
         it will match the given value in field specified as 'uniqueKey' in schema.xml """
         body = {'ids': docids}
-        docs = self._es_conn.mget(index=idx, doc_type=doc_type, body=body, **kwargs) 
+        docs = self._es.mget(index=idx, doc_type=doc_type, body=body, **kwargs) 
         docs = list(d for d in docs["docs"] if d["found"])
         return docs
         
@@ -104,11 +114,16 @@ class EsIndex(Index):
     def iter_docnums(self, incr=1000):
         raise NotImplementedError
 
-    def add_document(self, kdoc):
-        raise NotImplementedError
+    def add_document(self, idx, doc_type, doc):
+        return add_documents(idx, doc_type, [doc])
 
-    def add_documents(self, kdocs):
-        raise NotImplementedError
+    def add_documents(self, idx, doc_type, docs):
+        for doc in docs:
+            doc['_index'] = idx
+            doc['_type'] = doc_type
+        res = ESH.bulk_index(client=self._es, actions=docs)
+        return res
+
 
 
 class EsSearch(AbstractSearch):
@@ -158,7 +173,7 @@ class EsSearch(AbstractSearch):
                     and fieldThree has a boost of 0.4 ... : &qf=""")
                )
 
-    def __call__(self, query, search_field=u'text', qf=QF, fl=u"*,score", articles=10, operator=u"AND", raw=False):
+    def __call__(self, query, search_field=u'text', qf=QF, fl=u"id, title, out_links, premierParagraphe,score", articles=10, operator=u"AND", raw=False):
         """ Perform a search using the Elasticsearch
         :param search_field: field to search for matching term. 
           If '*' one can set the boosts per field in the @param qf.
@@ -200,11 +215,11 @@ class EsSearch(AbstractSearch):
         if query:
             self._logger.info("Elasticsearch query: '%s'" % query)
             if get_by_id:
-                retrieved = [d for d in self.es_index._es_conn.mget(index=self._es_idx, doc_type=self._es_doctype, body={'ids': list(query)})["docs"] if d["found"]]
+                retrieved = [d for d in self.es_index._es.mget(index=self._es_idx, doc_type=self._es_doctype, body={'ids': list(query)})["docs"] if d["found"]]
                 for rank, doc in enumerate(retrieved):
                     kdocs.append(self._es_to_kdoc(doc, rank+1))
             else:
-                result = self.es_index._es_conn.search(self._es_idx, doc_type=self._es_doctype, body=query_dsl)
+                result = self.es_index._es.search(self._es_idx, doc_type=self._es_doctype, body=query_dsl)
                 if result["hits"]["total"] > 0:      
                     for rank, doc in enumerate(result["hits"]["hits"]):
                         if raw == False:
