@@ -315,11 +315,14 @@ class Optionable(Composable):
         """ Decorator for optionable __call__ method
         It check the given option values
         """
+        # wrap the method
         @wraps(call_fct)
         def checked_call(self, *args, **kwargs):
             self.set_options_values(kwargs, parse=False, strict=True)
             options_values = self.get_options_values(hidden=True)
             return call_fct(self, *args, **options_values)
+        # add a flag on the new method to indicate that it is 'checked'
+        checked_call._checked = True
         return checked_call
 
 

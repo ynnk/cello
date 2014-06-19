@@ -8,16 +8,6 @@ from cello.exceptions import ValidationError
 from cello.types import GenericType, Numeric, Text, Boolean
 from cello.pipeline import Composable, Optionable, OptionableSequence, Pipeline
 
-class MyOptionable(Optionable):
-    def __init__(self):
-        super(MyOptionable, self).__init__("testOptionableName")
-        self.add_option("alpha", Numeric(default=4, min=1, max=20))
-        self.add_option("name", Text(default=u"un", choices=[u"un", u"deux"]))
-
-    @Optionable.check
-    def __call__(self, alpha=None, name=None):
-        return alpha, name
-
 
 class TestComposable(unittest.TestCase):
     def testRaises(self):
@@ -38,11 +28,31 @@ class TestComposable(unittest.TestCase):
 
         opt = Optionable()
         self.assertEqual(opt.name, "Optionable")
-        
+
+
+class MyOptionable(Optionable):
+    def __init__(self):
+        super(MyOptionable, self).__init__("testOptionableName")
+        self.add_option("alpha", Numeric(default=4, min=1, max=20))
+        self.add_option("name", Text(default=u"un", choices=[u"un", u"deux"]))
+
+    @Optionable.check
+    def __call__(self, alpha=None, name=None):
+        return alpha, name
+
+# this should work without a check BUT should be avoided
+class MyOptionableNoCheck(Optionable):
+    def __init__(self):
+        super(MyOptionableNoCheck, self).__init__("testOptionableNameNoCheck")
+        self.add_option("name", Text(default=u"un", choices=[u"un", u"deux"]))
+
+    def __call__(self, name=None):
+        return 2, name
+
 
 class TestOptionable(unittest.TestCase):
     maxDiff = None
-    
+
     def setUp(self):
         pass
 
@@ -56,6 +66,7 @@ class TestOptionable(unittest.TestCase):
 
     def testCheckDecorator(self):
         comp = MyOptionable()
+        # should be able to run without outparamters
         alpha, name = comp()
         self.assertEqual(alpha, 4)
         self.assertEqual(name, u"un")
@@ -69,6 +80,17 @@ class TestOptionable(unittest.TestCase):
             alpha, name = comp(alpha=5)
         alpha, name = comp()
         self.assertEqual(alpha, 10)
+
+    def testCheckDecoratorFlag(self):
+        comp = MyOptionable()
+        # should kave a "_checked" flag
+        self.assertTrue(hasattr(comp.__call__, "_checked"))
+        # that should be true
+        self.assertTrue(comp.__call__._checked)
+        # but not if @check is not make (that is not good...)
+        comp = MyOptionableNoCheck()
+        self.assertFalse(hasattr(comp.__call__, "_checked"))
+        
 
     def testAddOption(self):
         comp = Optionable("composant")

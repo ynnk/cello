@@ -254,13 +254,13 @@ def prox_markov_dict(graph, p0, length, mode=OUT, add_loops=False, weight=None,
     :param add_loops: if True do as if every vertex hold a self loop
          (force the graph to be reflexif)
     :param weight: if None the graph is not weighting, else it could be:
-        * a str corresponding to an edge attribute to use as weight,
-        * or a list of weight (`|weight| == graph.ecount()`),
-        * or a callable `lambda graph, source, target: wgt`
+        a str corresponding to an edge attribute to use as weight,
+        or a list of weight (`|weight| == graph.ecount()`),
+        or a callable `lambda graph, source, target: wgt`
     :param loops_weight: only if `add_loops`, weight for added loops, it may be :
-        * a str corresponding to a vertex attribute,
-        * or a list of weight (`|loops_weight| == graph.vcount()`),
-        * or a callable `lambda graph, vid: wgt`
+        a str corresponding to a vertex attribute,
+        or a list of weight (`|loops_weight| == graph.vcount()`),
+        or a callable `lambda graph, vid: wgt`
     :param neighbors: function that override std graph.neighbors fct
     :returns: result vector, a python dictionary : `{vertex_id:value, ...}`
     
@@ -294,6 +294,15 @@ def prox_markov_dict(graph, p0, length, mode=OUT, add_loops=False, weight=None,
     >>> prox_markov_dict(graph, [0], 2, add_loops=False, weight=wgt_fct)
     {0: 0.5, 2: 0.5}
 
+
+    and with weights and loops:
+    
+    >>> # by default if you add loops they have a weight of "1":
+    >>> prox_markov_dict(graph, [0], 2, add_loops=True, weight="wgt")
+    {0: 0.5125, 1: 0.3375, 2: 0.15}
+    >>> # but you can also give them some weight
+    >>> prox_markov_dict(graph, [0], 2, add_loops=True, weight="wgt", loops_weight=[100, 10, 1])
+    {0: 0.9488372406178044, 1: 0.049082315554179065, 2: 0.0020804438280166435}
     """
     #TODO: add doctest with add_loops and weights
     vect = normalize_pzero(graph, p0)
@@ -317,6 +326,8 @@ def prox_markov_dict(graph, p0, length, mode=OUT, add_loops=False, weight=None,
                 loops_weight = graph.vs[weight]
             elif callable(loops_weight):
                 loops_weight = [loops_weight(graph, vtx.index) for vtx in graph.vs]
+            elif loops_weight is None:
+                loops_weight = [1. for vtx in graph.vs]
         else:
             loops_weight = None
         # compute prox it self
@@ -346,6 +357,7 @@ def prox_markov_list(graph, p0, length, mode=OUT, add_loops=False, weight=None,
 
 
 
+#TODO: do not put "cello.graphs.neighbors" in default but None and set it to cello.graphs.neighbors in the function
 def prox_markov_mtcl(graph, p0, length, throws, mode=OUT, add_loops=False,
                         weight=None, neighbors=cello.graphs.neighbors):
     """ Prox 'classic' by an approximate method montecarlo with nb_throw throws
@@ -392,6 +404,7 @@ def prox_markov_mtcl(graph, p0, length, throws, mode=OUT, add_loops=False,
 
 ################################################################################
 
+#TODO: do not put "cello.graphs.neighbors" in default but None and set it to cello.graphs.neighbors in the function
 def confluence(graph, vtxa, vtxb, length=3, add_loops=True, remove_edge=False, 
             prox_markov_list=prox_markov_list, neighbors=cello.graphs.neighbors):
     """ Compute the confluence

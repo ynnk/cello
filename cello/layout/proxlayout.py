@@ -11,7 +11,9 @@ from cello.types import Numeric, Boolean
 from cello.pipeline import Optionable, Composable
 
 from cello.graphs import prox
+from cello.graphs import EDGE_WEIGHT_ATTR
 from cello.layout.transform import ReducePCA, ReduceRandProj, normalise
+
 
 class ProxLayout(Optionable):
     """ Returns a n*n layout computed with short length random walks
@@ -23,36 +25,54 @@ class ProxLayout(Optionable):
     >>> layout = ProxLayout()
     >>> layout(g)
     <Layout with 5 vertices and 5 dimensions>
+    
+    >>> import cello.graphs
+    >>> g.es[cello.graphs.EDGE_WEIGHT_ATTR] = [10, 10, 1, 1]
+    >>> layout_wgt = ProxLayout(weighted=True)
+    >>> layout_wgt(g)
+    <Layout with 5 vertices and 5 dimensions>
     """
-    def __init__(self, name="prox_layout"):
+    def __init__(self, name="prox_layout", weighted=False):
+        """
+        :param weighted: whether to use the weight of the graph, is True the edge
+            attribute `cello.graphs.EDGE_WEIGHT_ATTR` is used.
+        :type weighted: boolean
+        """
         super(ProxLayout, self).__init__(name=name)
         self.add_option("length", Numeric(default=3, min=1, max=50, help="Random walks length"))
         self.add_option("add_loops", Boolean(default=True, help="Wether to add self loop on all vertices"))
+        self.weighted = weighted
 
     @Optionable.check
     def __call__(self, graph, length=None, add_loops=None):
-        coords = [prox.prox_markov_list(graph, [vtx.index], length=length, add_loops=add_loops) \
+        weight = None
+        if self.weighted:
+            weight = EDGE_WEIGHT_ATTR
+        #TODO: manage loops weight !
+        coords = [prox.prox_markov_list(graph, [vtx.index], weight=weight, length=length, add_loops=add_loops) \
                         for vtx in graph.vs]
-        return ig.Layout(coords)
+        return ig.Layout(coords, dim=len(coords))
 
 
-def ProxLayoutPCA(name="prox_layout_PCA", dim=3):
+def ProxLayoutPCA(name="ProxLayoutPCA", dim=3, weighted=False):
     """ Std Prox layout
     
     :param name: name of the component
     :param dim: number of dimentions of the output layouts
+    :param weighted: whether to use the weight of the graph, is True the edge
+        attribute `cello.graphs.EDGE_WEIGHT_ATTR` is used.
 
     >>> g = ig.Graph.Formula("a--b, a--c, a--d, a--f")
     >>> layout = ProxLayoutPCA(dim=2)
     >>> layout(g)
     <Layout with 5 vertices and 2 dimensions>
     """
-    layout_cpt = ProxLayout() | ReducePCA(dim=dim) | normalise
+    layout_cpt = ProxLayout(weighted=weighted) | ReducePCA(dim=dim) | normalise
     layout_cpt.name = name
     return layout_cpt
 
 
-def ProxLayoutRandomProj(name="prox_layout_Random_Proj", dim=3):
+def ProxLayoutRandomProj(name="ProxLayoutRandomProj", dim=3):
     """ Prox layout with a random projection to reduce dimentions
     
     :param name: name of the component
@@ -65,8 +85,6 @@ def ProxLayoutRandomProj(name="prox_layout_Random_Proj", dim=3):
     <Layout with 5 vertices and 3 dimensions>
     """
     layout_cpt = ProxLayout() | ReduceRandProj(dim=dim) | normalise
-    #TODO: on ajoute un truc du genre:
-    #layout_cpt |= maybe(Shaker(), default=True, help="'Shake' the layout to ensure no overlaping vertices")
     layout_cpt.name = name
     return layout_cpt
 
@@ -84,28 +102,47 @@ class ProxBigraphLayout(Optionable):
     >>> layout = ProxBigraphLayout()
     >>> layout(g, length=1)
     <Layout with 6 vertices and 6 dimensions>
+
+    Works also with weighted graph:
+
+    >>> import cello.graphs
+    >>> g.es[cello.graphs.EDGE_WEIGHT_ATTR] = [10, 10, 1, 1, 10]
+    >>> layout_wgt = ProxBigraphLayout(weighted=True)
+    >>> layout_wgt(g)
+    <Layout with 6 vertices and 6 dimensions>
     """
-    def __init__(self, name='prox_bigraph_layout'):
+    def __init__(self, name=None, weighted=False):
+        """
+        :param weighted: whether to use the weight of the graph, is True the edge
+            attribute `cello.graphs.EDGE_WEIGHT_ATTR` is used.
+        :type weighted: boolean
+        """
         super(ProxBigraphLayout, self).__init__(name=name)
         self.add_option("length", Numeric(default=3, min=1, max=50, help="Random walks length"))
+        self.weighted = weighted
 
     @Optionable.check
     def __call__(self, graph, length=None, add_loops=None):
         assert "type" in graph.vs.attributes()
+        weight = None
+        if self.weighted:
+            weight = EDGE_WEIGHT_ATTR
 
         coords = []
         for vtx in graph.vs:
             v_length = length - (length % 2) if vtx["type"] else length - ( length % 2 ) + 1
-            pline = prox.prox_markov_list(graph, [vtx.index], length=v_length, add_loops=False)
+            pline = prox.prox_markov_list(graph, [vtx.index], length=v_length, add_loops=False, weight=weight)
             coords.append(pline)
         return ig.Layout(coords)
 
 
-def ProxBigraphLayoutPCA(name="prox_bigraph_layout_PCA", dim=3):
+def ProxBigraphLayoutPCA(name="ProxBigraphLayoutPCA", dim=3, weighted=False):
     """ Std Prox layout for bipartite graphs
     
     :param name: name of the component
     :param dim: number of dimentions of the output layouts
+    :param weighted: whether to use the weight of the graph, is True the edge
+        attribute `cello.graphs.EDGE_WEIGHT_ATTR` is used.
 
     >>> g = ig.Graph.Formula("A--a, A--b, A--c, B--b, B--f")
     >>> g.vs['type'] = [vtx['name'].isupper() for vtx in g.vs]
@@ -114,12 +151,12 @@ def ProxBigraphLayoutPCA(name="prox_bigraph_layout_PCA", dim=3):
     >>> layout(g)
     <Layout with 6 vertices and 3 dimensions>
     """
-    layout_cpt = ProxBigraphLayout() | ReducePCA(dim=dim) | normalise
+    layout_cpt = ProxBigraphLayout(weighted=weighted) | ReducePCA(dim=dim) | normalise
     layout_cpt.name = name
     return layout_cpt
 
 
-def ProxBigraphLayoutRandomProj(name="prox_layout_bigraph_PCA", dim=3):
+def ProxBigraphLayoutRandomProj(name="ProxLayoutBigraphPCA", dim=3):
     """ Prox layout with a random projection to reduce dimentions
     
     :param name: name of the component
@@ -133,8 +170,6 @@ def ProxBigraphLayoutRandomProj(name="prox_layout_bigraph_PCA", dim=3):
     <Layout with 6 vertices and 2 dimensions>
     """
     layout_cpt = ProxBigraphLayout() | ReduceRandProj(dim=dim) | normalise
-    #TODO: on ajoute un truc du genre:
-    #layout_cpt |= maybe(Shaker(), default=True, help="'Shake' the layout to ensure no overlaping vertices")
     layout_cpt.name = name
     return layout_cpt
 
@@ -144,7 +179,7 @@ class ProxGlobalLayout(ProxLayout):
     
     .. Warning:: THIS SHOULD BE UPDATED !
     """
-    def __init__(self, global_graph, name='prox_layout_global'):
+    def __init__(self, global_graph, name='ProxGlobalLayout'):
         raise NotImplementedError("this should be updated...")
         super(ProxGlobalLayout, self).__init__(name=name)
         self.global_graph = global_graph
@@ -167,29 +202,4 @@ class ProxGlobalLayout(ProxLayout):
             coords.append([pline.get(to_gid, .0) for to_gid in pzlist])
 
         return coords
-
-
-def layout_bipartite(subgraph, graph, l, neighbors_fct=None):
-    """Compute a n-dimention layout for the given bipartite subgraph according
-    to the result of random walks in the given graph (also bipartite).
-    
-    TODO
-    """
-    assert "globalIndex" in subgraph.vertex_attributes()
-    assert "type" in subgraph.vertex_attributes()
-    
-    if neighbors_fct is None:
-        neighbors_fct = lambda g, vid: g.neighbors(vid)
-    
-    global_idx = subgraph.vs["globalIndex"]
-    pzlist = [gid  if graph.vs[gid]["type"] else -1 for gid in global_idx]
-    
-    layout = []
-    for vid, gid in enumerate(global_idx):
-        length = l - (l%2) if graph.vs[gid]["type"] else l - (l%2) + 1
-        pline = prox.prox_markov_dict(graph, [gid], l=length,  neighbors_fct=neighbors_fct)
-        layout.append([pline.get(to_gid, .0) for to_gid in pzlist])
-        
-    return layout
-
 

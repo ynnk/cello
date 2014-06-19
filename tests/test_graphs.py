@@ -25,11 +25,11 @@ class TestGraph(unittest.TestCase):
                         {'s': 0, 't': 3},
                         {'s': 0, 't': 4},
                         {'s': 3, 't': 4}],
-                 'vs': [{'_id': 0, 'docnum': '0', 'name': 'a'},
-                        {'_id': 1, 'docnum': None, 'name': 'b'},
-                        {'_id': 2, 'docnum': '2', 'name': 'c'},
-                        {'_id': 3, 'docnum': None, 'name': 'd'},
-                        {'_id': 4, 'docnum': '4', 'name': 'f'}]
+                 'vs': [{'id': 0, 'docnum': '0', 'name': 'a'},
+                        {'id': 1, 'docnum': None, 'name': 'b'},
+                        {'id': 2, 'docnum': '2', 'name': 'c'},
+                        {'id': 3, 'docnum': None, 'name': 'd'},
+                        {'id': 4, 'docnum': '4', 'name': 'f'}]
                 }
 
     def test_should_serialize_to_json(self):

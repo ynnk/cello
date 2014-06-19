@@ -11,9 +11,132 @@ from cello.types import Text
 
 from cello.graphs import EDGE_WEIGHT_ATTR
 from cello.graphs.prox import prox_markov_dict
-
+from cello.graphs.builder import GraphBuilder
 
 _logger = logging.getLogger("cello.graphs.transform")
+
+
+class MergeGraphs(Composable):
+    """ Merge a list of graph into one.
+    
+    By default no vertices are merged (each vertex in each graph is keeped).
+    However one can specify a vertex 'hash' function (`vertex_id`) that is used
+    to identify vertices. If two vertices have the same 'vertex_id' they will 
+    be merged.
+    
+    If we have two graphs like:
+    
+    >>> import igraph as ig
+    >>> g1 = ig.Graph.Formula("a--b--c--a")
+    >>> g3 = ig.Graph.Formula("a--B--C--a")
+
+    is is possible to merge it with:
+
+    >>> merger = MergeGraphs(vertex_id=lambda graph, vtx: vtx["name"])
+
+    that give:
+
+    >>> g = merger([g1, g3])
+    >>> print(g.summary(verbosity=1))
+    IGRAPH UN-- 5 6 -- 
+    + attr: name (v)
+    + edges (vertex names):
+    a--b, a--c, b--c, a--B, a--C, B--C
+
+    This composant is usefull when you have different graph builders that work
+    from a same input.
+
+    To illustrate it, we can take the two following simple (and useless) graph
+    builders:
+
+    >>> @Composable
+    ... def lower_seq(string):
+    ...     letters = [letter for letter in string if letter.islower()]
+    ...     return ig.Graph.Formula("--".join(letters))
+    >>> @Composable
+    ... def upper_seq(string):
+    ...     letters = [letter for letter in string if letter.isupper()]
+    ...     return ig.Graph.Formula("--".join(letters))
+
+    They build graphs from a sequence of char, taking into acount only upper or
+    lower chars. Here is an exemple:
+
+    >>> g1 = upper_seq("gBrIaphG")
+    >>> print(g1.summary(verbosity=1))
+    IGRAPH UN-- 3 2 -- 
+    + attr: name (v)
+    + edges (vertex names):
+    B--I, I--G
+    >>> g2 = lower_seq("gBrIaphG")
+    >>> print(g2.summary(verbosity=1))
+    IGRAPH UN-- 5 4 -- 
+    + attr: name (v)
+    + edges (vertex names):
+    g--r, r--a, a--p, p--h
+
+    We can now build a meta composant that use this two graph builders and then
+    merge it in one graph.
+
+    >>> gbuilder = (upper_seq & lower_seq) | MergeGraphs()
+
+    This component can be used this way:
+
+    >>> g = gbuilder("gBrIaphG")
+    >>> print(g.summary(verbosity=1))
+    IGRAPH UN-- 8 6 -- 
+    + attr: name (v)
+    + edges (vertex names):
+    B--I, I--G, g--r, r--a, a--p, p--h
+
+    """
+    def __init__(self, name=None, vertex_id=None):
+        """
+        :param vertex_id: function to identify vertices
+        :type vertex_id: (graph, vertex) -> str
+        """
+        super(MergeGraphs, self).__init__(name=name)
+        if vertex_id is None:
+            vertex_id = lambda graph, vtx: "%s-%s" % (hash(graph), vtx.index)
+        self.vertex_id = vertex_id
+
+    def __call__(self, graph_list):
+        vertex_id = self.vertex_id
+        # create the graph builder
+        gbuilder = GraphBuilder(directed=False) #TODO: directed ?
+        # declar attrs
+        for graph in graph_list:
+            # vtx_attr
+            for vattr in graph.vs.attributes():
+                gbuilder.declare_vattr(vattr)
+            # edge_attr
+            for eattr in graph.es.attributes():
+                gbuilder.declare_eattr(eattr)
+        #
+        gbuilder.reset()
+        # build the vertices of the merged graph
+        for graph in graph_list:
+            for vtx in graph.vs:
+                vid = vertex_id(graph, vtx)
+                vgid = gbuilder.add_get_vertex(vid)
+                # add attributes
+                for vattr, val in vtx.attributes().iteritems():
+                    gbuilder.set_vattr(vgid, vattr, val)
+        #
+        # build the edges
+        for graph in graph_list:
+            for edge in graph.es:
+                sid = vertex_id(graph, graph.vs[edge.source])
+                sgid = gbuilder.add_get_vertex(sid)
+                tid = vertex_id(graph, graph.vs[edge.target])
+                tgid = gbuilder.add_get_vertex(tid)
+                eid = gbuilder.add_get_edge(sgid, tgid)
+                # add attributes
+                for eattr, val in edge.attributes().iteritems():
+                    #gbuilder.set_eattr(egid, vattr, val)
+                    pass
+        #
+        # Creates and returns the graph
+        return gbuilder.create_graph()
 
 
 class EdgeAttr(Composable):
@@ -146,14 +269,14 @@ class GraphProjection(Optionable):
     proj_wgt (Text, default=p, in: {no, count, p, pmin, pmax, pavg, confl}): projection weighting method
 
     .. Warning:: The bipartite graph should have True vertices in first in
-        vertex sequence, if not see  :class:`TrueInFirst`:.
+        vertex sequence, if not use  :class:`TrueInFirst`:.
 
     This could be used without weights on original graph:
 
     >>> g = ig.Graph.Formula("a:b:c--A:B:C:D, d--D:E, c:d--F")
     >>> g.vs["type"] = [vtx["name"].islower() for vtx in g.vs]
 
-    As the graph do not have True vertices in first we add :class:`TrueInFirst`:
+    As the graph do not have True vertices in first we have to use :class:`TrueInFirst`:
 
     >>> projection = TrueInFirst() | GraphProjection()
 
@@ -167,8 +290,11 @@ class GraphProjection(Optionable):
     
     >>> gp.es["weight"]
     [1, 1, 1, 1, 1, 1]
+	>>>  # also note that no loops are created
+    >>> gp.is_loop()
+    [False, False, False, False, False, False]
 
-    One can also use the weight to coun the number of commun neighbors in the
+    One can also use the weight to count the number of commun neighbors in the
     original bipartite graph:
     
     >>> gp = projection(g, proj_wgt='count')
@@ -184,7 +310,7 @@ class GraphProjection(Optionable):
     [1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]
 
 
-    Then different weight are possible (see :meth:`GraphProjection.bigraph_projection`):
+    Then different weights are possible (see :meth:`GraphProjection.bigraph_projection`):
     
     >>> gp = projection(g, proj_wgt='p')
     >>> gp.es["weight"]
@@ -212,9 +338,12 @@ class GraphProjection(Optionable):
         # this two points are checked with following assert
         if __debug__:
             docids = [vtx.index for vtx in graph.vs.select(type=True)]
-            assert sorted(docids) == range(max(docids) + 1), \
+            assert len(docids) == 0 or sorted(docids) == range(max(docids) + 1), \
                 "Documents should be the first veritces of the graph"
-        pgraph = GraphProjection.bigraph_projection(graph, proj_wgt, wgt_attr=EDGE_WEIGHT_ATTR)
+        if graph.vcount() == 0:
+            pgraph = graph.copy()
+        else:
+            pgraph = GraphProjection.bigraph_projection(graph, proj_wgt, wgt_attr=EDGE_WEIGHT_ATTR)
         if __debug__ and "_doc" in graph.vs.attributes():
             assert pgraph.vs["_doc"] == graph.vs.select(type=True)["_doc"]
         return pgraph
@@ -223,22 +352,22 @@ class GraphProjection(Optionable):
     def bigraph_projection(graph, weight=None, wgt_attr=EDGE_WEIGHT_ATTR):
         """ Projection of a bipartite graph
     
-            .. note:: this method is static it may be use independently
+        .. note:: this method is static so it may be use independently
 
-            weight:
-                - 'count': number of neighbors in commun
-                - 'p': 
-                    :math:`w(u, v) = p(u\\rightarrow v, t=2) . deg(u) = p(v \\rightarrow u, t=2) . deg(v)`
-                - 'confl': 
-                    :math:`w(u, v) = \\frac{ p(u\\rightarrow v, t=2) }{p(u \\rightarrow v, t=2) + \\pi_v} \\quad`
-                    avec 
-                    :math:`\\quad \\pi_v = \\frac{deg(v)}{ \\sum_j deg(j)}`
-                - 'pmin': 
-                    :math:`w(u, v) = \\min\\big(p(u\\rightarrow v, t=2), \quad p(v \\rightarrow u, t=2) \\big )`
-                - 'pmax':  
-                    :math:`w(u, v) = \\max\\big(p(u\\rightarrow v, t=2), \quad p(v \\rightarrow u, t=2) \\big )`
-                - 'pavg':
-                    :math:`w(u, v) = \\frac{1}{2} . \\big ( p(u\\rightarrow v, t=2) + p(v \\rightarrow u, t=2)\\big )`
+        weight:
+            - 'count': number of neighbors in commun
+            - 'p': 
+                :math:`w(u, v) = p(u\\rightarrow v, t=2) . deg(u) = p(v \\rightarrow u, t=2) . deg(v)`
+            - 'confl': 
+                :math:`w(u, v) = \\frac{ p(u\\rightarrow v, t=2) }{p(u \\rightarrow v, t=2) + \\pi_v} \\quad`
+                avec 
+                :math:`\\quad \\pi_v = \\frac{deg(v)}{ \\sum_j deg(j)}`
+            - 'pmin': 
+                :math:`w(u, v) = \\min\\big(p(u\\rightarrow v, t=2), \quad p(v \\rightarrow u, t=2) \\big )`
+            - 'pmax':  
+                :math:`w(u, v) = \\max\\big(p(u\\rightarrow v, t=2), \quad p(v \\rightarrow u, t=2) \\big )`
+            - 'pavg':
+                :math:`w(u, v) = \\frac{1}{2} . \\big ( p(u\\rightarrow v, t=2) + p(v \\rightarrow u, t=2)\\big )`
                 - else: no weight
         """
         multiplicity = True if weight == "count" else False
