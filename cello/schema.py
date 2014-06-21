@@ -134,6 +134,9 @@ class DocField(object):
         """
         raise NotImplementedError
     
+    def parse(self, value):
+        return self._ftype.parse(value)
+    
     def export(self):
         """ Returns a serialisable representation of the field
         """
@@ -740,11 +743,12 @@ class Doc(dict):
         except KeyError as err:
             raise SchemaError("'%s' is not a document field (existing attributes are: %s)" % (err, self.keys()))
 
-    def set_field(self, name, value):
+    def set_field(self, name, value, parse=False):
         """ set field """
         # explicit getitem needed for ValueField
         try: 
-            dict.__getitem__(self, name).set(value)
+            item = dict.__getitem__(self, name)
+            item.set( item.parse(value) if parse else value  )
         except ValidationError as err:
             raise FieldValidationError(name, value, list(err))
             
