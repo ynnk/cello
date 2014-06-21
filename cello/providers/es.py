@@ -148,7 +148,7 @@ class EsSearch(AbstractSearch):
 #        self.add_bool_option("in_title", True, "Search in titles")
 #        self.add_bool_option("in_redirects", True, "Search in redirects")
 #        self.add_option("fl", '*,score', "fields returned by solr; &fl=", str)
-        self.add_option("articles", Numeric(default=10, help=u"Number of results; &rows="))
+        self.add_option("doc_count", Numeric(default=10, help=u"Number of results; &rows="))
         self.add_option("operator", Text(choices=[u"AND", u"OR",], default=u"AND", 
             help=u"operator used for chaining terms"))
         if connect:
@@ -173,7 +173,7 @@ class EsSearch(AbstractSearch):
                     and fieldThree has a boost of 0.4 ... : &qf=""")
                )
 
-    def __call__(self, query, search_field=u'text', qf=QF, fl=u"id, title, out_links, premierParagraphe,score", articles=10, operator=u"AND", raw=False):
+    def __call__(self, query, search_field=u'text', qf=QF, fl=u"", doc_count=10, operator=u"AND", raw=False):
         """ Perform a search using the Elasticsearch
         :param search_field: field to search for matching term. 
           If '*' one can set the boosts per field in the @param qf.
@@ -206,18 +206,20 @@ class EsSearch(AbstractSearch):
                         "default_field": search_field,
                         }
             query_dsl = {
-                    "size": articles,
+                    "size": doc_count,
                     "query": {
                         "query_string": query_string
                         }
                     }
 
         if query:
-            self._logger.info("Elasticsearch query: '%s'" % query)
             if get_by_id:
-                retrieved = [d for d in self.es_index._es.mget(index=self._es_idx, doc_type=self._es_doctype, body={'ids': list(query)})["docs"] if d["found"]]
+                if type(query) not in (set, list, tuple):
+                    query = [query]
+                res =  self.es_index._es.mget(index=idx, doc_type=doc_type, body={'ids': query})
+                retrieved = [d for d in res["docs"] if d["found"]]
                 for rank, doc in enumerate(retrieved):
-                    kdocs.append(self._es_to_kdoc(doc, rank+1))
+                    kdocs.append(self.to_doc(doc, rank+1))
             else:
                 result = self.es_index._es.search(self._es_idx, doc_type=self._es_doctype, body=query_dsl)
                 if result["hits"]["total"] > 0:      
