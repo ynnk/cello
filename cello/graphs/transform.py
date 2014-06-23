@@ -132,8 +132,8 @@ class MergeGraphs(Composable):
                 eid = gbuilder.add_get_edge(sgid, tgid)
                 # add attributes
                 for eattr, val in edge.attributes().iteritems():
-                    #gbuilder.set_eattr(egid, vattr, val)
-                    pass
+                    gbuilder.set_eattr(eid, eattr, val)
+                    #TODO : how to deal with conflict ?
         #
         # Creates and returns the graph
         return gbuilder.create_graph()
