@@ -25,6 +25,7 @@ These two components can be used this way:
 """
 import re
 
+from cello.exceptions import CelloPlayError
 from cello.types import Numeric, Text
 from cello.pipeline import Composable, Optionable
 from cello.graphs import prox, IN, OUT, ALL, neighbors
@@ -99,7 +100,7 @@ class VtxMatch(Composable):
         for name, score in VtxMatch.split_score(query):
             score = 1. if len(score) == 0 else float(score)
             if name not in self._index:
-                raise DoNotWhatToDoException() #XXX
+                raise CelloPlayError("Vertex '%s' not found..." % name)
             else:
                 vid = self._index[name]
                 pzero[vid] = pzero.get(vid, 0.) + score
