@@ -414,8 +414,7 @@ def confluence(graph, vtxa, vtxb, length=3, add_loops=True, remove_edge=False,
     """
     assert not graph.is_directed()
     
-    # FIXME 
-    
+    # FIXME
     if remove_edge:
         raise NotImplementedError
     if not add_loops:
