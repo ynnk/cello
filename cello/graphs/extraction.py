@@ -63,6 +63,8 @@ class VtxMatch(Composable):
     {0: 1.0, 3: 1.0}
     >>> match("a; d:3")
     {0: 1.0, 3: 3.0}
+    >>> match("a; d:-3")
+    {0: 1.0, 3: -3.0}
     """
     #TODO: what append when vertex not found ?
     #TODO add test an suport for str/unicode
