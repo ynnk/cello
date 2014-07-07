@@ -195,7 +195,7 @@ def spreading_wgt(graph, in_vect, mode, add_loops, weight, loops_weight):
     >>> spreading_wgt(graph, {1:1.0}, mode=ALL, add_loops=False, weight=weight, loops_weight=None)
     {0: 0.75, 2: 0.25}
 
-    It is possible to force the graphe to be reflexif and then to specify the 
+    It is possible to force the graph to be reflexif and then to specify the 
     weight on each loop:
     >>> graph = ig.Graph.Formula("a-->b-->c")
     >>> weight = [3., 1.]
