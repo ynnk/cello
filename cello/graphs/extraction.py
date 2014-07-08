@@ -26,7 +26,7 @@ These two components can be used this way:
 import re
 
 from cello.exceptions import CelloPlayError
-from cello.types import Numeric, Text
+from cello.types import Numeric, Text, Boolean
 from cello.pipeline import Composable, Optionable
 from cello.graphs import prox, IN, OUT, ALL, neighbors
 
@@ -130,11 +130,13 @@ class ProxExtractGlobal(Optionable):
         super(ProxExtractGlobal, self).__init__(name=name)
         self.add_option("vcount", Numeric(default=10, help="max vertex count"))
         self.add_option("length", Numeric(default=3, help="random walk length"))
+        self.add_option("add_loops", Boolean(default=True, help="virtualy add loops on each vertex"))
         self.prox_func = prox_func
         self.global_graph = global_graph
 
     @Optionable.check
-    def __call__(self, pzero, vcount=None, length=None, **kwargs):
+    def __call__(self, pzero, vcount=None, length=None, add_loops=None, **kwargs):
+        kwargs["add_loops"] = add_loops
         v_extract = self.prox_func(self.global_graph, pzero, length, **kwargs)
         v_extract = prox.sortcut(v_extract, vcount) # limit 
         return v_extract
