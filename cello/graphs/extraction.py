@@ -88,7 +88,14 @@ class VtxMatch(Composable):
         super(VtxMatch, self).__init__(name=name)
         self.global_graph = global_graph
         self._vattr = attr
-        self._index = {vtx[attr]: vtx.index for vtx in global_graph.vs}
+#        self._index = {vtx[attr]: vtx.index for vtx in global_graph.vs}
+        self._index = {}
+        for vtx in global_graph.vs : 
+            if self._index.has_key(vtx[attr]) : 
+                self._index[vtx[attr]].append(vtx.index)
+            else : 
+                self._index[vtx[attr]] = [vtx.index]
+
         #RMQ: construire un index comme ca n'est pas pertinant pour les graphes non stocké en RAM
         # est-ce que l'on incorpore "select" dans AbstractGraph ?
         # ALIRE: http://permalink.gmane.org/gmane.comp.science.graph.igraph.general/2722
@@ -100,12 +107,13 @@ class VtxMatch(Composable):
         """
         pzero = {}
         for name, score in VtxMatch.split_score(query):
-            score = 1. if len(score) == 0 else float(score)
             if name not in self._index:
                 raise CelloPlayError("Vertex '%s' not found..." % name)
             else:
-                vid = self._index[name]
-                pzero[vid] = pzero.get(vid, 0.) + score
+#                vid = self._index[name]
+                score = 1. if len(score) == 0 else float(score)
+                for vid in self._index[name] : 
+                    pzero[vid] = pzero.get(vid, 0.) + score
         return pzero
 
 #TODO; NeighborsExtractGlobal
