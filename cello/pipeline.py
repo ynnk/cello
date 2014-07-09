@@ -323,6 +323,7 @@ class Optionable(Composable):
             return call_fct(self, *args, **options_values)
         # add a flag on the new method to indicate that it is 'checked'
         checked_call._checked = True
+        checked_call._no_check = call_fct
         return checked_call
 
 
