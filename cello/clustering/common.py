@@ -27,6 +27,16 @@ class Walktrap(ClusteringMethod):
     >>> g.es[EDGE_WEIGHT_ATTR] = [0.]       # Graph as 'no' real edge
     >>> clustering(g).membership
     [[], [], [], [], [], []]
+
+
+    Note: this last exemple is here to illustrate a bug in igraph when there is
+    a simple pair of adjacent vertices and some singletons. There is a fix in
+    the code to avoid this issue.
+
+    >>> g = ig.Graph.Formula("a--b, e")
+    >>> g.es[EDGE_WEIGHT_ATTR] = [1.]       # basic weights
+    >>> clustering(g).membership
+    [[0], [0], [1]]
     """
     def __init__(self, name=None):
         super(Walktrap, self).__init__(name=name)
@@ -36,7 +46,20 @@ class Walktrap(ClusteringMethod):
         if self.graph_is_trivial(graph, weighted=True):
             return ig.VertexCover(graph, [])
         vertex_clustering = graph.community_walktrap(weights=EDGE_WEIGHT_ATTR, steps=l)
-        return vertex_clustering.as_clustering().as_cover()
+        #Fix the dendrogramm to add singletons because igraph forget it...
+        merges = vertex_clustering.merges
+        n = graph.vcount()
+        singles = graph.vs.select(_degree=0)
+        for vtx in singles:
+            last_merge = n - len(singles) + len(merges) - 1
+            merges.append((last_merge, vtx.index))
+        fixed_vertex_clustering = ig.VertexDendrogram(
+            graph,
+            merges,
+            vertex_clustering.optimal_count,
+            modularity_params=dict(weights=EDGE_WEIGHT_ATTR)
+        )
+        return fixed_vertex_clustering.as_clustering().as_cover()
 
 
 class Infomap(ClusteringMethod):
