@@ -44,27 +44,44 @@ class VertexIds(Optionable):
         return [vid for vid, _ in vect]
 
 #TODO VtxMatch
-class VtxMatch(Composable):
+class VtxMatch(Optionable):
     """ Extract a list of weighted vertex ids from a query string
     
     >>> import igraph as ig
     >>> global_graph = ig.Graph.Formula("a--b--c--d, b--d, b--e")
-    >>> match = VtxMatch(global_graph, attr="name")
+    >>> global_graph.vs["label"] = ["1", "1", "2", "2", "3"]
+    >>> match = VtxMatch(global_graph, attr_list=[u"name", u"label"], default_attr=u"name")
     >>> # then at query time:
-    >>> match("a")
+    >>> match("a", "name")
     {0: 1.0}
-    >>> match("a ; a")
+    >>> match("a ; a", "name")
     {0: 2.0}
-    >>> match("a ; a;a;a")
+    >>> match("a ; a;a;a", "name")
     {0: 4.0}
-    >>> match("a:5.5")
+    >>> match("a:5.5", "name")
     {0: 5.5}
-    >>> match("a; d")
+    >>> match("a; d", "name")
     {0: 1.0, 3: 1.0}
-    >>> match("a; d:3")
+    >>> match("a; d:3", "name")
     {0: 1.0, 3: 3.0}
-    >>> match("a; d:-3")
+    >>> match("a; d:-3", "name")
     {0: 1.0, 3: -3.0}
+    >>> match("a; d:-3", "name")
+    {0: 1.0, 3: -3.0}
+    >>> match("1", "label")
+    {0: 1.0, 1: 1.0}
+    >>> match("1;1;1;1", "label")
+    {0: 4.0, 1: 4.0}
+    >>> match("2:5.5", "label")
+    {2: 5.5, 3: 5.5}
+    >>> match("1; 3", "label")
+    {0: 1.0, 1: 1.0, 4: 1.0}
+    >>> match("1; 3:3", "label")
+    {0: 1.0, 1: 1.0, 4: 3.0}
+    >>> match("1; 3:-3", "label")
+    {0: 1.0, 1: 1.0, 4: -3.0}
+    >>> match("1:-2; 3:-3", "label")
+    {0: -2.0, 1: -2.0, 4: -3.0}
     """
     #TODO: what append when vertex not found ?
     #TODO add test an suport for str/unicode
@@ -84,35 +101,38 @@ class VtxMatch(Composable):
         """
         return VtxMatch.re_split_score.findall(query)
 
-    def __init__(self, global_graph, attr, name=None):
+    def __init__(self, global_graph, attr_list, default_attr, name=None):
         super(VtxMatch, self).__init__(name=name)
+        self.add_option("attr", Text(default=default_attr, choices=attr_list, help="vertices' attribute for searching"))
         self.global_graph = global_graph
-        self._vattr = attr
+        self._vattr = [attr for attr in attr_list]
 #        self._index = {vtx[attr]: vtx.index for vtx in global_graph.vs}
         self._index = {}
-        for vtx in global_graph.vs : 
-            if self._index.has_key(vtx[attr]) : 
-                self._index[vtx[attr]].append(vtx.index)
-            else : 
-                self._index[vtx[attr]] = [vtx.index]
+        for attr in attr_list : 
+            self._index[attr] = {}
+            for vtx in global_graph.vs : 
+                if self._index[attr].has_key(vtx[attr]) : 
+                    self._index[attr][vtx[attr]].append(vtx.index)
+                else : 
+                    self._index[attr][vtx[attr]] = [vtx.index]
 
         #RMQ: construire un index comme ca n'est pas pertinant pour les graphes non stocké en RAM
         # est-ce que l'on incorpore "select" dans AbstractGraph ?
         # ALIRE: http://permalink.gmane.org/gmane.comp.science.graph.igraph.general/2722
 
-    def __call__(self, query):
+    def __call__(self, query, attr=None):
         """
         :param query: the input query
         :type query: unicode
         """
         pzero = {}
         for name, score in VtxMatch.split_score(query):
-            if name not in self._index:
+            if name not in self._index[attr]:
                 raise CelloPlayError("Vertex '%s' not found..." % name)
             else:
 #                vid = self._index[name]
                 score = 1. if len(score) == 0 else float(score)
-                for vid in self._index[name] : 
+                for vid in self._index[attr][name] : 
                     pzero[vid] = pzero.get(vid, 0.) + score
         return pzero
 
