@@ -2,12 +2,13 @@
 """ :mod:`cello.graphs.transform`
 ==============================
 """
-import igraph as ig
-
 import logging
 
+import igraph as ig
+import numpy as np
+
 from cello.pipeline import Composable, Optionable
-from cello.types import Text
+from cello.types import Text, Numeric
 
 from cello.graphs import EDGE_WEIGHT_ATTR
 from cello.graphs.prox import prox_markov_dict
@@ -213,7 +214,6 @@ def bipartit_linw(graph, edge):
     return min(nb_vois_tag/nb_opt, 1 - (nb_vois_tag-nb_opt)/(nb_doc-nb_opt))
 
 
-
 class VtxAttr(Composable):
     """ Add one or more attributes to the vertices of the graph
     
@@ -237,6 +237,7 @@ class VtxAttr(Composable):
                 graph.vs[attr] = value
         return graph
 
+
 class TrueInFirst(Composable):
     """ Permute bigraph vertices to move True vertices in first places.
 
@@ -259,6 +260,89 @@ class TrueInFirst(Composable):
         new_order = [new_ids[vid] for vid in xrange(bigraph.vcount())]
         bigraph_true_first = bigraph.permute_vertices(new_order)
         return bigraph_true_first
+
+
+class SymFalseBigraph(Optionable):
+    """ Symetrise a "false-bipartite" graph, i.e. an unipartite graph considered
+    as a bipartite one.
+
+    If you have the following bigraph:
+
+    >>> import igraph as ig
+    >>> g = ig.Graph.Formula("A--b, B--c:d, D--a")
+    >>> g.vs["type"] = [vtx["name"].isupper() for vtx in g.vs]
+    >>> print(g.summary(verbosity=2))
+    IGRAPH UN-T 7 4 -- 
+    + attr: name (v), type (v)
+    + edges (vertex names):
+    A--b, B--c, B--d, D--a
+
+    each vertex is present either with a lower name or a upper name (or both).
+
+    >>> # you cat use the following 'symetriser'
+    >>> sym = SymFalseBigraph(
+    ...     vtx_true_hash=lambda vtx: vtx["name"].lower(),
+    ...     vtx_false_hash=lambda vtx: vtx["name"]
+    ... )
+    >>> g = sym(g)
+    >>> print(g.summary(verbosity=2))
+    IGRAPH UN-T 7 10 -- 
+    + attr: name (v), type (v)
+    + edges (vertex names):
+    A -- b, d, a
+    b -- A, B, D
+    B -- b, c, d, a
+    c -- B
+    d -- A, B, D
+    D -- b, d, a
+    a -- A, B, D
+
+    One can see that now there is an edge between lower and uper version of each
+    vertex. Also there is now an edge between 'a' and 'B' (for exemple) because
+    there is an edge between 'A' and 'b' in the initial graph.
+
+    """
+    def __init__(self, name=None, vtx_true_hash=None, vtx_false_hash=None):
+        super(SymFalseBigraph, self).__init__(name=name)
+        # hash to identify type True vertices
+        if vtx_true_hash is None:
+            vtx_true_hash = lambda vtx: vtx["label"]
+        self.vtx_true_hash = vtx_true_hash
+        # hash to identify type False vertices
+        if vtx_false_hash is None:
+            vtx_false_hash = lambda vtx: vtx["label"]
+        self.vtx_false_hash = vtx_false_hash
+
+    @Optionable.check
+    def __call__(self, bigraph):
+        vtx_false_hash = self.vtx_false_hash
+        vtx_true_hash = self.vtx_true_hash
+        new_edges = []
+        # get id of vertices from there 'hash'
+        true_by_hash = {vtx_true_hash(vtx): vtx.index for vtx in bigraph.vs.select(type=True)}
+        false_by_hash = {vtx_false_hash(vtx): vtx.index for vtx in bigraph.vs.select(type=False)}
+        #
+        # ETAPE 1: self loops
+        # pour tout les True (doc) : ajout le lien sym si autre existe
+        for vtx_doc_hash, vtx_doc_index in true_by_hash.iteritems():
+            if vtx_doc_hash in false_by_hash:
+                new_edges.append((vtx_doc_index, false_by_hash[vtx_doc_hash]))
+        #
+        # ETAPE 2 : symetrisation
+        # pour tout les True (doc) :
+        for vtx_doc_hash, vtx_doc_index in true_by_hash.iteritems():
+            if vtx_doc_hash not in false_by_hash:
+                # this document is not linked by any other...
+                # so it can't make in link to the others
+                continue
+            # pour tous les liens sortants, ajoute le lien entrant dans l'autre sens
+            for neith in bigraph.neighbors(vtx_doc_index):
+                vtx_neith_hash = vtx_false_hash(bigraph.vs[neith])
+                if vtx_neith_hash in true_by_hash:
+                    new_edges.append((true_by_hash[vtx_neith_hash], false_by_hash[vtx_doc_hash]))
+        self._logger.info("Add %d edges" % len(new_edges))
+        bigraph.add_edges(new_edges)
+        return bigraph
 
 
 class GraphProjection(Optionable):
@@ -399,5 +483,79 @@ class GraphProjection(Optionable):
         return pg
 
 
+class WeightByConfluence(Optionable):
+    """ Normalise edge weights using the confluence.
+    
+    >>> weighter = WeightByConfluence()
+    >>> weighter.print_options()
+    wlength (Numeric, default=3): length of the random walks
 
+    >>> g = ig.Graph.Formula("a--b:c:d:e, e--f")
+    >>> g.es["weight"] = [1, 2, 1, 1, 2]
+    >>> g = weighter(g, wlength=1)
+    >>> g.es["weight"]
+    [0.625, 0.68965517241379315, 0.625, 0.45454545454545453, 0.76923076923076916]
+
+    >>> g = ig.Graph.Formula("a--b:c:d:e, e--f")
+    >>> g.es["weight"] = [1, 2, 1, 1, 2]
+    >>> g = weighter(g, wlength=3)
+    >>> g.es["weight"]
+    [0.56886227544910184, 0.58139534883720934, 0.56886227544910184, 0.42743538767395622, 0.67809239940387489]
+
+    >>> g = ig.Graph.Formula("a--b:c:d:e, e--f")
+    >>> g.es["weight"] = [1, 2, 1, 1, 2]
+    >>> #HACK: strange call to avoid the check on option (wlength can't be higher than 10)
+    >>> g = WeightByConfluence.__call__._no_check(weighter, g, wlength=100)
+    >>> g.es["weight"]
+    [0.50000000019945789, 0.50000000017418911, 0.50000000019945789, 0.49999999974475873, 0.50000000071232309]
+    """
+    def __init__(self, name=None):
+        super(WeightByConfluence, self).__init__(name=name)
+        self.add_option("wlength", Numeric(default=3, min=1, max=10,
+            help="length of the random walks"))
+        #TODO: add an option tu remove the edge before to compute the confl
+        #TODO; add param to configure the edge attr to use
+
+    @Optionable.check
+    def __call__(self, graph, wlength=None):
+        assert not graph.is_directed() #TODO: manage directed graph
+
+        # compute total weight
+        weigths = graph.es[EDGE_WEIGHT_ATTR]
+        wtot = sum(weigths)
+        # add weight of loosp
+        wtot += graph.vcount()
+
+        ## calcul la proba limite de chaque sommet, + 1 for add_loops
+        # weight de chaque somment:
+        limits = np.fromiter(
+            (sum(weigths[inc_edge] for inc_edge in graph.incident(vtx)) + 1 for vtx in graph.vs),
+            np.float, count=graph.vcount()
+        )
+        # normalised
+        limits = limits / limits.sum()
+
+        cweight = np.zeros(graph.ecount())
+        # pour chaque sommet
+        for vtx in graph.vs:
+            # calcul ligne prox
+            lprox = prox_markov_dict(
+                graph,
+                [vtx.index],
+                wlength,
+                weight=weigths,
+                add_loops=True,
+                loops_weight=None, # then 1 on each loop
+            )
+            # pour chaque voisin,
+            for vois in graph.neighbors(vtx):
+                # calcul
+                limit = limits[vois]
+                # update le score
+                eid = graph.get_eid(vtx.index, vois)
+                cweight[eid] = lprox.get(vois, 0.) / (limit + lprox.get(vois, 0.))
+
+        # update the weights
+        graph.es[EDGE_WEIGHT_ATTR] = cweight
+        return graph
 

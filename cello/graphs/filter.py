@@ -113,6 +113,53 @@ class EdgeCut(Optionable):
         return graph
 
 
+class MaxDensity(Optionable):
+    """ Remove edges with lower weight in order to ensure that the mean degree
+    (i.e. density) is lower than a given threshold.
+
+    >>> filter = MaxDensity()
+    >>> filter.print_options()
+    kmax (Numeric, default=10.0): Maximum mean degree
+
+    >>> g = ig.Graph.Formula("a:b:c--A:B:C:D, d--D:E, c:d--F")
+    >>> g.vs["type"] = [vtx["name"].islower() for vtx in g.vs]
+    >>> g.es['weight'] = [1, 2, 3, 4, 5, 6, 7, 8]
+    >>> g.es['weight']
+    [1, 2, 3, 4, 5, 6, 7, 8, 1, 2, 3, 4, 5, 6, 7, 8]
+    >>> import numpy as np
+    >>> np.mean(g.degree())
+    3.2000000000000002
+    >>> # apply the filter :
+    >>> g = filter(g, kmax=2.)
+    >>> np.mean(g.degree())
+    2.0
+    >>> # one can check that edges with smaller weight have been removed
+    >>> g.es['weight']
+    [4, 5, 6, 7, 8, 4, 5, 6, 7, 8]
+    >>> g.vs['name']
+    ['a', 'b', 'c', 'A', 'B', 'C', 'D', 'd', 'E', 'F']
+    """
+    def __init__(self, name=None, edge_wgt_attr=EDGE_WEIGHT_ATTR):
+        super(MaxDensity, self).__init__(name=name)
+        self.edge_wgt_attr = EDGE_WEIGHT_ATTR
+        self.add_option("kmax", Numeric(vtype=float, default=10., min=0.1, help="Maximum mean degree"))
+
+    @Optionable.check
+    def __call__(self, graph, kmax=None):
+        assert not graph.is_directed()
+        if graph.vcount() > 0:
+            dmean = (2. * graph.ecount()) / graph.vcount()
+            self._logger.info("Mean degree is %1.3f, max is %1.3f" % (dmean, kmax))
+            if dmean > kmax:
+                m = int((kmax*graph.vcount())/2.)
+                self._logger.info("Before filtering: |V|=%d, |E|=%d, keep only %d edges" % (graph.vcount(), graph.ecount(), m))
+                to_del = sorted(graph.es, key=lambda edg: edg[self.edge_wgt_attr], reverse=True)[m:]
+                graph.delete_edges(to_del)
+                dmean = (2. * graph.ecount()) / graph.vcount()
+                self._logger.info("After filtering: |V|=%d, |E|=%d, <k>=%1.3f" % (graph.vcount(), graph.ecount(), dmean))
+        return graph
+
+
 class GenericVertexFilter(Optionable):
     """ Keep only a fixed number of edges.
     Edges are ordered (before the cut) according to "weight" attribute.
