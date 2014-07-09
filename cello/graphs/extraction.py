@@ -16,10 +16,10 @@ here is an usage example:
 
 These two components can be used this way:
 
->>> markov_glbl([1], vcount=5, length=3)
+>>> markov_glbl([1], vcount=5, length=3, add_loops=False)
 [0, 2, 3, 13, 7]
 >>> import random; random.seed(0) #for testing purpose
->>> mtcl_glbl([1, 2], vcount=3, length=3, throws=10000)
+>>> mtcl_glbl([1, 2], vcount=3, length=3, throws=10000, add_loops=False)
 [0, 1, 3]
 
 """
@@ -150,8 +150,10 @@ class ProxMarkovExtractionGlobal(ProxExtractGlobal):
     >>> global_graph = ig.Graph.Formula("a--b--c--d, b--d, b--e")
     >>> xtrct_markov = ProxMarkovExtractionGlobal(global_graph)
     >>> # then at query time:
-    >>> xtrct_markov([4], length=3, vcount=2)
+    >>> xtrct_markov([4], length=3, vcount=2, add_loops=False)
     [(1, 0.75), (2, 0.125)]
+    >>> xtrct_markov([4], length=1, vcount=10, add_loops=True)
+    [(1, 0.5), (4, 0.5)]
     """
     def __init__(self, global_graph, name=None):
         super(ProxMarkovExtractionGlobal, self).__init__(global_graph, prox.prox_markov_dict, name=name)
@@ -166,7 +168,7 @@ class ProxMtclExtractionGlobal(ProxExtractGlobal):
     >>> xtrct_markov_mtcl = ProxMtclExtractionGlobal(global_graph)
     >>> # then at query time:
     >>> import random; random.seed(0) #for testing purpose
-    >>> xtrct_markov_mtcl([4], length=2, vcount=3, throws=200)
+    >>> xtrct_markov_mtcl([4], length=2, vcount=3, throws=200, add_loops=False)
     [(2, 0.31), (3, 0.27), (4, 0.24)]
     """
     def __init__(self, global_graph, name=None):
