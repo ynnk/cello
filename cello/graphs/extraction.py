@@ -55,7 +55,7 @@ class VtxMatch(Optionable):
     >>> match = VtxMatch(global_graph, attr_list=[u"name", u"label"], default_attr=u"name")
     >>> # one can see the availables options 
     >>> match.print_options()
-    attr (Text, default=name, in: {name, label}): vertex attribute used for searching
+    default_attr (Text, default=name, in: {name, label}): default search attribute
 
     Then one can use it at query time:
 
@@ -67,27 +67,41 @@ class VtxMatch(Optionable):
     {0: 4.0}
     >>> match("a:5.5")
     {0: 5.5}
-    >>> match("a; d", attr=u"name") # it is also possible to set the attr used for searching vtx
+    >>> match("a; d", default_attr=u"name") # it is also possible to set the default_attr used for searching vtx
     {0: 1.0, 3: 1.0}
-    >>> match("a; d:3", attr=u"name")
+    >>> match("a; d:3", default_attr=u"name")
     {0: 1.0, 3: 3.0}
-    >>> match("a; d:-3", attr=u"name")
+    >>> match("a; d:-3", default_attr=u"name")
     {0: 1.0, 3: -3.0}
-    >>> match("a; d:-3", attr=u"name")
+    >>> match("a; d:-3", default_attr=u"name")
     {0: 1.0, 3: -3.0}
-    >>> match("1", attr=u"label")    #Note: if more than one vtx have the given attr value the all are returned
+    >>> match("1", default_attr=u"label")    #Note: if more than one vtx have the given attr value the all are returned
     {0: 1.0, 1: 1.0}
-    >>> match("1;1;1;1", attr=u"label")
+    >>> match("1;1;1;1", default_attr=u"label")
     {0: 4.0, 1: 4.0}
-    >>> match("2:5.5", attr=u"label")
+    >>> match("2:5.5", default_attr=u"label")
     {2: 5.5, 3: 5.5}
-    >>> match("1; 3", attr=u"label")
+    >>> match("1; 3", default_attr=u"label")
     {0: 1.0, 1: 1.0, 4: 1.0}
-    >>> match("1; 3:3", attr=u"label")
+    >>> match("1; 3:3", default_attr=u"label")
     {0: 1.0, 1: 1.0, 4: 3.0}
-    >>> match("1; 3:-3", attr=u"label")
+    >>> match("1; 3:-3", default_attr=u"label")
     {0: 1.0, 1: 1.0, 4: -3.0}
-    >>> match("1:-2; 3:-3", attr=u"label")
+    >>> match("1:-2; 3:-3", default_attr=u"label")
+    {0: -2.0, 1: -2.0, 4: -3.0}
+    >>> match("1")    #Note: if more than one vtx have the given attr value the all are returned
+    {0: 1.0, 1: 1.0}
+    >>> match("1;1;1;1")
+    {0: 4.0, 1: 4.0}
+    >>> match("2:5.5")
+    {2: 5.5, 3: 5.5}
+    >>> match("1; 3")
+    {0: 1.0, 1: 1.0, 4: 1.0}
+    >>> match("1; 3:3")
+    {0: 1.0, 1: 1.0, 4: 3.0}
+    >>> match("1; 3:-3")
+    {0: 1.0, 1: 1.0, 4: -3.0}
+    >>> match("1:-2; 3:-3")
     {0: -2.0, 1: -2.0, 4: -3.0}
     
     This component can also throw some :class:`.CelloPlayError` if vertices are
@@ -96,8 +110,22 @@ class VtxMatch(Optionable):
     >>> match("bp")
     Traceback (most recent call last):
     ...
-    CelloPlayError: Vertex 'bp' not found !
-
+    CelloPlayError: Vertex's name 'bp' not found; Vertex's label 'bp' not found
+    
+    >>> match("bp;lj")
+    Traceback (most recent call last):
+    ...
+    CelloPlayError: Vertices' names 'bp and lj' not found; Vertices' labels 'bp and lj' not found
+    
+    >>> match("bp;1")
+    Traceback (most recent call last):
+    ...
+    CelloPlayError: Vertices' names 'bp and 1' not found; Vertex's label 'bp' not found
+    
+    >>> match("a;1")
+    Traceback (most recent call last):
+    ...
+    CelloPlayError: Vertex's name '1' not found; Vertex's label 'a' not found
     """
     #TODO add test an suport for str/unicode
 
@@ -119,9 +147,9 @@ class VtxMatch(Optionable):
 
     def __init__(self, global_graph, attr_list, default_attr, name=None):
         super(VtxMatch, self).__init__(name=name)
-        self.add_option("attr", Text(default=default_attr, choices=attr_list, help="vertex attribute used for searching"))
+        self.add_option("default_attr", Text(default=default_attr, choices=attr_list, help="default search attribute"))
         self.global_graph = global_graph
-        self._vattr = [attr for attr in attr_list]
+        self._vattr_list = attr_list
         self._index = {}
         # build the indices, for each attr
         for attr in attr_list:
@@ -136,15 +164,52 @@ class VtxMatch(Optionable):
         # ALIRE: http://permalink.gmane.org/gmane.comp.science.graph.igraph.general/2722
 
     @Optionable.check
-    def __call__(self, query, attr=None):
+    def __call__(self, query, default_attr=None):
         pzero = {}
-        for name, score in VtxMatch.split_score(query):
-            if name not in self._index[attr]:
-                raise CelloPlayError("Vertex '%s' not found !" % name) #TODO i18n
-            else:
-                score = 1. if len(score) == 0 else float(score)
-                for vid in self._index[attr][name] : 
-                    pzero[vid] = pzero.get(vid, 0.) + score
+        attr_list = []
+        #get the default attribute position in list
+        attr_idx = self._vattr_list.index(default_attr)
+        #if attr_idx is not the first one, rebuild attr_list with default at first position
+        if attr_idx > 0 : 
+            attr_list = [default_attr]
+            attr_list.extend(self._vattr_list[0:attr_idx])
+            attr_list.extend(self._vattr_list[attr_idx+1:len(self._vattr_list)])
+        else :
+            attr_list= self._vattr_list
+        
+        missing_nodes = {}
+        for attr in attr_list : 
+            for name, score in VtxMatch.split_score(query) :
+                if name not in self._index[attr] :
+                    if missing_nodes.has_key(attr) : 
+                        missing_nodes[attr].append(name)
+                    else : 
+                        missing_nodes[attr] = [name]
+#                    raise CelloPlayError("Vertex '%s' not found !" % name) #TODO i18n
+                else :
+                    score = 1. if len(score) == 0 else float(score)
+                    for vid in self._index[attr][name] : 
+                        pzero[vid] = pzero.get(vid, 0.) + score
+            if missing_nodes.has_key(attr) == False : break #if no missing nodes for the attribute, break the loop
+                
+        if len(missing_nodes) == len(attr_list) :
+            print len(missing_nodes)
+            str_err_list = []
+            str_err = ""
+            
+            for key, val in missing_nodes.items() :
+            
+                if (len(val)>1) : 
+                    str_err_temp = "Vertices' %ss '%s' not found" % (key, " and ".join(val))
+                else : 
+                    str_err_temp = "Vertex's %s '%s' not found" % (key, val[0])
+                    
+                str_err_list.append(str_err_temp)
+            
+            str_err = "; ".join(str_err_list)
+            
+            raise CelloPlayError("%s" % str_err) #TODO i18n
+                        
         return pzero
 
 
