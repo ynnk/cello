@@ -140,7 +140,7 @@ class VtxMatch(Optionable):
         pzero = {}
         for name, score in VtxMatch.split_score(query):
             if name not in self._index[attr]:
-                raise CelloPlayError("Vertex '%s' not found !" % name) #TODO i18n
+                raise CelloPlayError("Vertex with %s='%s' not found !" % (attr, name)) #TODO i18n
             else:
                 score = 1. if len(score) == 0 else float(score)
                 for vid in self._index[attr][name] : 
