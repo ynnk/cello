@@ -29,9 +29,15 @@ class ReducePCA(Composable):
     >>> pca(layout)
     <Layout with 5 vertices and 2 dimensions>
 
-    Note that if the input layout is empty nothing is done:
+    Some limit cases:
+
+    >>> # if the input layout is empty nothing is done:
     >>> pca(ig.Layout())
     <Layout with no vertices and 2 dimensions>
+    >>> pca = ReducePCA(3)
+    >>> pca(ig.Layout([[1, 1], [0, 1]])).coords
+    [[1.0, 1.0, 0.0], [0.0, 1.0, 0.0]]
+
     """
     def __init__(self, dim=3):
         super(ReducePCA, self).__init__()
@@ -73,7 +79,10 @@ class ReducePCA(Composable):
         if len(layout) == 0:
             result = []
         else:
-            result = self.robust_pca(mat).tolist()
+            if layout.dim <= self.out_dim:
+                result = np.hstack((mat, np.zeros((len(layout), self.out_dim - layout.dim)))).tolist()
+            else:
+                result = self.robust_pca(mat).tolist()
         return ig.Layout(result, dim=self.out_dim)
 
 

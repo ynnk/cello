@@ -96,7 +96,7 @@ class VtxMatch(Optionable):
     >>> match("bp")
     Traceback (most recent call last):
     ...
-    CelloPlayError: Vertex 'bp' not found !
+    CelloPlayError: Vertex with label='bp' not found !
 
     """
     #TODO add test an suport for str/unicode
