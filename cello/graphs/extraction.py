@@ -166,6 +166,7 @@ class VtxMatch(Optionable):
     @Optionable.check
     def __call__(self, query, default_attr=None):
         pzero = {}
+        
         attr_list = []
         #get the default attribute position in list
         attr_idx = self._vattr_list.index(default_attr)
@@ -210,6 +211,14 @@ class VtxMatch(Optionable):
             
             raise CelloPlayError("%s" % str_err) #TODO i18n
                         
+
+#        for name, score in VtxMatch.split_score(query):
+#            if name not in self._index[attr]:
+#                raise CelloPlayError("Vertex with %s='%s' not found !" % (attr, name)) #TODO i18n
+#            else:
+#                score = 1. if len(score) == 0 else float(score)
+#                for vid in self._index[attr][name] : 
+#                    pzero[vid] = pzero.get(vid, 0.) + score
         return pzero
 
 
@@ -282,6 +291,56 @@ class ProxMtclExtractionGlobal(ProxExtractGlobal):
         self.add_option("throws", Numeric(default=500, help="The number of throws in montecarlo process"))
 
 
+class ProxMarkovExtractionGlobalBigraph(Optionable):
+    """ According to an initial distribution of weight over some vertices of
+    the graph extract a given number of vertices by two random walks : one of
+    odd length one of even lenght.
+    
+    >>> # a global graph is needed to build the extractor
+    >>> import igraph as ig
+    >>> g = ig.Graph.Formula("a:b:c--A:B:C:D, d--D:E, c:d--F")
+    >>> g.vs["type"] = [vtx["name"].islower() for vtx in g.vs]
+    >>> g.vs["name"] # to see corespondance between id and name
+    ['a', 'b', 'c', 'A', 'B', 'C', 'D', 'd', 'E', 'F']
+    >>> extract = ProxMarkovExtractionGlobalBigraph(g)
+    >>> extract.print_options()
+    half_length (Numeric, default=2): Two walks will be computed one of lenght t*2-1 one of lenght t*2
+    odd_count (Numeric, default=15): Number of vertices to keep with the *odd* lenght walk
+    even_count (Numeric, default=35): Number of vertices to keep with the *even* lenght walk
+
+    One can then use it :
+    >>> extract({0:1.}, half_length=1, odd_count=4, even_count=0)
+    [(3, 0.25), (4, 0.25), (5, 0.25), (6, 0.25)]
+    >>> extract({0:1.}, half_length=1, odd_count=0, even_count=20)
+    [(0, 0.3125), (1, 0.3125), (2, 0.3125), (7, 0.0625)]
+    >>> extract({0:1.}, half_length=1, odd_count=20, even_count=20)
+    [(3, 0.25), (4, 0.25), (5, 0.25), (6, 0.25), (0, 0.3125), (1, 0.3125), (2, 0.3125), (7, 0.0625)]
+    """
+    def __init__(self, graph, name=None):
+        super(ProxMarkovExtractionGlobalBigraph, self).__init__(name=name)
+        self.add_option("half_length", Numeric(
+            min=0, max=20, default=2,
+            help="Two walks will be computed one of lenght t*2-1 one of lenght t*2"
+        ))
+        self.add_option("odd_count", Numeric(
+            min=0, default=15,
+            help="Number of vertices to keep with the *odd* lenght walk"
+        ))
+        self.add_option("even_count", Numeric(
+            min=0, default=35,
+            help="Number of vertices to keep with the *even* lenght walk"
+        ))
+        # create the the basic extractor
+        self.extrator = ProxMarkovExtractionGlobal(graph)
+
+    @Optionable.check
+    def __call__(self, pzero, half_length=None, odd_count=None, even_count=None):
+        odd_vect = self.extrator(pzero, length=half_length*2-1, vcount=odd_count, add_loops=False)
+        event_vect = self.extrator(pzero, length=half_length*2, vcount=even_count, add_loops=False)
+        odd_vect.extend(event_vect)
+        return odd_vect
+
+
 #RMQ: les extracts non "global" sont en fait des pipeline: Prox() | sortcut
 # A condition que Prox soit un optionable 
 
@@ -345,30 +404,4 @@ class ProxMonteCarloExtraction(ProxExtract):
     def __init__(self, name=None):
         super(ProxMonteCarloExtraction, self).__init__(prox.prox_markov_mtcl, name=name)
         self.add_option("throws", Numeric(default=500, help="The number of throws in montecarlo process"))
-
-
-
-
-# FIXME Untested 
-def extract_bipartite(graph, p0, length, vcount, mode=OUT, add_loops=False, 
-                        weight=None, neighbors=neighbors):
-    """ neighborhood of a list of vertices in a bipartite graph
-
-    :param pzero: list of starting vertices (ids)
-    :param l: length of the random walk use to compute the neighborhood
-    :param neighbors_fct: (optional) function that return, for a given graph and a given vertex id, the neighbors of the vertexs
-
-    :returns: a list of the form: [(vid1, score), (vid2, score), ...]
-    """
-    # prox curryfication 
-    prox_method = lambda _length : prox.prox_markov_dict(graph, p0, _length)
-    
-    v_extract = prox_method(length)
-    v_extract.update(prox_method(length+1))
-    
-    v_extract = v_extract.items() #  sparce prox_vect : [(id, prox_value)]
-    v_extract.sort(key=lambda x: x[1], reverse=True) # sorting by prox.prox_markov
-    v_extract = v_extract[:vcount]
-    
-    return v_extract
 

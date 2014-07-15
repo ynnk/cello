@@ -82,6 +82,8 @@ class CelloFlaskView(Blueprint):
     def options(self):
         """ Engine options discover HTTP entry point
         """
+        #configure engine with an empty dict to ensure default selection/options
+        self.engine.configure({})
         conf = self.engine.as_dict()
         conf["returns"] = [oname for oname in self._outputs.iterkeys()]
         # Note: we overide args to only list the ones that are declared in this view
@@ -119,12 +121,14 @@ class CelloFlaskView(Blueprint):
         needed_inputs = self.engine.needed_inputs()
         # check if all needed inputs are possible
         if not all([inname in self._inputs for inname in needed_inputs]):
-            #XXX this may be check staticly
-            raise NotImplementedError()
+            #Note: this may be check staticly
+            missing = [inname for inname in needed_inputs if inname not in self._inputs]
+            raise ValueError("With this configuration the inputs %s are needed but not declared." % missing)
         # check if all inputs are given
         if not all([inname in inputs_data for inname in needed_inputs]):
-            #XXX ERROR should be handle
-            raise NotImplementedError()
+            # configuration error
+            missing = [inname for inname in needed_inputs if inname not in inputs_data]
+            raise ValueError("With this configuration the inputs %s are missing." % missing)
         #
         ### parse inputs (and validate)
         inputs = {}
