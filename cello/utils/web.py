@@ -82,6 +82,8 @@ class CelloFlaskView(Blueprint):
     def options(self):
         """ Engine options discover HTTP entry point
         """
+        #configure engine with an empty dict to ensure default selection/options
+        self.engine.configure({})
         conf = self.engine.as_dict()
         conf["returns"] = [oname for oname in self._outputs.iterkeys()]
         # Note: we overide args to only list the ones that are declared in this view
