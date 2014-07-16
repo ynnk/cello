@@ -211,7 +211,6 @@ class VtxMatch(Optionable):
             
             raise CelloPlayError("%s" % str_err) #TODO i18n
                         
-
 #        for name, score in VtxMatch.split_score(query):
 #            if name not in self._index[attr]:
 #                raise CelloPlayError("Vertex with %s='%s' not found !" % (attr, name)) #TODO i18n
@@ -228,13 +227,15 @@ class VtxMatch(Optionable):
 class ProxExtractGlobal(Optionable):
     """ Extract vertices of a graph from an inital set of vertices.
     """
-    def __init__(self, global_graph, prox_func, name=None):
+    def __init__(self, global_graph, prox_func, default_mode=OUT, name=None):
         """
         :param global_graph: a subclass of :class:`.AbstractGraph`
         :param prox_func: curryfied function for prox. Only `graph`, `pzero`,
             and `length` will be passed a argument to the fuction. If one wants
             to modified the named argument you want passed a lamdba with all
             named arguments setted.
+        :param default_mode: default mode for the random walk (useful only if the graph is directed)
+
 
         Here is an example of usable prox fct:
 
@@ -243,15 +244,25 @@ class ProxExtractGlobal(Optionable):
         ...         add_loops=False, weight=None)
         """
         super(ProxExtractGlobal, self).__init__(name=name)
+        
         self.add_option("vcount", Numeric(default=10, help="max vertex count"))
         self.add_option("length", Numeric(default=3, help="random walk length"))
         self.add_option("add_loops", Boolean(default=True, help="virtualy add loops on each vertex"))
+        
+        
+        self._modes = {
+            "text_to_num": {"IN":IN, "OUT":OUT, "ALL":ALL},
+            "num_to_text": {IN:u"IN", OUT:u"OUT", ALL:u"ALL"}
+            }
+
+        self.add_option("mode", Text(default=self._modes["num_to_text"][default_mode], choices=[u"IN", u"OUT", u"ALL"], help="edges to walk on from a vertex"))
         self.prox_func = prox_func
         self.global_graph = global_graph
 
     @Optionable.check
-    def __call__(self, pzero, vcount=None, length=None, add_loops=None, **kwargs):
+    def __call__(self, pzero, vcount=None, length=None, add_loops=None, mode=None, **kwargs):
         kwargs["add_loops"] = add_loops
+        kwargs["mode"] = self._modes["text_to_num"][mode]
         v_extract = self.prox_func(self.global_graph, pzero, length, **kwargs)
         v_extract = prox.sortcut(v_extract, vcount) # limit 
         return v_extract
@@ -269,8 +280,16 @@ class ProxMarkovExtractionGlobal(ProxExtractGlobal):
     [(1, 0.75), (2, 0.125)]
     >>> xtrct_markov([4], length=1, vcount=10, add_loops=True)
     [(1, 0.5), (4, 0.5)]
+    >>> global_graph = ig.Graph.Formula("a-->b-->c")
+    >>> xtrct_markov = ProxMarkovExtractionGlobal(global_graph)
+    >>> xtrct_markov([1], length=1, vcount=10, add_loops=False)
+    [(2, 1.0)]
+    >>> xtrct_markov([1], length=1, vcount=10, add_loops=False, mode=u"IN")
+    [(0, 1.0)]
+    >>> xtrct_markov([1], length=1, vcount=10, add_loops=False, mode=u"ALL")
+    [(0, 0.5), (2, 0.5)]
     """
-    def __init__(self, global_graph, name=None):
+    def __init__(self, global_graph, default_mode=OUT, name=None):
         super(ProxMarkovExtractionGlobal, self).__init__(global_graph, prox.prox_markov_dict, name=name)
 
 
