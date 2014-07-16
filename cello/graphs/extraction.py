@@ -171,44 +171,40 @@ class VtxMatch(Optionable):
         #get the default attribute position in list
         attr_idx = self._vattr_list.index(default_attr)
         #if attr_idx is not the first one, rebuild attr_list with default at first position
-        if attr_idx > 0 : 
+        if attr_idx > 0:
             attr_list = [default_attr]
             attr_list.extend(self._vattr_list[0:attr_idx])
             attr_list.extend(self._vattr_list[attr_idx+1:len(self._vattr_list)])
-        else :
+        else:
             attr_list= self._vattr_list
-        
+
         missing_nodes = {}
-        for attr in attr_list : 
-            for name, score in VtxMatch.split_score(query) :
-                if name not in self._index[attr] :
-                    if missing_nodes.has_key(attr) : 
+        for attr in attr_list:
+            for name, score in VtxMatch.split_score(query):
+                if name not in self._index[attr]:
+                    if missing_nodes.has_key(attr):
                         missing_nodes[attr].append(name)
-                    else : 
+                    else:
                         missing_nodes[attr] = [name]
-#                    raise CelloPlayError("Vertex '%s' not found !" % name) #TODO i18n
-                else :
+                else:
                     score = 1. if len(score) == 0 else float(score)
-                    for vid in self._index[attr][name] : 
+                    for vid in self._index[attr][name]:
                         pzero[vid] = pzero.get(vid, 0.) + score
-            if missing_nodes.has_key(attr) == False : break #if no missing nodes for the attribute, break the loop
-                
-        if len(missing_nodes) == len(attr_list) :
-            print len(missing_nodes)
+            #if no missing nodes for the attribute, break the loop
+            if not attr in missing_nodes:
+                break
+
+        if len(missing_nodes) == len(attr_list):
             str_err_list = []
             str_err = ""
             
-            for key, val in missing_nodes.items() :
-            
-                if (len(val)>1) : 
+            for key, val in missing_nodes.items():
+                if len(val) > 1:
                     str_err_temp = "Vertices' %ss '%s' not found" % (key, " and ".join(val))
-                else : 
+                else:
                     str_err_temp = "Vertex's %s '%s' not found" % (key, val[0])
-                    
                 str_err_list.append(str_err_temp)
-            
             str_err = "; ".join(str_err_list)
-            
             raise CelloPlayError("%s" % str_err) #TODO i18n
                         
 #        for name, score in VtxMatch.split_score(query):
