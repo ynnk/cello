@@ -286,7 +286,7 @@ class ProxMarkovExtractionGlobal(ProxExtractGlobal):
     [(0, 0.5), (2, 0.5)]
     """
     def __init__(self, global_graph, default_mode=OUT, name=None):
-        super(ProxMarkovExtractionGlobal, self).__init__(global_graph, prox.prox_markov_dict, name=name)
+        super(ProxMarkovExtractionGlobal, self).__init__(global_graph, prox.prox_markov_dict, default_mode, name=name)
 
 
 class ProxMtclExtractionGlobal(ProxExtractGlobal):
