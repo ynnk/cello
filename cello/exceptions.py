@@ -15,16 +15,45 @@ class CelloValueError(CelloError, ValueError):
 
 
 class CelloPlayError(Exception):
-    """Error occuring at engine 'play' time
+    u"""Error occuring at engine 'play' time
     
     This errors can be show to the user
+    
+    The message could be given as a str (not unicode), it will be decode as utf8 :
+    
+    >>> error = CelloPlayError("un méssage en str")
+    >>> error.msg
+    u'un m\\xe9ssage en str'
+
+    Note that `str()` will return an utf8 string:
+    >>> type(str(error))
+    <type 'str'>
+    >>> str(error)
+    'un m\\xc3\\xa9ssage en str'
+    >>> error = CelloPlayError(u"un méssage en str")
+    >>> error.msg
+    u'un m\\xe9ssage en str'
+    >>> type(str(error))
+    <type 'str'>
+    >>> str(error)
+    'un m\\xc3\\xa9ssage en str'
+
     """
     #TODO: manage i18n
     def __init__(self, msg):
+        """
+        :param msg: the message for the user
+        """
+        if isinstance(msg, str):
+           msg = msg.decode("utf8")
+        assert isinstance(msg, unicode)
         self.msg = msg
 
     def __str__(self):
-        return self.msg
+        return self.msg.encode("utf8")
+
+    def __repr__(self):
+        return "%s(%s)" % (self.__class__.__name__, str(self))
 
 
 class SchemaError(Exception):
