@@ -28,15 +28,20 @@ class Walktrap(ClusteringMethod):
     >>> clustering(g).membership
     [[], [], [], [], [], []]
 
+    >>> g = ig.Graph.Formula("e")
+    >>> g.es[EDGE_WEIGHT_ATTR] = []       # basic weights
+    >>> clustering(g).membership
+    [[]]
 
-    Note: this last exemple is here to illustrate a bug in igraph when there is
-    a simple pair of adjacent vertices and some singletons. There is a fix in
-    the code to avoid this issue.
+    Note: this last exemple illustrate a bug in igraph when there is a simple
+    pair of adjacent vertices and some singletons. There is a fix in the code
+    to avoid this issue.
 
     >>> g = ig.Graph.Formula("a--b, e")
     >>> g.es[EDGE_WEIGHT_ATTR] = [1.]       # basic weights
     >>> clustering(g).membership
     [[0], [0], [1]]
+
     """
     def __init__(self, name=None):
         super(Walktrap, self).__init__(name=name)
@@ -74,6 +79,15 @@ class Infomap(ClusteringMethod):
     >>> clustering = Infomap()
     >>> clustering(g).membership    # here, should be same as connected components
     [[0], [0], [0], [0], [1], [1]]
+
+    >>> g.es[EDGE_WEIGHT_ATTR] = [0.]       # Graph as 'no' real edge
+    >>> clustering(g).membership
+    [[], [], [], [], [], []]
+
+    >>> g = ig.Graph.Formula("e")
+    >>> g.es[EDGE_WEIGHT_ATTR] = []       # basic weights
+    >>> clustering(g).membership
+    [[]]
 
     >>> g = ig.Graph(n=5)           # in case of graph with no edge
     >>> clustering(g).membership
