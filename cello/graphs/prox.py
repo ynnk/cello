@@ -111,7 +111,8 @@ def sortcut(v_extract, vcount):
         v_extract = { i: v for i, v in enumerate(v_extract) }
     v_extract = v_extract.items() #  sparce prox_vect : [(id, prox_value)]
     v_extract.sort(key=lambda x: x[1], reverse=True) # sorting by prox.prox_markov
-    v_extract = v_extract[:vcount]
+    if vcount:
+        v_extract = v_extract[:vcount]
     
     return v_extract
 
