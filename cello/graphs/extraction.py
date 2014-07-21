@@ -284,6 +284,10 @@ class ProxMarkovExtractionGlobal(ProxExtractGlobal):
     [(0, 1.0)]
     >>> xtrct_markov([1], length=1, vcount=10, add_loops=False, mode=u"ALL")
     [(0, 0.5), (2, 0.5)]
+    >>> # one ca also start from no vertices, then you start from all
+    >>> xtrct_markov([], length=1, vcount=10, add_loops=False, mode=u"ALL") 
+    [(1, 0.6666666666666666), (0, 0.16666666666666666), (2, 0.16666666666666666)]
+    
     """
     def __init__(self, global_graph, default_mode=OUT, name=None):
         super(ProxMarkovExtractionGlobal, self).__init__(global_graph, prox.prox_markov_dict, default_mode, name=name)
