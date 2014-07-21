@@ -35,8 +35,7 @@ class Subgraph(Composable):
     >>> [vtx.index for vtx in graph.vs]
     [0, 1, 2]
 
-
-    if the input is a list of tupple `[(vid, score), ...]` then the score is stored
+    If the input is a list of tupple `[(vid, score), ...]` then the score is stored
     on an vertex attribute
 
     >>> subgraph_builder = Subgraph(global_graph, score_attr="prox")
@@ -46,11 +45,54 @@ class Subgraph(Composable):
     [0, 1, 3]
     >>> graph.vs["prox"]
     [0.02, 0.0015, 0.00102]
+
+    It also work with larger graph:
+
+    >>> global_graph = ig.Graph.Tree(200, 3)
+    >>> global_graph.vs["name"] = [str(i) for i in range(global_graph.vcount())]
+    >>> subgraph_builder = Subgraph(global_graph)
+    >>> graph = subgraph_builder([0, 152, 42])
+    >>> graph.vs["name"]
+    ['0', '42', '152']
+    >>> graph.vs["gid"]
+    [0, 42, 152]
+
+    It is possible to keep in the subgraph the degree of each vertex in the
+    global graph:
+
+    >>> import random; random.seed(0)
+    >>> global_graph = ig.Graph.Erdos_Renyi(400, 0.6)
+    >>> subgraph_builder = Subgraph(global_graph, gdeg_attr="gdeg")
+    >>> graph = subgraph_builder([0,3,2])
+    >>> graph.vs["gid"]
+    [0, 2, 3]
+    >>> graph.vs["gdeg"]
+    [257, 258, 243]
+    >>> global_graph.degree(graph.vs["gid"])
+    [257, 258, 243]
+
+    Not that a attribute "gid" will be added to the global graph at init time
+
+    >>> global_graph = ig.Graph.Formula("a--b--c--d, b--d, b--e")
+    >>> subgraph_builder = Subgraph(global_graph)
+    >>> global_graph.vs["gid"]
+    [0, 1, 2, 3, 4]
+
     """
-    def __init__(self, graph, score_attr="score", name=None):
+    def __init__(self, graph, score_attr="score", gdeg_attr=None, name=None):
+        """
+        :attr graph: global graph from which subgraph will be extracted
+        :attr score_attr: vertex attribute used to store incomming score
+        :attr gdeg_attr: vertex attribute used to store global degree of each
+            vertices. In None global degree isn't stored.
+        :attr name: name of the component
+        """
         super(Subgraph, self).__init__(name=name)
         self._graph = graph
+        # add global id to the graph
+        self._graph.vs["gid"] = range(self._graph.vcount())
         self._score_attr = score_attr
+        self._gdeg_attr = gdeg_attr
 
     def __call__(self, vids):
         scores = None
@@ -58,9 +100,15 @@ class Subgraph(Composable):
             scores = [score for vid, score in vids]
             vids = [vid for vid, score in vids]
         subgraph = self._graph.subgraph(vids)
-        subgraph.vs["gid"] = vids
+        assert subgraph.vcount() == len(vids)
         if scores is not None:
             subgraph.vs[self._score_attr] = scores
+        if self._gdeg_attr is not None:
+            gids = subgraph.vs["gid"]
+            subgraph.vs[self._gdeg_attr] = self._graph.degree(gids)
+        #for i, vtx in enumerate(subgraph.vs):
+        #    print vtx["label"], self._graph.vs[vids[i]]["label"]
+        #    assert vtx[self._gdeg_attr] == self._graph.degree(vtx["gid"])
         return subgraph
 
 
