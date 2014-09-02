@@ -100,8 +100,14 @@ def sortcut(v_extract, vcount):
 
     >>> sortcut({45:0.2, 180:0.08, 20:0.12, 21:0.102, 255:0.85, 12:0.0021}, 3) 
     [(255, 0.85), (45, 0.2), (20, 0.12)]
+    >>> sortcut({45:0.2, 180:0.08, 20:0.12, 21:0.102, 255:0.85, 12:0.0021}, 0) 
+    []
     >>> sortcut([0.02, 0.12, 0.82, 0.001, 0.18], 3)
     [(2, 0.82), (4, 0.18), (1, 0.12)]
+    >>> sortcut([0.02, 0.12, 0.82, 0.001, 0.18], 0)
+    []
+    >>> sortcut([0.02, 0.12, 0.82, 0.001, 0.18], -5)
+    [(2, 0.82), (4, 0.18), (1, 0.12), (0, 0.02), (3, 0.001)]
 
     :param v_extract: dict vertex_ids, value or list of values
     :param vcount: vertex count
@@ -111,7 +117,7 @@ def sortcut(v_extract, vcount):
         v_extract = { i: v for i, v in enumerate(v_extract) }
     v_extract = v_extract.items() #  sparce prox_vect : [(id, prox_value)]
     v_extract.sort(key=lambda x: x[1], reverse=True) # sorting by prox.prox_markov
-    if vcount:
+    if vcount >= 0:
         v_extract = v_extract[:vcount]
     
     return v_extract

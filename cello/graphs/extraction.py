@@ -274,6 +274,8 @@ class ProxMarkovExtractionGlobal(ProxExtractGlobal):
     >>> # then at query time:
     >>> xtrct_markov([4], length=3, vcount=2, add_loops=False)
     [(1, 0.75), (2, 0.125)]
+    >>> xtrct_markov([4], length=3, vcount=0, add_loops=False)
+    []
     >>> xtrct_markov([4], length=1, vcount=10, add_loops=True)
     [(1, 0.5), (4, 0.5)]
     >>> global_graph = ig.Graph.Formula("a-->b-->c")
@@ -327,7 +329,8 @@ class ProxMarkovExtractionGlobalBigraph(Optionable):
     odd_count (Numeric, default=15): Number of vertices to keep with the *odd* lenght walk
     even_count (Numeric, default=35): Number of vertices to keep with the *even* lenght walk
 
-    One can then use it :
+    One can then use it:
+    
     >>> extract({0:1.}, half_length=1, odd_count=4, even_count=0)
     [(3, 0.25), (4, 0.25), (5, 0.25), (6, 0.25)]
     >>> extract({0:1.}, half_length=1, odd_count=0, even_count=20)
@@ -355,8 +358,8 @@ class ProxMarkovExtractionGlobalBigraph(Optionable):
     @Optionable.check
     def __call__(self, pzero, half_length=None, odd_count=None, even_count=None):
         odd_vect = self.extrator(pzero, length=half_length*2-1, vcount=odd_count, add_loops=False)
-        event_vect = self.extrator(pzero, length=half_length*2, vcount=even_count, add_loops=False)
-        odd_vect.extend(event_vect)
+        even_vect = self.extrator(pzero, length=half_length*2, vcount=even_count, add_loops=False)
+        odd_vect.extend(even_vect)
         return odd_vect
 
 
