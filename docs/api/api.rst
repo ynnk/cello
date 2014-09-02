@@ -19,6 +19,7 @@ Voir :mod:`cello.pipeline` par exemple, ou meme :class:`cello.pipeline.Optionabl
     cello.graphs
     cello.layout
     cello.clustering
+    cello.offline
     cello.utils
 
 
