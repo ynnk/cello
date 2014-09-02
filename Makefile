@@ -42,6 +42,9 @@ testall:
 testcov:
 	py.test --cov cello --cov-report term-missing
 
+testdoc:
+	py.test -v ./docs --doctest-glob='*.rst'
+
 clean:
 	# removing .pyc filesin
 	find ./ -iname *.pyc | xargs rm
