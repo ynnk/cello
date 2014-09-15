@@ -25,9 +25,10 @@ from cello.graphs.builder import GraphBuilder
 
 
 # Edge Mode
-OUT = 1
-IN  = 2
-ALL = 3
+# Note: this constant values are the same than igraph.IN/OUT/ALL
+OUT = 1     # = ig.OUT
+IN  = 2     # = ig.IN
+ALL = 3     # = ig.ALL
 
 
 # default edge attribute for weighted graph
