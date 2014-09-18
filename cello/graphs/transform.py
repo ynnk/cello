@@ -139,7 +139,7 @@ class MergeGraphs(Composable):
         # Creates and returns the graph
         return gbuilder.create_graph()
 
-
+#TODO: rename it RemoveWeight : Permit to set weight of a graph to 1 (ie. remove the weight)
 class Weight(Optionable):
     """ Add/Override ``weight`` attribute
 
@@ -148,57 +148,52 @@ class Weight(Optionable):
     >>> graph = ig.Graph.Formula("a--b--c--d, b--d, b--e")
     >>> graph.es["weight"] = [1, 2, 3, 4, 1]
     >>> weight = Weight(weight="weight")
-    >>> graph = weight(graph, is_weighted = True)
+    >>> graph = weight(graph, is_weighted=True)
     >>> graph.es["weight"]
     [1, 2, 3, 4, 1]
     
     >>> graph = ig.Graph.Formula("a--b--c--d, b--d, b--e")
     >>> graph.es["wgt"] = [1, 2, 3, 4, 1]
     >>> weight = Weight(weight="wgt")
-    >>> graph = weight(graph, is_weighted = True)
+    >>> graph = weight(graph, is_weighted=True)
     >>> graph.es["weight"]
     [1, 2, 3, 4, 1]
     
     >>> graph = ig.Graph.Formula("a--b--c--d, b--d, b--e")
     >>> graph.es["weight"] = [1, 2, 3, 4, 1]
     >>> weight = Weight()
-    >>> graph = weight(graph, is_weighted = True)
+    >>> graph = weight(graph, is_weighted=True)
     >>> graph.es["weight"]
     [1.0, 1.0, 1.0, 1.0, 1.0]
     
     >>> graph = ig.Graph.Formula("a--b--c--d, b--d, b--e")
     >>> graph.es["weight"] = [1, 2, 3, 4, 1]
     >>> weight = Weight()
-    >>> graph = weight(graph, is_weighted = False)
+    >>> graph = weight(graph, is_weighted=False)
     >>> graph.es["weight"]
     [1.0, 1.0, 1.0, 1.0, 1.0]
     
     >>> graph = ig.Graph.Formula("a--b--c--d, b--d, b--e")
     >>> weight = Weight()
-    >>> graph = weight(graph, is_weighted = True)
+    >>> graph = weight(graph, is_weighted=True)
     >>> graph.es["weight"]
     [1.0, 1.0, 1.0, 1.0, 1.0]
     """
     def __init__(self, weight=None, name=None):
         """
-        :attr graph: global graph from which subgraph will be extracted
-        :attr is_weighted: boolean to know weither the subgraph weighted or no : if False then graph.es[weight]=1.0
-        :attr weight: name of the edges' ``weight`` attribute  when is_weighted == True : if weight = None then graph.es[weight]=1.0
+        :attr weight: name of the edges' `weight` attribute to use when is_weighted == True : if weight = None then graph.es[weight]=1.0
         :attr name: name of the component
         """
         super(Weight, self).__init__(name=name)
-        
         self.add_option("is_weighted", Boolean(default=True, help="is the graph weighted?"))
-        
+        #TODO: ^ become "remove_weight" "remove graph weight"
         self._weight = weight
 
     def __call__(self, graph, is_weighted=None):
-
-        if is_weighted==True and isinstance(self._weight, str) and self._weight in graph.edge_attributes() : 
+        if is_weighted==True and isinstance(self._weight, str) and self._weight in graph.edge_attributes():
             graph.es["weight"] = graph.es[self._weight]
-        else :
+        else:
             graph.es["weight"] = 1.
-        
         return graph
 
 
