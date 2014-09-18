@@ -184,7 +184,7 @@ class RemoveWeight(Optionable):
         :attr weight: name of the edges' `weight` attribute to use when is_weighted == True : if weight = None then graph.es[weight]=1.0
         :attr name: name of the component
         """
-        super(Weight, self).__init__(name=name)
+        super(RemoveWeight, self).__init__(name=name)
         self.add_option("remove_weight", Boolean(default=True, help="remove graph weight?"))
         self._weight = weight
 
