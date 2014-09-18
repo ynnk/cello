@@ -263,7 +263,7 @@ class ProxExtractGlobal(Optionable):
         
         self._wgt = weight
         if weight is not None : 
-            self.add_option("is_wgt", Boolean(default=True, help="is the graph weighted?"))
+            self.add_option("is_wgt", Boolean(default=True, help="consider graph weight?"))
         self.prox_func = prox_func
         self.global_graph = global_graph
         self._loops_weight= loops_weight

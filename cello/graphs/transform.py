@@ -185,7 +185,7 @@ class RemoveWeight(Optionable):
         :attr name: name of the component
         """
         super(RemoveWeight, self).__init__(name=name)
-        self.add_option("remove_weight", Boolean(default=True, help="remove graph weight?"))
+        self.add_option("remove_weight", Boolean(default=False, help="remove graph weight?"))
         self._weight = weight
 
     def __call__(self, graph, remove_weight=None):
