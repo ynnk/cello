@@ -223,7 +223,7 @@ class VtxMatch(Optionable):
 class ProxExtractGlobal(Optionable):
     """ Extract vertices of a graph from an inital set of vertices.
     """
-    def __init__(self, global_graph, prox_func, default_mode=OUT, name=None):
+    def __init__(self, global_graph, prox_func, default_mode=OUT, weight=None, loops_weight=None, name=None):
         """
         :param global_graph: a subclass of :class:`.AbstractGraph`
         :param prox_func: curryfied function for prox. Only `graph`, `pzero`,
@@ -231,6 +231,14 @@ class ProxExtractGlobal(Optionable):
             to modified the named argument you want passed a lamdba with all
             named arguments setted.
         :param default_mode: default mode for the random walk (useful only if the graph is directed)
+        :param weight: if None the graph is not weighting, else it could be:
+            a str corresponding to an edge attribute to use as weight,
+            or a list of weight (`|weight| == graph.ecount()`),
+            or a callable `lambda graph, source, target: wgt`
+        :param loops_weight: only if `add_loops`, weight for added loops, it may be :
+            a str corresponding to a vertex attribute,
+            or a list of weight (`|loops_weight| == graph.vcount()`),
+            or a callable `lambda graph, vid, mode, weight: wgt`
 
 
         Here is an example of usable prox fct:
@@ -252,13 +260,23 @@ class ProxExtractGlobal(Optionable):
             }
 
         self.add_option("mode", Text(default=self._modes["num_to_text"][default_mode], choices=[u"IN", u"OUT", u"ALL"], help="edges to walk on from a vertex"))
+        
+        self._wgt = weight
+        if weight is not None : 
+            self.add_option("is_wgt", Boolean(default=True, help="is the graph weighted?"))
         self.prox_func = prox_func
         self.global_graph = global_graph
+        self._loops_weight= loops_weight
 
     @Optionable.check
-    def __call__(self, pzero, vcount=None, length=None, add_loops=None, mode=None, **kwargs):
+    def __call__(self, pzero, vcount=None, length=None, add_loops=None, mode=None, is_wgt=None, **kwargs):
         kwargs["add_loops"] = add_loops
+        kwargs["loops_weight"] = self._loops_weight
         kwargs["mode"] = self._modes["text_to_num"][mode]
+        
+        if self._wgt is not None and is_wgt == True : 
+            kwargs["weight"] = self._wgt
+            
         v_extract = self.prox_func(self.global_graph, pzero, length, **kwargs)
         v_extract = prox.sortcut(v_extract, vcount) # limit 
         return v_extract
@@ -289,10 +307,18 @@ class ProxMarkovExtractionGlobal(ProxExtractGlobal):
     >>> # one ca also start from no vertices, then you start from all
     >>> xtrct_markov([], length=1, vcount=10, add_loops=False, mode=u"ALL") 
     [(1, 0.6666666666666666), (0, 0.16666666666666666), (2, 0.16666666666666666)]
+    >>> # test of the weight
+    >>> global_graph = ig.Graph.Formula("a-->b-->c")
+    >>> global_graph.es["wgt"] = [3, 1]
+    >>> xtrct_markov = ProxMarkovExtractionGlobal(global_graph, weight = "wgt")
+    >>> xtrct_markov([1], length=1, vcount=10, add_loops=False, mode=u"ALL") 
+    [(0, 0.75), (2, 0.25)]
+    >>> xtrct_markov([1], length=1, vcount=10, add_loops=True, mode=u"ALL") 
+    [(0, 0.5), (1, 0.3333333333333333), (2, 0.16666666666666666)]
     
     """
-    def __init__(self, global_graph, default_mode=OUT, name=None):
-        super(ProxMarkovExtractionGlobal, self).__init__(global_graph, prox.prox_markov_dict, default_mode, name=name)
+    def __init__(self, global_graph, default_mode=OUT, weight=None, loop_weight=None, name=None):
+        super(ProxMarkovExtractionGlobal, self).__init__(global_graph, prox.prox_markov_dict, default_mode, weight, loop_weight, name=name)
 
 
 class ProxMtclExtractionGlobal(ProxExtractGlobal):
