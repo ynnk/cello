@@ -140,7 +140,7 @@ class MergeGraphs(Composable):
         return gbuilder.create_graph()
 
 #TODO: rename it RemoveWeight : Permit to set weight of a graph to 1 (ie. remove the weight)
-class Weight(Optionable):
+class RemoveWeight(Optionable):
     """ Add/Override ``weight`` attribute
 
     >>> import igraph as ig
@@ -185,12 +185,11 @@ class Weight(Optionable):
         :attr name: name of the component
         """
         super(Weight, self).__init__(name=name)
-        self.add_option("is_weighted", Boolean(default=True, help="is the graph weighted?"))
-        #TODO: ^ become "remove_weight" "remove graph weight"
+        self.add_option("remove_weight", Boolean(default=True, help="remove graph weight?"))
         self._weight = weight
 
-    def __call__(self, graph, is_weighted=None):
-        if is_weighted==True and isinstance(self._weight, str) and self._weight in graph.edge_attributes():
+    def __call__(self, graph, remove_weight=None):
+        if not remove_weight and isinstance(self._weight, str) and self._weight in graph.edge_attributes():
             graph.es["weight"] = graph.es[self._weight]
         else:
             graph.es["weight"] = 1.
