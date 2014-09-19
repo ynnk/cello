@@ -170,15 +170,14 @@ def spreading(graph, in_vect, mode, add_loops):
     return vect
 
 
-def spreading_wgt(graph, in_vect, mode, add_loops, weight, loops_weight):
+def spreading_wgt(graph, in_vect, mode, weight, loops_weight):
     """ Spread value of in_vect throw the graph. (weighted version)
     
     :param graph: subclass of :class:`.AbstractGraph`
     :param in_vect: input vector, a python dictionary : {vertex_id:value, ...}
     :param mode: given to neighboors, consider OUT links, IN links our ALL for both
-    :param add_loops: if True do as if every vertex hold a self loop (loops_weight is then used)
     :param weight: a list of weight (`|weight| == graph.ecount()`)
-    :param loops_weight: list of weights for loops
+    :param loops_weight: list of weights for loops (if None then no loops)
 
     :returns: output vector same format as in_vect.
 
@@ -186,20 +185,20 @@ def spreading_wgt(graph, in_vect, mode, add_loops, weight, loops_weight):
     >>> import igraph as ig
     >>> graph = ig.Graph.Formula("a--b--c")
     >>> weight = [3., 1.]
-    >>> spreading_wgt(graph, {1:1.0}, mode=OUT, add_loops=False, weight=weight, loops_weight=None)
+    >>> spreading_wgt(graph, {1:1.0}, mode=OUT, weight=weight, loops_weight=None)
     {0: 0.75, 2: 0.25}
-    >>> spreading_wgt(graph, {0:2.0}, mode=OUT, add_loops=False, weight=weight, loops_weight=None)
+    >>> spreading_wgt(graph, {0:2.0}, mode=OUT, weight=weight, loops_weight=None)
     {1: 2.0}
 
     also works for directed graphs:
 
     >>> graph = ig.Graph.Formula("a-->b-->c")
     >>> weight = [3., 1.]
-    >>> spreading_wgt(graph, {1:1.0}, mode=OUT, add_loops=False, weight=weight, loops_weight=None)
+    >>> spreading_wgt(graph, {1:1.0}, mode=OUT, weight=weight, loops_weight=None)
     {2: 1.0}
-    >>> spreading_wgt(graph, {1:1.0}, mode=IN, add_loops=False, weight=weight, loops_weight=None)
+    >>> spreading_wgt(graph, {1:1.0}, mode=IN, weight=weight, loops_weight=None)
     {0: 1.0}
-    >>> spreading_wgt(graph, {1:1.0}, mode=ALL, add_loops=False, weight=weight, loops_weight=None)
+    >>> spreading_wgt(graph, {1:1.0}, mode=ALL, weight=weight, loops_weight=None)
     {0: 0.75, 2: 0.25}
 
     It is possible to force the graph to be reflexif and then to specify the 
@@ -207,13 +206,13 @@ def spreading_wgt(graph, in_vect, mode, add_loops, weight, loops_weight):
     >>> graph = ig.Graph.Formula("a-->b-->c")
     >>> weight = [3., 1.]
     >>> loops_weight = [0, 1., 2.]  # no loops on a, loops with weight 1 and 2 on b and c
-    >>> spreading_wgt(graph, {1:1.0}, mode=OUT, add_loops=True, weight=weight, loops_weight=loops_weight)
+    >>> spreading_wgt(graph, {1:1.0}, mode=OUT, weight=weight, loops_weight=loops_weight)
     {1: 0.5, 2: 0.5}
-    >>> spreading_wgt(graph, {1:1.0}, mode=IN, add_loops=True, weight=weight, loops_weight=loops_weight)
+    >>> spreading_wgt(graph, {1:1.0}, mode=IN, weight=weight, loops_weight=loops_weight)
     {0: 0.75, 1: 0.25}
-    >>> spreading_wgt(graph, {1:1.0}, mode=ALL, add_loops=True, weight=weight, loops_weight=loops_weight)
+    >>> spreading_wgt(graph, {1:1.0}, mode=ALL, weight=weight, loops_weight=loops_weight)
     {0: 0.6, 1: 0.2, 2: 0.2}
-    >>> spreading_wgt(graph, {0:0.5, 2:0.5}, mode=OUT, add_loops=True, weight=weight, loops_weight=loops_weight)
+    >>> spreading_wgt(graph, {0:0.5, 2:0.5}, mode=OUT, weight=weight, loops_weight=loops_weight)
     {1: 0.5, 2: 0.5}
 
     With `add_loops=True` it add a loops **even if** there is already a loops:
@@ -223,11 +222,18 @@ def spreading_wgt(graph, in_vect, mode, add_loops, weight, loops_weight):
     >>> loops_weight = [1., 1., 1.]    # [a->a, b->b, c->c]
     >>> graph.neighbors(2, mode=OUT)
     [1, 2]
-    >>> spreading_wgt(graph, {2:1.0}, mode=OUT, add_loops=True, weight=weight, loops_weight=loops_weight)
+    >>> spreading_wgt(graph, {2:1.0}, mode=OUT, weight=weight, loops_weight=loops_weight)
     {1: 0.25, 2: 0.75}
     """
     out_vect = {}
     es = graph.es    # get a ref to edge sequence
+    add_loops = True if isinstance(loops_weight, list) else False
+
+    if not isinstance(weight, list):
+        raise TypeError
+    if len(weight) != graph.ecount():
+        raise NotImplementedError
+
     for from_vertex, value in in_vect.iteritems():
         incident_edges = graph.incident(from_vertex, mode=mode)
         wgts = [weight[edg] for edg in incident_edges]
@@ -264,10 +270,10 @@ def prox_markov_dict(graph, p0, length, mode=OUT, add_loops=False, weight=None,
         a str corresponding to an edge attribute to use as weight,
         or a list of weight (`|weight| == graph.ecount()`),
         or a callable `lambda graph, source, target: wgt`
-    :param loops_weight: only if `add_loops`, weight for added loops, it may be :
+    :param loops_weight: only if `add_loops`, weight for added loops, it may be:
         a str corresponding to a vertex attribute,
         or a list of weight (`|loops_weight| == graph.vcount()`),
-        or a callable `lambda graph, vid: wgt`
+        or a callable `lambda graph, vid, mode, weight: wgt`
     :param neighbors: function that override std graph.neighbors fct
     :returns: result vector, a python dictionary : `{vertex_id:value, ...}`
     
@@ -303,15 +309,20 @@ def prox_markov_dict(graph, p0, length, mode=OUT, add_loops=False, weight=None,
 
 
     and with weights and loops:
-    
-    >>> # by default if you add loops they have a weight of "1":
+    >>> get_weight = get_average_es_weight
+    >>> # by default if you add loops they have the average weight of the other edges:
     >>> prox_markov_dict(graph, [0], 2, add_loops=True, weight="wgt")
-    {0: 0.5125, 1: 0.3375, 2: 0.15}
-    >>> # but you can also give them some weight
+    {0: 0.5, 1: 0.41666666666666663, 2: 0.08333333333333333}
+    >>> # one can check that we have the same than:
+    >>> prox_markov_dict(graph, [0], 2, add_loops=True, weight="wgt", loops_weight=get_weight)
+    {0: 0.5, 1: 0.41666666666666663, 2: 0.08333333333333333}
+    >>> prox_markov_dict(graph, [1], 2, add_loops=True, weight="wgt", loops_weight=get_weight)
+    {0: 0.41666666666666663, 1: 0.4444444444444444, 2: 0.1388888888888889}
+    >>> # but you can also give custom weight for loops:
     >>> prox_markov_dict(graph, [0], 2, add_loops=True, weight="wgt", loops_weight=[100, 10, 1])
     {0: 0.9488372406178044, 1: 0.049082315554179065, 2: 0.0020804438280166435}
+
     """
-    #TODO: add doctest with add_loops and weights
     vect = normalize_pzero(graph, p0)
     if neighbors is not None:
         raise NotImplementedError
@@ -331,19 +342,26 @@ def prox_markov_dict(graph, p0, length, mode=OUT, add_loops=False, weight=None,
             #TODO: use a np.array not a list, to save memory
             if isinstance(loops_weight, basestring):
                 loops_weight = graph.vs[weight]
-            elif callable(loops_weight):
-                loops_weight = [loops_weight(graph, vtx.index) for vtx in graph.vs]
-            elif loops_weight is None:
-                loops_weight = [1. for vtx in graph.vs]
+            elif isinstance(loops_weight, list) == False : 
+                #defaut loop weight for each vertex is the average weight OUT/IN edges of the vertex.
+                if not callable(loops_weight) :
+                    loops_weight = get_average_es_weight 
+                    
+                #compute the weight of incident edges for all vertices
+                vs_incident = []
+                for vtx in graph.vs : 
+                    vs_incident.append([weight[edge] for edge in graph.incident(vtx.index, mode)])
+                loops_weight = [loops_weight(graph, vtx.index, mode, vs_incident[vtx.index]) for vtx in graph.vs]
+
         else:
             loops_weight = None
         # compute prox it self
         for k in xrange(length):
-            vect = spreading_wgt(graph, vect, mode, add_loops, weight, loops_weight)
+            vect = spreading_wgt(graph, vect, mode, weight, loops_weight)
     return vect
 
 
-def prox_markov_list(graph, p0, length, mode=OUT, add_loops=False, weight=None,
+def prox_markov_list(graph, p0, length, mode=OUT, add_loops=False, loops_weight=None, weight=None,
                         neighbors=None):
     """ Same as :func:`prox_markov_dict` except that the output is a list of
     the order of the graph
@@ -359,21 +377,32 @@ def prox_markov_list(graph, p0, length, mode=OUT, add_loops=False, weight=None,
     >>> prox_markov_list(graph, {0:1}, 40, add_loops=True)
     [0.28571428571474045, 0.42857142857142855, 0.28571428571383095]
     """
-    vect = prox_markov_dict(graph, p0, length, mode, add_loops, weight, neighbors)
+    vect = prox_markov_dict(graph, p0, length, mode, add_loops, weight, loops_weight, neighbors)
     return [vect.get(vidx, 0.) for vidx in xrange(graph.vcount())]
 
 
 
 #TODO: do not put "cello.graphs.neighbors" in default but None and set it to cello.graphs.neighbors in the function
-def prox_markov_mtcl(graph, p0, length, throws, mode=OUT, add_loops=False,
+def prox_markov_mtcl(graph, p0, length, throws, mode=OUT, add_loops=False, loops_weight=None,
                         weight=None, neighbors=cello.graphs.neighbors):
     """ Prox 'classic' by an approximate method montecarlo with nb_throw throws
 
     :param graph: graph in igraph format
     :param p0: list of starting nodes : [id_vertex1, id_vertex2, ...]
-    :parma l: random walk length
+    :param length: random walk length
     :param nb_throw: the number of throws in montecarlo process
-    :param false_relf: if True do as if every vertex hold a self loop (reflexif graph)
+    :param mode: given to neighboors, consider OUT links, IN links our ALL for both
+    :param add_loops: if True do as if every vertex hold a self loop
+         (force the graph to be reflexif)
+    :param weight: if None the graph is not weighting, else it could be:
+        a str corresponding to an edge attribute to use as weight,
+        or a list of weight (`|weight| == graph.ecount()`),
+        or a callable `lambda graph, source, target: wgt`
+    :param loops_weight: only if `add_loops`, weight for added loops, it may be :
+        a str corresponding to a vertex attribute,
+        or a list of weight (`|loops_weight| == graph.vcount()`),
+        or a callable `lambda graph, vid, mode, weight: wgt`
+    :param neighbors: function that override std graph.neighbors fct
     
     :returns: prox_vect, died: prox_vect is a python dictionary : {vertex_id:value, ...} AND died is the probability of dying during the random walks (the walker die when he has to do a step starting from a vertex without neighbors)
     """ 
@@ -444,4 +473,57 @@ def confluence_simple(graph, p0, length=3, method=prox_markov_dict, neighbors=ce
     pm = method(graph, p0, length=length, neighbors=neighbors )
     conf =  { k: 1.*v / (v+(1.*len(neighbors(graph,k))/(2*graph.ecount()))) for k,v in pm.iteritems()}
     return conf
+
+##########################################################################
+def get_average_es_weight(graph, idx, mode=ALL, weight=None):
+    """ Compute the average weight of the edges that link the idx vertex to its neighbors
+
+    :param graph: subclass of :class:`.AbstractGraph`
+    :param idx: id of the vertex
+    :param mode: given to neighboors, consider OUT links, IN links our ALL for both
+    :param weight: if None the average_es_weight is 1 else:
+        a str corresponding to an edge attribute to use as weight,
+        or a list of weight (`|weight| == len(graph.incident(idx, mode=mode_int_to_str[mode]))`)
+        
+    >>> import igraph as ig
+    >>> graph = ig.Graph.Formula("a--b--c")
+    >>> graph.es["wgt"] = [3, 1]
+    >>> get_average_es_weight(graph, 1)
+    1.0
+    >>> get_average_es_weight(graph, 1, weight="wgt")
+    2.0
+    >>> graph = ig.Graph.Formula("a-->b-->c-->d, b-->d")
+    >>> graph.es["wgt"] = [3, 2, 1, 2]
+    >>> get_average_es_weight(graph, 1, weight="wgt")
+    2.0
+    >>> get_average_es_weight(graph, 2, weight="wgt")
+    2.0
+    >>> get_average_es_weight(graph, 1, mode=OUT, weight="wgt")
+    1.5
+    >>> get_average_es_weight(graph, 1, mode=IN, weight="wgt")
+    3.0
+    >>> get_average_es_weight(graph, 1, mode=ALL, weight=[1, 4, 1])
+    2.0
+    >>> get_average_es_weight(graph, 1, mode=IN, weight=[3])
+    3.0
+    >>> get_average_es_weight(graph, 1, mode=OUT, weight=[1, 2])
+    1.5
+    >>> get_average_es_weight(graph, 1, mode=OUT, weight=[1, 4, 1])
+    Traceback (most recent call last):
+    ...
+    ValueError: weight list should have the same lenght than vertex incidence list
+
+    """
+    if isinstance(weight, basestring):
+        es = graph.incident(idx, mode)
+        es_wgt = [graph.es[eid][weight] for eid in es]
+        loop_weight = (1. * sum(es_wgt))/len(es_wgt) if len(es_wgt) > 0 else 1.
+    elif isinstance(weight, list):
+        if len(weight) != len(graph.incident(idx, mode)):
+            raise ValueError("weight list should have the same lenght than vertex incidence list")
+        loop_weight = 1. * sum(weight)/len(weight) if len(weight) > 0 else 1.
+    else:
+        loop_weight = 1.
+    return loop_weight
+
 

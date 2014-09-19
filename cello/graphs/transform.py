@@ -8,7 +8,7 @@ import igraph as ig
 import numpy as np
 
 from cello.pipeline import Composable, Optionable
-from cello.types import Text, Numeric
+from cello.types import Text, Numeric, Boolean
 
 from cello.graphs import EDGE_WEIGHT_ATTR
 from cello.graphs.prox import prox_markov_dict
@@ -138,6 +138,62 @@ class MergeGraphs(Composable):
         #
         # Creates and returns the graph
         return gbuilder.create_graph()
+
+#TODO: rename it RemoveWeight : Permit to set weight of a graph to 1 (ie. remove the weight)
+class RemoveWeight(Optionable):
+    """ Add/Override ``weight`` attribute
+
+    >>> import igraph as ig
+    
+    >>> graph = ig.Graph.Formula("a--b--c--d, b--d, b--e")
+    >>> graph.es["weight"] = [1, 2, 3, 4, 1]
+    >>> weight = Weight(weight="weight")
+    >>> graph = weight(graph, is_weighted=True)
+    >>> graph.es["weight"]
+    [1, 2, 3, 4, 1]
+    
+    >>> graph = ig.Graph.Formula("a--b--c--d, b--d, b--e")
+    >>> graph.es["wgt"] = [1, 2, 3, 4, 1]
+    >>> weight = Weight(weight="wgt")
+    >>> graph = weight(graph, is_weighted=True)
+    >>> graph.es["weight"]
+    [1, 2, 3, 4, 1]
+    
+    >>> graph = ig.Graph.Formula("a--b--c--d, b--d, b--e")
+    >>> graph.es["weight"] = [1, 2, 3, 4, 1]
+    >>> weight = Weight()
+    >>> graph = weight(graph, is_weighted=True)
+    >>> graph.es["weight"]
+    [1.0, 1.0, 1.0, 1.0, 1.0]
+    
+    >>> graph = ig.Graph.Formula("a--b--c--d, b--d, b--e")
+    >>> graph.es["weight"] = [1, 2, 3, 4, 1]
+    >>> weight = Weight()
+    >>> graph = weight(graph, is_weighted=False)
+    >>> graph.es["weight"]
+    [1.0, 1.0, 1.0, 1.0, 1.0]
+    
+    >>> graph = ig.Graph.Formula("a--b--c--d, b--d, b--e")
+    >>> weight = Weight()
+    >>> graph = weight(graph, is_weighted=True)
+    >>> graph.es["weight"]
+    [1.0, 1.0, 1.0, 1.0, 1.0]
+    """
+    def __init__(self, weight=None, name=None):
+        """
+        :attr weight: name of the edges' `weight` attribute to use when is_weighted == True : if weight = None then graph.es[weight]=1.0
+        :attr name: name of the component
+        """
+        super(RemoveWeight, self).__init__(name=name)
+        self.add_option("remove_weight", Boolean(default=False, help="remove graph weight?"))
+        self._weight = weight
+
+    def __call__(self, graph, remove_weight=None):
+        if not remove_weight and isinstance(self._weight, str) and self._weight in graph.edge_attributes():
+            graph.es["weight"] = graph.es[self._weight]
+        else:
+            graph.es["weight"] = 1.
+        return graph
 
 
 class EdgeAttr(Composable):
@@ -494,20 +550,20 @@ class WeightByConfluence(Optionable):
     >>> g.es["weight"] = [1, 2, 1, 1, 2]
     >>> g = weighter(g, wlength=1)
     >>> g.es["weight"]
-    [0.625, 0.68965517241379315, 0.625, 0.45454545454545453, 0.76923076923076916]
+    [0.625, 0.625, 0.625, 0.42553191489361708, 0.7142857142857143]
 
     >>> g = ig.Graph.Formula("a--b:c:d:e, e--f")
     >>> g.es["weight"] = [1, 2, 1, 1, 2]
     >>> g = weighter(g, wlength=3)
     >>> g.es["weight"]
-    [0.56886227544910184, 0.58139534883720934, 0.56886227544910184, 0.42743538767395622, 0.67809239940387489]
+    [0.55408753096614372, 0.55408753096614372, 0.55408753096614372, 0.37079233557742103, 0.66260543580131204]
 
     >>> g = ig.Graph.Formula("a--b:c:d:e, e--f")
     >>> g.es["weight"] = [1, 2, 1, 1, 2]
     >>> #HACK: strange call to avoid the check on option (wlength can't be higher than 10)
     >>> g = WeightByConfluence.__call__._no_check(weighter, g, wlength=100)
     >>> g.es["weight"]
-    [0.50000000019945789, 0.50000000017418911, 0.50000000019945789, 0.49999999974475873, 0.50000000071232309]
+    [0.47801147996233123, 0.47801147996233123, 0.47801147996233123, 0.4780114630482894, 0.4972375921723784]
     """
     def __init__(self, name=None):
         super(WeightByConfluence, self).__init__(name=name)
