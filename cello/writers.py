@@ -103,4 +103,30 @@ class IndexWriter(AbstractWriter):
             raise
 
 
+class BulkIndexWriter(AbstractWriter):
+    """ Composant that push document to an :class:`.Index` object
+    """
+    def __init__(self, idx, csize=100):
+        """ 
+        Helper component to add document in a :class:`.Index`
+
+        :param idx: initialissed Cello Index object
+        :param csize: size of the cache
+        """
+        AbstractWriter.__init__(self)
+        self.idx = idx
+        self.csize = csize
+
+    def __call__(self, docs):
+        add_documents = self.idx.add_documents
+        csize = self.csize
+        dbuffer = []
+        for doc in docs:
+            dbuffer.append(doc)
+            if len(dbuffer) > csize:
+                add_documents(dbuffer)
+                dbuffer = []
+            yield doc
+        add_documents(dbuffer)
+        dbuffer = []
 
