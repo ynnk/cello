@@ -14,7 +14,7 @@ import elasticsearch.helpers as ESH
 
 from cello.types import Numeric, Text
 
-from cello.pipeline import Optionable
+from cello.pipeline import Composable, Optionable
 from cello.index import Index, CelloIndexError
 from cello.search import AbstractSearch
 
@@ -130,6 +130,20 @@ class EsIndex(Index):
             doc['_type'] = self.doc_type
         res = ESH.bulk_index(client=self._es, actions=docs)
         return res
+
+
+class ESIndexScan(Composable):
+    """ produce a generator over all documents of a :class:`ESIndex`
+    """
+    def __init__(self, es_index):
+        super(ESIndexScan, self).__init__()
+        self.es_index = es_index
+        self._es = self.es_index._es
+
+    def __call__(self, query):
+        self._logger.debug("Start scan with query: %s" % query)
+        for doc in ESH.scan(self._es, query=query, scroll='5m', index=self.es_index.index, doc_type=self.es_index.doc_type):
+            yield doc
 
 
 class ESQueryStringBuilder(Optionable):
