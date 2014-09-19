@@ -6,21 +6,21 @@ Voir :mod:`cello.pipeline` par exemple, ou meme :class:`cello.pipeline.Optionabl
 .. toctree::
 
     cello
-    cello.pipeline
-    cello.types
-    cello.options
-    cello.validators
-    cello.exceptions
-    cello.schema
-    cello.engine
-    cello.search
-    cello.expanders
-    cello.expanders.basics
-    cello.graphs
-    cello.layout
     cello.clustering
+    cello.engine
+    cello.exceptions
+    cello.expanders
+    cello.graphs
+    cello.index
+    cello.layout
     cello.offline
+    cello.options
+    cello.pipeline
+    cello.providers
+    cello.schema
+    cello.search
+    cello.types
     cello.utils
-
-
+    cello.validators
+    cello.writers
 

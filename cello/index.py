@@ -29,6 +29,26 @@ class Index:
         """
         raise NotImplementedError
 
+    def close(self):
+        """ Close the index.
+        """
+        pass
+    
+    def delete(self):
+        """ Delete the index, also close it
+        """
+        raise NotImplementedError
+
+    def create(self):
+        """ Create the index
+        """
+        raise NotImplementedError
+
+    def exist(self):
+        """ Whether the index exist
+        """
+        raise False
+
     def has_document(self, *args, **kwargs):
         """ Whether a document is in the index
         
@@ -98,15 +118,3 @@ class Index:
             if not add_document(kdoc):
                 fails_on.append(kdoc.docnum)
         return fails_on
-
-    def close(self):
-        """ Close the index.
-        """
-        pass
-    
-    def delete(self):
-        """ Delete the index, also close it
-        """
-        raise NotImplementedError
-
-

@@ -39,6 +39,9 @@ testlib:
 testall: 
 	py.test -v ./tests ./cello --doctest-module --cov cello --cov-report html
 
+test_providers:
+	py.test -v ./tests_providers
+
 testcov:
 	py.test --cov cello --cov-report term-missing
 
