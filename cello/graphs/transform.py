@@ -139,60 +139,67 @@ class MergeGraphs(Composable):
         # Creates and returns the graph
         return gbuilder.create_graph()
 
-#TODO: rename it RemoveWeight : Permit to set weight of a graph to 1 (ie. remove the weight)
-class RemoveWeight(Optionable):
-    """ Add/Override ``weight`` attribute
 
+class RemoveWeight(Optionable):
+    """ Ensure that a graph have a `weight` edge attribute, have an option to
+    force this weigth to 1 (i.e. no weight).
+
+    Options of the component:
+
+    >>> rweight = RemoveWeight()
+    >>> rweight.print_options()
+    remove_weight (Boolean, default=False): remove graph weight?
+
+    >>> # create a graph to make some test
     >>> import igraph as ig
-    
-    >>> graph = ig.Graph.Formula("a--b--c--d, b--d, b--e")
-    >>> graph.es["weight"] = [1, 2, 3, 4, 1]
-    >>> weight = Weight(weight="weight")
-    >>> graph = weight(graph, is_weighted=True)
+    >>> ograph = ig.Graph.Formula("a--b--c--d, b--d, b--e")
+    >>> owgt = [1, 2, 3, 4, 1]
+
+    Can remove a weight, or not according to the option
+
+    >>> # weigth removing
+    >>> graph = ograph.copy() ; graph.es["weight"] = owgt
+    >>> graph = rweight(graph, remove_weight=True)
+    >>> graph.es["weight"]
+    [1.0, 1.0, 1.0, 1.0, 1.0]
+    >>> # just do nothing if remove_weighted=False:
+    >>> graph = ograph.copy() ; graph.es["weight"] = owgt
+    >>> graph = rweight(graph, remove_weight=False)
     >>> graph.es["weight"]
     [1, 2, 3, 4, 1]
-    
-    >>> graph = ig.Graph.Formula("a--b--c--d, b--d, b--e")
-    >>> graph.es["wgt"] = [1, 2, 3, 4, 1]
-    >>> weight = Weight(weight="wgt")
-    >>> graph = weight(graph, is_weighted=True)
+
+    Can also take the weight from an other attribute :
+
+    >>> graph = ograph.copy()
+    >>> graph.es["wgt"] = owgt
+    >>> rweight = RemoveWeight(weight="wgt")
+    >>> graph.es["wgt"]
+    [1, 2, 3, 4, 1]
+    >>> graph = rweight(graph)
     >>> graph.es["weight"]
     [1, 2, 3, 4, 1]
-    
-    >>> graph = ig.Graph.Formula("a--b--c--d, b--d, b--e")
-    >>> graph.es["weight"] = [1, 2, 3, 4, 1]
-    >>> weight = Weight()
-    >>> graph = weight(graph, is_weighted=True)
+    >>> graph = rweight(graph, remove_weight=True)
     >>> graph.es["weight"]
     [1.0, 1.0, 1.0, 1.0, 1.0]
     
-    >>> graph = ig.Graph.Formula("a--b--c--d, b--d, b--e")
-    >>> graph.es["weight"] = [1, 2, 3, 4, 1]
-    >>> weight = Weight()
-    >>> graph = weight(graph, is_weighted=False)
-    >>> graph.es["weight"]
-    [1.0, 1.0, 1.0, 1.0, 1.0]
-    
-    >>> graph = ig.Graph.Formula("a--b--c--d, b--d, b--e")
-    >>> weight = Weight()
-    >>> graph = weight(graph, is_weighted=True)
-    >>> graph.es["weight"]
-    [1.0, 1.0, 1.0, 1.0, 1.0]
     """
     def __init__(self, weight=None, name=None):
         """
-        :attr weight: name of the edges' `weight` attribute to use when is_weighted == True : if weight = None then graph.es[weight]=1.0
+        :attr weight: name of the edges' `weight` attribute to use when not removing weight, by default `weight`
         :attr name: name of the component
         """
         super(RemoveWeight, self).__init__(name=name)
         self.add_option("remove_weight", Boolean(default=False, help="remove graph weight?"))
+        if weight is None:
+            weight = EDGE_WEIGHT_ATTR
         self._weight = weight
 
+    @Optionable.check
     def __call__(self, graph, remove_weight=None):
-        if not remove_weight and isinstance(self._weight, str) and self._weight in graph.edge_attributes():
-            graph.es["weight"] = graph.es[self._weight]
+        if not remove_weight and self._weight in graph.edge_attributes():
+            graph.es[EDGE_WEIGHT_ATTR] = graph.es[self._weight]
         else:
-            graph.es["weight"] = 1.
+            graph.es[EDGE_WEIGHT_ATTR] = 1.
         return graph
 
 

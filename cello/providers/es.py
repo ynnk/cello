@@ -2,7 +2,7 @@
 """ :mod:`cello.providers.es`
 =============================
 
-Set of class to acces a SOLR server
+Set of class to acces a Elastic Search server
 """
 
 import os.path
@@ -132,10 +132,22 @@ class EsIndex(Index):
         return res
 
 
-
-
-#TODO: should mouv in cello
 class ESQueryStringBuilder(Optionable):
+    """ Create a json query for :class:`ESSearch`
+    
+    >>> qbuilder = ESQueryStringBuilder()
+    >>> qbuilder.print_options()
+    operator (Text, default=OR, in: {AND, OR}): operator used for chaining terms
+    fields (Text, default=_all): List of fields 
+                and the 'boosts' to associate with each of them. The format
+                supported is "fieldOne^2.3 fieldTwo fieldThree^0.4", which indicates
+                that fieldOne has a boost of 2.3, fieldTwo has the default boost, 
+                and fieldThree has a boost of 0.4 ...
+    >>> qbuilder("cat")
+    {'query_string': {'query': 'cat', 'default_operator': u'OR', 'fields': [u'_all']}}
+    >>> qbuilder("cat", operator=u'AND')
+    {'query_string': {'query': 'cat', 'default_operator': u'AND', 'fields': [u'_all']}}
+    """
     #TODO: add docstring
     def __init__(self, name=None):
         super(ESQueryStringBuilder, self).__init__(name=name)
@@ -159,7 +171,6 @@ class ESQueryStringBuilder(Optionable):
         }
         return query_dsl
 
-import elasticsearch
 
 class ESSearch(Optionable):
     #TODO: add docstring ? not easy with ES connection
