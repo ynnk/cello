@@ -147,41 +147,41 @@ class RemoveWeight(Optionable):
     
     >>> graph = ig.Graph.Formula("a--b--c--d, b--d, b--e")
     >>> graph.es["weight"] = [1, 2, 3, 4, 1]
-    >>> weight = Weight(weight="weight")
-    >>> graph = weight(graph, is_weighted=True)
+    >>> weight = RemoveWeight(weight="weight")
+    >>> graph = weight(graph, remove_weight=False)
     >>> graph.es["weight"]
     [1, 2, 3, 4, 1]
     
     >>> graph = ig.Graph.Formula("a--b--c--d, b--d, b--e")
     >>> graph.es["wgt"] = [1, 2, 3, 4, 1]
-    >>> weight = Weight(weight="wgt")
-    >>> graph = weight(graph, is_weighted=True)
+    >>> weight = RemoveWeight(weight="wgt")
+    >>> graph = weight(graph, remove_weight=False)
     >>> graph.es["weight"]
     [1, 2, 3, 4, 1]
     
     >>> graph = ig.Graph.Formula("a--b--c--d, b--d, b--e")
     >>> graph.es["weight"] = [1, 2, 3, 4, 1]
-    >>> weight = Weight()
-    >>> graph = weight(graph, is_weighted=True)
+    >>> weight = RemoveWeight()
+    >>> graph = weight(graph, remove_weight=False)
     >>> graph.es["weight"]
     [1.0, 1.0, 1.0, 1.0, 1.0]
     
     >>> graph = ig.Graph.Formula("a--b--c--d, b--d, b--e")
     >>> graph.es["weight"] = [1, 2, 3, 4, 1]
-    >>> weight = Weight()
-    >>> graph = weight(graph, is_weighted=False)
+    >>> weight = RemoveWeight()
+    >>> graph = weight(graph, remove_weight=True)
     >>> graph.es["weight"]
     [1.0, 1.0, 1.0, 1.0, 1.0]
     
     >>> graph = ig.Graph.Formula("a--b--c--d, b--d, b--e")
-    >>> weight = Weight()
-    >>> graph = weight(graph, is_weighted=True)
+    >>> weight = RemoveWeight()
+    >>> graph = weight(graph, remove_weight=True)
     >>> graph.es["weight"]
     [1.0, 1.0, 1.0, 1.0, 1.0]
     """
     def __init__(self, weight=None, name=None):
         """
-        :attr weight: name of the edges' `weight` attribute to use when is_weighted == True : if weight = None then graph.es[weight]=1.0
+        :attr weight: name of the edges' `weight` attribute to use when the option remove_weight == True
         :attr name: name of the component
         """
         super(RemoveWeight, self).__init__(name=name)
