@@ -1,5 +1,5 @@
 
-.. automodule:: cello.offline
+.. automodule:: cello.index
     :show-inheritance:
     :members:
     :undoc-members:

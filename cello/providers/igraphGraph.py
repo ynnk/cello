@@ -1,11 +1,14 @@
 #-*- coding:utf-8 -*-
-#TODO: docstr
+""" :mod:`cello.providers.igraphGraph`
+=====================================
+
+"""
 
 import igraph
 import random
 from cello.graphs import AbstractGraph, random_vertex
 
-class IgraphGraph( AbstractGraph, igraph.Graph):
+class IgraphGraph(AbstractGraph, igraph.Graph):
 
     def __init__(self, *args, **kwargs ):
         AbstractGraph.__init__( self, *args, **kwargs)

@@ -1,4 +1,10 @@
 #-*- coding:utf-8 -*-
+""" :mod:`cello.writers`
+=======================
+
+:copyright: (c) 2013 - 2014 by Yannick Chudy, Emmanuel Navarro.
+:license: ${LICENSE}
+"""
 import re
 from cello.pipeline import Optionable
 
@@ -53,7 +59,6 @@ class ScreenWriter(AbstractWriter):
             pattern = re.compile("%\(([a-z]+)\)")
             _fields = pattern.findall(outformat)
             self.fields_format = lambda kdoc : outformat % { field: kdoc[field] for field in _fields } 
-        
 
     def add_document(self, kdoc):
         """ Prints fields of L{KodexDoc} on standart output
@@ -77,22 +82,51 @@ class ScreenWriter(AbstractWriter):
 
 
 class IndexWriter(AbstractWriter):
-
+    """ Composant that push document to an :class:`.Index` object
+    
+    Documents are added one by one ussing :func:`.Index.add_document`
+    """
     def __init__(self, idx):
         """ 
-        Helper component to add document in a solr index
-        :param idx: Cello.Index
+        Helper component to add document in a :class:`.Index`
+
+        :param idx: initialissed Cello Index object
         """
         AbstractWriter.__init__(self)
-        self._logger = logging.getLogger(self.__class__.__name__)
         self.idx = idx
 
-    def __call__(self, docs):
+    def add_document(self, doc):
         try:
-            self.idx.add_documents(docs)
+            self.idx.add_document(doc)
         except Exception as error :
             self._logger.error("IndexError")
             raise
 
-    def close(self):
-        pass
+
+class BulkIndexWriter(AbstractWriter):
+    """ Composant that push document to an :class:`.Index` object
+    """
+    def __init__(self, idx, csize=100):
+        """ 
+        Helper component to add document in a :class:`.Index`
+
+        :param idx: initialissed Cello Index object
+        :param csize: size of the cache
+        """
+        AbstractWriter.__init__(self)
+        self.idx = idx
+        self.csize = csize
+
+    def __call__(self, docs):
+        add_documents = self.idx.add_documents
+        csize = self.csize
+        dbuffer = []
+        for doc in docs:
+            dbuffer.append(doc)
+            if len(dbuffer) > csize:
+                add_documents(dbuffer)
+                dbuffer = []
+            yield doc
+        add_documents(dbuffer)
+        dbuffer = []
+

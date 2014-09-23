@@ -1,6 +1,6 @@
 #-*- coding:utf-8 -*-
 """ :mod:`cello.providers.solr`
-==================================
+===============================
 
 Set of class to acces a SOLR server
 """
