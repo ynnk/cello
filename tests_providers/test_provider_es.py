@@ -27,10 +27,10 @@ def test_create_and_delete(es):
 @pytest.fixture
 def idx(es):
     schema = {
-        "_id": {"path": "id"},
+        "_id": {"path": "docnum"},
         "dynamic": "strict",
         "properties": {
-            "id": {"type": "string"},
+            "docnum": {"type": "string"},
             "message": {
                 "type": "string",
                 "store": True,
@@ -50,6 +50,16 @@ def idx(es):
     idx.create()
     return idx
 
+
+@pytest.fixture
+def full_idx(idx):
+    doc = {"docnum":"42", "user": "papy", "message": "Salut tout le monde !"}
+    res = idx.add_document(doc)
+    doc = {"docnum":"666", "user": "evil", "message": "Good bye !"}
+    res = idx.add_document(doc)
+    return idx
+
+
 def test_create_and_delete_with_mapping(idx):
     assert idx.exist()
     # test mappings are ok
@@ -62,7 +72,7 @@ def test_create_and_delete_with_mapping(idx):
 
 def test_add_get_doc(idx):
     assert len(idx) == 0
-    doc = {"id":"42", "user": "papy", "message": "Salut tout le monde !"}
+    doc = {"docnum":"42", "user": "papy", "message": "Salut tout le monde !"}
     res = idx.add_document(doc)
     assert res["created"]
     assert res["_id"] == "42"
@@ -71,6 +81,11 @@ def test_add_get_doc(idx):
     assert len(idx) == 1
     # get the document
     retriev_doc = idx.get_document("42")
-    assert retriev_doc["_source"] == doc
-    
+    assert retriev_doc == doc
 
+
+def test_update(full_idx):
+    full_idx.update_document("42", {"message": "Super non ?"})
+    time.sleep(1)
+    retriev_doc = full_idx.get_document("42")
+    assert retriev_doc["message"] == "Super non ?"

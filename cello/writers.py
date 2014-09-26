@@ -156,7 +156,7 @@ class BulkUpdate(AbstractWriter):
             chunk[_id] = ndoc
             if len(chunk) > csize:
                 update_docs(chunk)
-            chunk = {}
+                chunk = {}
             yield doc
         update_docs(chunk)
 

@@ -114,7 +114,7 @@ class EsIndex(Index):
         """
         body = {'ids': docnums}
         docs = self._es.mget(index=self.index, doc_type=self.doc_type, body=body, **kwargs)
-        docs = list(doc for doc in docs["docs"] if doc["found"])
+        docs = list(doc["_source"] for doc in docs["docs"] if doc["found"])
         return docs
 
     def iter_docnums(self, incr=1000):
@@ -143,16 +143,16 @@ class EsIndex(Index):
 
         :param docs: a dictionary docid:doc
         """
-        es = self._es
         index = self.index
         doc_type = self.doc_type
         actions = [{
             "_op_type": "update",
             "_index": index,
+            "_type": doc_type,
             "_id": docnum,
             "doc": doc
         } for docnum, doc in docs.iteritems()]
-        ESH.bulk(es, actions)
+        ESH.bulk(self._es, actions)
 
 
 class ESIndexScan(Composable):
