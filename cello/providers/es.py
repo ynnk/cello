@@ -45,6 +45,7 @@ class EsIndex(Index):
         self.index = index
         self.doc_type = doc_type
         self.schema = schema
+        #TODO: ensure there is a docnum in the schema, and _id path to it ?
 
     def __len__(self):
         """ return count of document in index """
@@ -120,6 +121,7 @@ class EsIndex(Index):
         raise NotImplementedError
 
     def add_document(self, doc):
+        #TODO: ensure there is a docnum ?
         res = self._es.index(index=self.index, doc_type=self.doc_type, body=doc)
         return res
 
@@ -129,6 +131,28 @@ class EsIndex(Index):
             doc['_type'] = self.doc_type
         res = ESH.bulk_index(client=self._es, actions=docs)
         return res
+
+    def update_document(self, docnum, doc):
+        """ Partial update a document.
+        """
+        self.update_documents({docnum: doc})
+
+    def update_documents(self, docs):
+        """ Partial update a set of documents.
+        Only the field present will be updated.
+
+        :param docs: a dictionary docid:doc
+        """
+        es = self._es
+        index = self.index
+        doc_type = self.doc_type
+        actions = [{
+            "_op_type": "update",
+            "_index": index,
+            "_id": docnum,
+            "doc": doc
+        } for docnum, doc in docs.iteritems()]
+        ESH.bulk(es, actions)
 
 
 class ESIndexScan(Composable):

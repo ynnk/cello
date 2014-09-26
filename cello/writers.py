@@ -6,13 +6,13 @@
 :license: ${LICENSE}
 """
 import re
-from cello.pipeline import Optionable
+from cello.pipeline import Composable
 
-class AbstractWriter(Optionable):
+class AbstractWriter(Composable):
     """ Abstract writer
     """
     def __init__(self):
-        Optionable.__init__(self, self.__class__.__name__)
+        super(AbstractWriter, self).__init__()
     
     def add_document(self, kdoc):
         """ Add a document to the database
@@ -110,7 +110,7 @@ class BulkIndexWriter(AbstractWriter):
         """ 
         Helper component to add document in a :class:`.Index`
 
-        :param idx: initialissed Cello Index object
+        :param idx: initialissed :class:`.Index` object
         :param csize: size of the cache
         """
         AbstractWriter.__init__(self)
@@ -129,4 +129,34 @@ class BulkIndexWriter(AbstractWriter):
             yield doc
         add_documents(dbuffer)
         dbuffer = []
+
+
+class BulkUpdate(AbstractWriter):
+    """ Update documents in an :class:`.Index` 
+    """
+    def __init__(self, idx, fields, csize=400):
+        """
+        :param idx: initialissed :class:`.Index` object
+        :param fields: the list of the field to update
+        :param csize: size of the cache
+        """
+        super(BulkUpdate, self).__init__()
+        self.idx = idx
+        self.fields = fields
+        self.csize = csize
+
+    def __call__(self, docs):
+        fields = self.fields
+        update_docs = self.idx.update_documents
+        csize = self.csize
+        chunk = {}
+        for doc in docs:
+            _id = doc["docnum"] #FIXME pas tjs forcément ok
+            ndoc = dict((key, doc[key]) for key in fields if doc[key])
+            chunk[_id] = ndoc
+            if len(chunk) > csize:
+                update_docs(chunk)
+            chunk = {}
+            yield doc
+        update_docs(chunk)
 

@@ -97,19 +97,13 @@ class Index:
 
     def add_document(self, kdoc):
         """ Add a document in the index
-        @param kdoc: the document to add
-        @type kdoc: :class:`Doc`
-        @return: True if the document has been added correctly
-        @rtype: boolean
+        :param kdoc: the document to add
         """
         raise NotImplementedError
 
     def add_documents(self, kdocs):
         """ Add a set of documents in the index
-        @param kdocs: a list of  document to add
-        @type kdocs: (:class:`Doc`, ...)
-        @return: list of docnum that has not been added correctly
-        @rtype: [int, ...]
+        :param kdocs: a list of  document to add
         """
         warnings.warn("Unefficient implementation: it calls self.add_document for each term", RuntimeWarning)
         add_document = self.add_document
@@ -118,3 +112,23 @@ class Index:
             if not add_document(kdoc):
                 fails_on.append(kdoc.docnum)
         return fails_on
+
+    def update_document(self, docnum, doc):
+        """ Partial update a document.
+        
+        Note: this is a partial update, ie. only the given fields will be updated.
+        Fields that are present in the index but not given will stay has they are.
+        
+        :param docnum: the document identifier
+        :param doc: the new document
+        """
+        raise NotImplementedError
+
+    def update_documents(self, docs):
+        """ Partial update a set of documents.
+
+        :param docs: a dictionary `{docnum:doc}`
+        """
+        warnings.warn("Unefficient implementation: it calls self.update_document for each doc", RuntimeWarning)
+        return (self.update_document(docnum, doc) for docnum, doc in docs.iteritems())
+
