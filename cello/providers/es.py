@@ -49,7 +49,6 @@ class EsIndex(Index):
     def __len__(self):
         """ return count of document in index """
         res = self._es.count(self.index, doc_type=self.doc_type)
-        print res
         return res["count"]
 
     def statistics(self):
