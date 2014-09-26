@@ -167,7 +167,8 @@ class SpeedLogger(Composable):
         dtime = time() - ltop
         speed = count / dtime
         tcount += count
-        dtime_tot = time() - tzero
-        speed_tot = tcount / dtime_tot
         logger.info("Process %d %s in %1.3f sec (%1.2f %s/sec)" % (count, self.elements, dtime, speed, self.elements))
-        logger.info("In total: %d %s proceded in %1.3f sec (%1.2f %s/sec)" % (tcount, self.elements, dtime_tot, speed_tot, self.elements))
+        if tcount > count:
+            dtime_tot = time() - tzero
+            speed_tot = tcount / dtime_tot
+            logger.info("In total: %d %s proceded in %1.3f sec (%1.2f %s/sec)" % (tcount, self.elements, dtime_tot, speed_tot, self.elements))

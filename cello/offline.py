@@ -47,7 +47,9 @@ instead of :func:`run`
 >>> #pprint(res)
 
 """
+import logging
 import multiprocessing as mp
+from time import time
 from itertools import islice
 
 def run(pipeline, input_gen, options={}):
@@ -80,17 +82,25 @@ def run(pipeline, input_gen, options={}):
     D
     E
     """
+    logger = logging.getLogger("cello.run")
+    t0 = time()
     res = [output for output in pipeline(input_gen, **options)]
+    logger.info("Pipeline executed in %1.3f sec" % (time() - t0))
     return res
 
-def _cello_worker(Qin, Qout, pipeline, options={}):
+def _cello_worker(wnum, Qin, Qout, pipeline, options={}):
     """ a worker used by :func:`run_parallel`
     """
+    #pipeline = get_pipeline()
+    logger = logging.getLogger("cello.run_parallel.worker#%s" % wnum)
+    logger.debug("worker created")
     if options is None:
         options = {}
     while True:
         chunk = Qin.get() # get an element (and wait for it if needed)
+        logger.debug("Get %s elements to process" % len(chunk))
         res = [output for output in pipeline(chunk, **options)]
+        logger.debug("processing done, results len = %s" % len(res))
         Qout.put(res)
         Qin.task_done()
 
@@ -108,6 +118,10 @@ def run_parallel(pipeline, input_gen, options={}, ncpu=4, chunksize=200):
     >>> #Note: res should be equals to [['C', 'D'], ['A', 'B'], ['E']]
     >>> #but it seems that there is a bug with py.test and mp...
     """
+    t0 = time()
+    #FIXME: there is a know issue when pipeline results are "big" object, the merge is bloking... to be investigate
+    #TODO: add get_pipeline args to prodvide a fct to build the pipeline (in each worker)
+    logger = logging.getLogger("cello.run_parallel")
     jobs = []
     results = []
     Qdata = mp.JoinableQueue(ncpu*2)  # input queue
@@ -115,8 +129,9 @@ def run_parallel(pipeline, input_gen, options={}, ncpu=4, chunksize=200):
     # ensure input_gen is realy an itertor not a list
     if hasattr(input_gen, "__len__"):
         input_gen = iter(input_gen)
-    for _ in range(ncpu):
-        worker = mp.Process(target=_cello_worker, args=(Qdata, Qresult, pipeline, options))
+    for wnum in range(ncpu):
+        logger.debug("create worker #%s" % wnum)
+        worker = mp.Process(target=_cello_worker, args=(wnum, Qdata, Qresult, pipeline, options))
         worker.start()
         jobs.append(worker)
     while True:
@@ -124,17 +139,24 @@ def run_parallel(pipeline, input_gen, options={}, ncpu=4, chunksize=200):
         chunk = tuple(islice(input_gen, chunksize))
         if not len(chunk):
             break
+        logger.info("send a chunk of %s elemets to a worker" % len(chunk))
         Qdata.put(chunk)
+    logger.info("all data has beed send to workers")
     # wait until all task are done
     Qdata.join()
+    logger.debug("wait for workers...")
     for worker in jobs:
         worker.terminate()
+    logger.debug("merge results")
     try:
-        while (not Qresult.empty()):
+        while not Qresult.empty():
+            logger.debug("result queue still have %d elements" % Qresult.qsize())
             res = Qresult.get_nowait()
             results.append(res)
     except mp.Queue.Empty:
+        logger.debug("result queue is empty")
         pass
+    logger.info("Pipeline executed in %1.3f sec" % (time() - t0))
     return results
 
 
