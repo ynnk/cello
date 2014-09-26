@@ -105,7 +105,7 @@ class VtxMatch(Optionable):
     {0: -2.0, 1: -2.0, 4: -3.0}
     
     >>> #Test case sensitivity
-    >>> match = VtxMatch(global_graph, attr_list=[u"name", u"label"], default_attr=u"name", case_sensitive = False)
+    >>> match = VtxMatch(global_graph, attr_list=[u"name", u"label"], default_attr=u"name", case_sensitive=False)
     >>> match("a")
     {0: 1.0}
     >>> match("A")
@@ -117,14 +117,11 @@ class VtxMatch(Optionable):
     CelloPlayError: Vertex's name 'A' not found; Vertex's label 'A' not found
     >>> match("a")
     {0: 1.0}
-    
-    
-    
 
 
     This component can also throw some :class:`.CelloPlayError` if vertices are
     not found:
-    
+
     >>> match("bp")
     Traceback (most recent call last):
     ...
@@ -134,18 +131,16 @@ class VtxMatch(Optionable):
     Traceback (most recent call last):
     ...
     CelloPlayError: Vertices' names 'bp and lj' not found; Vertices' labels 'bp and lj' not found
-    
+
     >>> match("bp;1")
     Traceback (most recent call last):
     ...
     CelloPlayError: Vertices' names 'bp and 1' not found; Vertex's label 'bp' not found
-    
+
     >>> match("a;1")
     Traceback (most recent call last):
     ...
     CelloPlayError: Vertex's name '1' not found; Vertex's label 'a' not found
-    
-
     """
     #TODO add test an suport for str/unicode
 
@@ -165,7 +160,13 @@ class VtxMatch(Optionable):
         """
         return VtxMatch.re_split_score.findall(query)
 
-    def __init__(self, global_graph, attr_list, default_attr, case_sensitive = True, name=None):
+    def __init__(self, global_graph, attr_list, default_attr, case_sensitive=True, name=None):
+        """
+        :attr global_graph: the graph to search vertices in
+        :attr attr_list: list of the vtx attributes used to identify vertices
+        :attr default_attr: the one used by default (should be in `attr_list`)
+        :arre case_sensitive: is the search case_sensitive
+        """
         super(VtxMatch, self).__init__(name=name)
         self.add_option("default_attr", Text(default=default_attr, choices=attr_list, help="default search attribute"))
         self.global_graph = global_graph
@@ -189,8 +190,6 @@ class VtxMatch(Optionable):
                     self._index[attr][vtx_label].append(vtx.index)
                 else:
                    self._index[attr][vtx_label] = [vtx.index]
-                    
-                    
         
         #RMQ: construire un index comme ca n'est pas pertinant pour les graphes non stocké en RAM
         # est-ce que l'on incorpore "select" dans AbstractGraph ?
@@ -213,17 +212,20 @@ class VtxMatch(Optionable):
 
         missing_nodes = {}
         for attr in attr_list:
-        
+            # for each attributes
             for name, score in VtxMatch.split_score(query):
-            
-                if not self._case_sensitive: name = name.lower() 
-                    
+                # for each term in the query
+                if not self._case_sensitive:
+                    name = name.lower()
+                # does we have it in the attr ?
                 if name not in self._index[attr]:
+                    # not found !
                     if missing_nodes.has_key(attr):
                         missing_nodes[attr].append(name)
                     else:
                         missing_nodes[attr] = [name]
                 else:
+                    # found !
                     score = 1. if len(score) == 0 else float(score)
                     for vid in self._index[attr][name]:
                         pzero[vid] = pzero.get(vid, 0.) + score
@@ -231,10 +233,10 @@ class VtxMatch(Optionable):
             if not attr in missing_nodes:
                 break
 
+        # if we have missing nodes for all attributes... then error !
         if len(missing_nodes) == len(attr_list):
             str_err_list = []
             str_err = ""
-            
             for key, val in missing_nodes.items():
                 if len(val) > 1:
                     str_err_temp = "Vertices' %ss '%s' not found" % (key, " and ".join(val))
@@ -243,14 +245,7 @@ class VtxMatch(Optionable):
                 str_err_list.append(str_err_temp)
             str_err = "; ".join(str_err_list)
             raise CelloPlayError("%s" % str_err) #TODO i18n
-                        
-#        for name, score in VtxMatch.split_score(query):
-#            if name not in self._index[attr]:
-#                raise CelloPlayError("Vertex with %s='%s' not found !" % (attr, name)) #TODO i18n
-#            else:
-#                score = 1. if len(score) == 0 else float(score)
-#                for vid in self._index[attr][name] : 
-#                    pzero[vid] = pzero.get(vid, 0.) + score
+
         return pzero
 
 
