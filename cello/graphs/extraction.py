@@ -104,6 +104,24 @@ class VtxMatch(Optionable):
     >>> match("1:-2; 3:-3")
     {0: -2.0, 1: -2.0, 4: -3.0}
     
+    >>> #Test case sensitivity
+    >>> match = VtxMatch(global_graph, attr_list=[u"name", u"label"], default_attr=u"name", case_sensitive = False)
+    >>> match("a")
+    {0: 1.0}
+    >>> match("A")
+    {0: 1.0}
+    >>> match = VtxMatch(global_graph, attr_list=[u"name", u"label"], default_attr=u"name")
+    >>> match("A")
+    Traceback (most recent call last):
+    ...
+    CelloPlayError: Vertex's name 'A' not found; Vertex's label 'A' not found
+    >>> match("a")
+    {0: 1.0}
+    
+    
+    
+
+
     This component can also throw some :class:`.CelloPlayError` if vertices are
     not found:
     
@@ -126,6 +144,8 @@ class VtxMatch(Optionable):
     Traceback (most recent call last):
     ...
     CelloPlayError: Vertex's name '1' not found; Vertex's label 'a' not found
+    
+
     """
     #TODO add test an suport for str/unicode
 
@@ -145,20 +165,33 @@ class VtxMatch(Optionable):
         """
         return VtxMatch.re_split_score.findall(query)
 
-    def __init__(self, global_graph, attr_list, default_attr, name=None):
+    def __init__(self, global_graph, attr_list, default_attr, case_sensitive = True, name=None):
         super(VtxMatch, self).__init__(name=name)
         self.add_option("default_attr", Text(default=default_attr, choices=attr_list, help="default search attribute"))
         self.global_graph = global_graph
         self._vattr_list = attr_list
         self._index = {}
+        
+        self._case_sensitive = case_sensitive
+        
         # build the indices, for each attr
         for attr in attr_list:
             self._index[attr] = {}
             for vtx in global_graph.vs:
-                if self._index[attr].has_key(vtx[attr]):
-                    self._index[attr][vtx[attr]].append(vtx.index)
+                
+               #Manage the case sentivity
+                if self._case_sensitive: 
+                    vtx_label = vtx[attr]
                 else:
-                    self._index[attr][vtx[attr]] = [vtx.index]
+                    vtx_label = vtx[attr].lower()
+                    
+                if self._index[attr].has_key(vtx_label):
+                    self._index[attr][vtx_label].append(vtx.index)
+                else:
+                   self._index[attr][vtx_label] = [vtx.index]
+                    
+                    
+        
         #RMQ: construire un index comme ca n'est pas pertinant pour les graphes non stocké en RAM
         # est-ce que l'on incorpore "select" dans AbstractGraph ?
         # ALIRE: http://permalink.gmane.org/gmane.comp.science.graph.igraph.general/2722
@@ -180,7 +213,11 @@ class VtxMatch(Optionable):
 
         missing_nodes = {}
         for attr in attr_list:
+        
             for name, score in VtxMatch.split_score(query):
+            
+                if not self._case_sensitive: name = name.lower() 
+                    
                 if name not in self._index[attr]:
                     if missing_nodes.has_key(attr):
                         missing_nodes[attr].append(name)

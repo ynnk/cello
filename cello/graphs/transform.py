@@ -152,6 +152,7 @@ class RemoveWeight(Optionable):
 
     >>> # create a graph to make some test
     >>> import igraph as ig
+    
     >>> ograph = ig.Graph.Formula("a--b--c--d, b--d, b--e")
     >>> owgt = [1, 2, 3, 4, 1]
 
