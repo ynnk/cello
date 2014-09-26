@@ -9,6 +9,8 @@ Helper function to setup a basic logger for a cello app
 """
 
 import logging
+from time import time
+from cello.pipeline import Composable
 
 # NullHandler is not defined in python < 2.6
 try:
@@ -18,10 +20,10 @@ except ImportError:
         def emit(self, record):
             pass
 
-def get_basic_logger(level=logging.WARN):
+def get_basic_logger(level=logging.WARN, scope='cello'):
     """ return a basic logger that print on stdout msg from cello lib
     """
-    logger = logging.getLogger('cello')
+    logger = logging.getLogger(scope)
     logger.setLevel(level)
     # create console handler with a higher log level
     ch = logging.StreamHandler()
@@ -103,3 +105,69 @@ def get_app_logger_color(appname, app_log_level=logging.INFO, log_level=logging.
     app_logger.addHandler(app_stderr_handler)
     return app_logger
 
+
+class SpeedLogger(Composable):
+    """ Pipeline element that do *nothing* but log the procesing speed every K
+    element and at the end.
+    
+    if you have a processing pipe, for example:
+    
+    >>> from cello.pipeline import Composable
+    >>> pipeline = Composable(lambda data: (x**3 for x in data))
+    
+    you can add a :class:`SpeedLogger` in it:
+    
+    >>> pipeline |= SpeedLogger(each=30000, elements="numbers")
+    
+    And then when you run your pipeline:
+    
+    >>> import logging
+    >>> from cello.utils.log import get_basic_logger
+    >>> logger = get_basic_logger(logging.INFO)
+    >>> from cello.offline import run
+    >>> results = run(pipeline, xrange(100000))
+    
+    You will get a logging like that::
+
+        2014-09-26 15:19:56,139:INFO:cello.SpeedLogger:Process 30000 numbers in 0.010 sec (2894886.12 numbers/sec)
+        2014-09-26 15:19:56,148:INFO:cello.SpeedLogger:Process 30000 numbers in 0.008 sec (3579572.14 numbers/sec)
+        2014-09-26 15:19:56,156:INFO:cello.SpeedLogger:Process 30000 numbers in 0.008 sec (3719343.80 numbers/sec)
+        2014-09-26 15:19:56,159:INFO:cello.SpeedLogger:Process 9997 numbers in 0.003 sec (3367096.85 numbers/sec)
+        2014-09-26 15:19:56,159:INFO:cello.SpeedLogger:In total: 100000 numbers proceded in 0.030 sec (3307106.53 numbers/sec)
+
+    
+    """
+    def __init__(self, each=1000, elements="documents"):
+        """ 
+        :param each: log the speed every *each* element
+        :param elements: name of the elements in the produced log lines
+        """
+        super(SpeedLogger, self).__init__()
+        self.each = each
+        self.elements = elements
+
+    def __call__(self, inputs):
+        count = 0
+        ltop = time()
+        tzero = ltop
+        tcount = 0
+        each = self.each
+        info = "Process %d %s in %%1.3f sec (%%1.2f %s/sec)" % (each, self.elements, self.elements)
+        logger = self._logger
+        for element in inputs:
+            count += 1
+            yield element
+            if count > each:
+                dtime = time() - ltop
+                speed = each / dtime
+                logger.info(info % (dtime, speed))
+                tcount += count
+                count = 0
+                ltop = time()
+        dtime = time() - ltop
+        speed = count / dtime
+        tcount += count
+        dtime_tot = time() - tzero
+        speed_tot = tcount / dtime_tot
+        logger.info("Process %d %s in %1.3f sec (%1.2f %s/sec)" % (count, self.elements, dtime, speed, self.elements))
+        logger.info("In total: %d %s proceded in %1.3f sec (%1.2f %s/sec)" % (tcount, self.elements, dtime_tot, speed_tot, self.elements))
