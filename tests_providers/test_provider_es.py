@@ -48,6 +48,7 @@ def idx(es):
     }
     idx = EsIndex("test_idx", doc_type="doc", schema=schema, es=es)
     idx.create()
+    time.sleep(1)
     return idx
 
 

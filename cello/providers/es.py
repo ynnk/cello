@@ -23,12 +23,13 @@ class EsIndex(Index):
     """ Elasticsearch index for a particular doc_type
     """
 
-    def __init__(self, index, doc_type="document", schema=None, es=None, host=None):
+    def __init__(self, index, doc_type="document", schema=None, settings=None, es=None, host=None):
         """
 
         :param index: index name
         :param doc_type: the name of document type to use
-        :param schema: the schema of documents
+        :param schema: schema of documents
+        :param settings: index settings
         :param es: initialised Elastic Search python client :class:`elasticsearch.Elasticsearch` (if None one is created with given host)
         :param host: base url for connection
         :param idx: solr index name
@@ -45,6 +46,7 @@ class EsIndex(Index):
         self.index = index
         self.doc_type = doc_type
         self.schema = schema
+        self.settings = settings
         #TODO: ensure there is a docnum in the schema, and _id path to it ?
 
     def __len__(self):
@@ -63,10 +65,15 @@ class EsIndex(Index):
     def create(self):
         """ Create the index, and add the doc type schema (if given)
         """
-        if not self.exist():
-            self._es.indices.create(self.index, ignore=400)
+        if self.exist():
+            raise RuntimeError("Index already exist !")
+        body = {}
+        if self.settings is not None:
+            body["settings"] =  self.settings
         if self.schema is not None:
-            self._es.indices.put_mapping(index=self.index, doc_type=self.doc_type, body=self.schema)
+            body["mappings"] = {}
+            body["mappings"][self.doc_type] = self.schema
+        self._es.indices.create(self.index, body=body, ignore=400)
 
     def delete(self):
         """ Remove the index from ES instance
