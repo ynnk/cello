@@ -63,6 +63,8 @@ class VtxMatch(Optionable):
     {0: 1.0}
     >>> match("a ; a")
     {0: 2.0}
+    >>> match("")
+    {}
     >>> match("a ; a;a;a")
     {0: 4.0}
     >>> match("a:5.5")
@@ -306,7 +308,7 @@ class ProxExtractGlobal(Optionable):
         kwargs["loops_weight"] = self._loops_weight
         kwargs["mode"] = self._modes["text_to_num"][mode]
         
-        if self._wgt is not None and is_wgt == True : 
+        if self._wgt is not None and is_wgt == True:
             kwargs["weight"] = self._wgt
             
         v_extract = self.prox_func(self.global_graph, pzero, length, **kwargs)
@@ -323,6 +325,10 @@ class ProxMarkovExtractionGlobal(ProxExtractGlobal):
     >>> xtrct_markov = ProxMarkovExtractionGlobal(global_graph)
     >>> # then at query time:
     >>> xtrct_markov([4], length=3, vcount=2, add_loops=False)
+    [(1, 0.75), (2, 0.125)]
+    >>> # in case of empty p0, :
+    [(1, 0.5250000000000001), (2, 0.17500000000000002)]
+    >>> xtrct_markov([], length=3, vcount=2, add_loops=False)
     [(1, 0.75), (2, 0.125)]
     >>> xtrct_markov([4], length=3, vcount=0, add_loops=False)
     []
@@ -415,6 +421,7 @@ class ProxMarkovExtractionGlobalBigraph(Optionable):
 
     @Optionable.check
     def __call__(self, pzero, half_length=None, odd_count=None, even_count=None):
+        #TODO: assert pzero only on one kind of vtx
         odd_vect = self.extrator(pzero, length=half_length*2-1, vcount=odd_count, add_loops=False)
         even_vect = self.extrator(pzero, length=half_length*2, vcount=even_count, add_loops=False)
         odd_vect.extend(even_vect)

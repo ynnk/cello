@@ -98,7 +98,7 @@ class Subgraph(Composable):
         scores = None
         if len(vids) != 0 and isinstance(vids[0], tuple):
             scores = [score for vid, score in vids]
-            vids = [vid for vid, score in vids]
+            vids = set([vid for vid, score in vids])
         subgraph = self._graph.subgraph(vids)
         assert subgraph.vcount() == len(vids)
         if scores is not None:
