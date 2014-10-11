@@ -5,6 +5,7 @@
 """
 #TODO: add doc
 import warnings
+import logging
 
 from cello.exceptions import CelloError
 from cello.schema import Doc    #FIXME: unused import
@@ -19,7 +20,7 @@ class Index:
     """ Abstract class, provide methods to access an index of a collection.
     """
     def __init__(self):
-        pass
+        self._logger = logging.getLogger("cello.%s" % self.__class__.__name__)
 
     def __len__(self):
         """ Number of documents in the index

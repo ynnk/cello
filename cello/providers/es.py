@@ -82,16 +82,21 @@ class EsIndex(Index):
             body["mappings"][self.doc_type] = self.schema
         self._es.indices.create(self.index, body=body, ignore=400)
 
-    def delete(self):
+    def delete(self, full=False):
         """ Remove the index from ES instance
         """
         mappings = self._es.indices.get_mapping(index=self.index)
-        if self.index in mappings:
+        if not full and self.index in mappings:
             if self.doc_type in mappings[self.index]['mappings'] and len(mappings[self.index]['mappings']) > 1:
                 # More than one doctype, only delete mine !
+                self._logger.info("Remove just the mapping")
                 self._es.indices.delete_mapping(self.index, doc_type=self.doc_type, ignore=400)
-            else: # delete the whole index
+            elif self.doc_type in mappings[self.index]['mappings']:
+                self._logger.info("Remove the full index")
                 self._es.indices.delete(self.index, ignore=400)
+        else: # delete the whole index
+            self._logger.info("Remove the full index")
+            self._es.indices.delete(self.index, ignore=400)
 
     def get_schema(self):
         """ Get the mappings (or schema) for the current doc_type in the index
