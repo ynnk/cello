@@ -11,7 +11,7 @@ from pytest_dbfixtures import factories
 
 # create es fixture
 # see http://pytest-dbfixtures.readthedocs.org/
-es_proc = factories.elasticsearch_proc(host='127.0.0.1', port=9201)
+es_proc = factories.elasticsearch_proc(host='127.0.1', port=9201)
 es = factories.elasticsearch("es_proc", hosts='127.0.01:9201')
 
 from cello.providers.es import EsIndex
@@ -69,6 +69,7 @@ def test_create_and_delete_with_mapping(idx):
     assert 'message' in idx_schema["properties"]
     assert 'user' in idx_schema["properties"]
     idx.delete()
+    time.sleep(1)
     assert not idx.exist()
 
 def test_add_get_doc(idx):
