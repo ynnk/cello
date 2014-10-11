@@ -327,9 +327,8 @@ class ProxMarkovExtractionGlobal(ProxExtractGlobal):
     >>> xtrct_markov([4], length=3, vcount=2, add_loops=False)
     [(1, 0.75), (2, 0.125)]
     >>> # in case of empty p0, :
-    [(1, 0.5250000000000001), (2, 0.17500000000000002)]
     >>> xtrct_markov([], length=3, vcount=2, add_loops=False)
-    [(1, 0.75), (2, 0.125)]
+    [(1, 0.5250000000000001), (2, 0.17500000000000002)]
     >>> xtrct_markov([4], length=3, vcount=0, add_loops=False)
     []
     >>> xtrct_markov([4], length=1, vcount=10, add_loops=True)
