@@ -48,8 +48,33 @@ def idx(es):
     }
     idx = EsIndex("test_idx", doc_type="doc", schema=schema, es=es)
     idx.create()
-    time.sleep(1)
+    idx.refresh()
     return idx
+
+
+def test_create_and_delete_with_mapping(idx):
+    assert idx.exist()
+    # test mappings are ok
+    idx_schema = idx.get_mapping()
+    assert 'properties' in idx_schema
+    assert 'message' in idx_schema["properties"]
+    assert 'user' in idx_schema["properties"]
+    idx.delete()
+    assert not idx.exist()
+
+def test_add_get_doc(idx):
+    time.sleep(1)
+    assert len(idx) == 0
+    doc = {"docnum":"42", "user": "papy", "message": "Salut tout le monde !"}
+    res = idx.add_document(doc)
+    assert res["created"]
+    assert res["_id"] == "42"
+    idx.refresh()
+    # check added
+    assert len(idx) == 1
+    # get the document
+    retriev_doc = idx.get_document("42")
+    assert retriev_doc == doc
 
 
 @pytest.fixture
@@ -60,34 +85,36 @@ def full_idx(idx):
     res = idx.add_document(doc)
     return idx
 
-
-def test_create_and_delete_with_mapping(idx):
-    assert idx.exist()
-    # test mappings are ok
-    idx_schema = idx.get_schema()
-    assert 'properties' in idx_schema
-    assert 'message' in idx_schema["properties"]
-    assert 'user' in idx_schema["properties"]
-    idx.delete()
-    time.sleep(1)
-    assert not idx.exist()
-
-def test_add_get_doc(idx):
-    assert len(idx) == 0
-    doc = {"docnum":"42", "user": "papy", "message": "Salut tout le monde !"}
-    res = idx.add_document(doc)
-    assert res["created"]
-    assert res["_id"] == "42"
-    time.sleep(1)
-    # check added
-    assert len(idx) == 1
-    # get the document
-    retriev_doc = idx.get_document("42")
-    assert retriev_doc == doc
-
-
 def test_update(full_idx):
-    full_idx.update_document("42", {"message": "Super non ?"})
-    time.sleep(1)
+    full_idx.update_document({"docnum":"42", "message": "Super non ?"})
+    full_idx.refresh()
     retriev_doc = full_idx.get_document("42")
     assert retriev_doc["message"] == "Super non ?"
+
+
+def test_add_update_bulk(full_idx):
+    # Add
+    docs = [ {"docnum":"n%s" % num, "user": "papy", "message": "Salut #%s" % num}
+        for num in range(100)
+    ]
+    res = full_idx.add_documents(docs)
+    full_idx.refresh()
+    # check added
+    assert len(full_idx) == 102
+    assert full_idx.get_document("n55")["message"] == "Salut #55"
+    assert full_idx.get_document("n55")["user"] == "papy"
+
+    #update
+    docs = [ {"docnum":"n%s" % num, "message": "Vraiment salut #%s" % num}
+        for num in range(50, 120)
+    ]
+    res = full_idx.update_documents(docs, add_if_new=True)
+    full_idx.refresh()
+    assert len(full_idx) == 122
+    assert full_idx.get_document("n59")["message"] == "Vraiment salut #59"
+    assert full_idx.get_document("n59")["user"] == "papy"
+    
+    # test for new
+    assert full_idx.has_document("n110")
+    assert full_idx.get_document("n110")["message"] == "Vraiment salut #110"
+    

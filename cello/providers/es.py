@@ -54,6 +54,12 @@ class EsIndex(Index):
         res = self._es.count(self.index, doc_type=self.doc_type)
         return res["count"]
 
+    def refresh(self):
+        """ Make sure that all current operation are available for search
+        """
+        if self.exist():
+            self._es.indices.refresh(self.index)
+
     def statistics(self):
         return {
             "ndocs": len(self)
@@ -74,13 +80,22 @@ class EsIndex(Index):
         if self.exist():
             raise RuntimeError("Index already exist !")
         body = {}
-        if self.settings is not None:
-            body["settings"] =  self.settings
-        body["mappings"] = {}
-        body["mappings"][self.doc_type] = {}
-        if self.schema is not None:
-            body["mappings"][self.doc_type] = self.schema
-        self._es.indices.create(self.index, body=body, ignore=400)
+        if not self._es.indices.exists(self.index):
+            if self.settings is not None:
+                body["settings"] =  self.settings
+            body["mappings"] = {}
+            body["mappings"][self.doc_type] = {}
+            if self.schema is not None:
+                body["mappings"][self.doc_type] = self.schema
+            self._logger.info("Create the index")
+            self._es.indices.create(self.index, body=body)
+        else:
+            if self.schema is not None:
+                body[self.doc_type] = self.schema
+                self._logger.info("Add a mapping (Index already exist)")
+                self._es.indices.put_mapping(index=self.index, doc_type=self.doc_type, body=body)
+            if self.settings is not None:
+                self._logger.warn("Settings where not updated (Index already exist)")
 
     def delete(self, full=False):
         """ Remove the index from ES instance
@@ -98,8 +113,8 @@ class EsIndex(Index):
             self._logger.info("Remove the full index")
             self._es.indices.delete(self.index, ignore=400)
 
-    def get_schema(self):
-        """ Get the mappings (or schema) for the current doc_type in the index
+    def get_mapping(self):
+        """ Get the mapping (or schema) for the current doc_type in the index
         """
         mappings = self._es.indices.get_mapping(index=self.index, doc_type=self.doc_type)
         if self.index in mappings and self.doc_type in mappings[self.index]['mappings']:
@@ -108,16 +123,17 @@ class EsIndex(Index):
             return {}
 
     def get_uniq_key(self):
+        """ return the field used as _id
+        """
         uniq_key = None
-        mappings = self.get_mappings(self.index)
-        if self.doc_type in mappings:
-            if '_id' in mappings[doc_type] and 'path' in mappings[doc_type]['_id']:
-                uniq_key = mappings[doc_type]['_id']['path']
+        mapping = self.get_mapping()
+        if '_id' in mapping and 'path' in mapping['_id']:
+            uniq_key = mapping['_id']['path']
         return uniq_key
 
     def get_fields(self):
         """ Returns field names declared in the schema as a list """
-        return self.get_mappings(self.index)[self.doc_type]['properties'].keys()
+        return self.get_mapping()['properties'].keys()
 
     def has_document(self, docnum):
         """Test for a document in Index.  Fetchs document and returns True wether exists """
@@ -148,33 +164,64 @@ class EsIndex(Index):
         return res
 
     def add_documents(self, docs):
-        for doc in docs:
-            doc['_index'] = self.index
-            doc['_type'] = self.doc_type
-        res = ESH.bulk_index(client=self._es, actions=docs)
-        return res
-
-    def update_document(self, docnum, doc):
-        """ Partial update a document.
-        """
-        self.update_documents({docnum: doc})
-
-    def update_documents(self, docs):
-        """ Partial update a set of documents.
-        Only the field present will be updated.
-
-        :param docs: a dictionary docid:doc
-        """
         index = self.index
         doc_type = self.doc_type
         actions = [{
-            "_op_type": "update",
-            "_index": index,
-            "_type": doc_type,
-            "_id": docnum,
-            "doc": doc
-        } for docnum, doc in docs.iteritems()]
-        ESH.bulk(self._es, actions)
+            #"_op_type": "index",
+                        # ^ create, index, update are possible but
+            '_index': index,
+            '_type': doc_type,
+            '_id': doc["docnum"],
+            "_source": doc,
+        } for doc in docs]
+        res = ESH.bulk(client=self._es, actions=actions)
+        #res = ESH.bulk_index(client=self._es, actions=docs)
+        return res
+
+    def update_document(self, doc):
+        """ Partial update a document.
+        """
+        self.update_documents((doc, ))
+
+    def update_documents(self, docs, add_if_new=False):
+        """ Partial update a list of documents.
+        Only the field present will be updated.
+
+        :param docs: a list of document
+        """
+        id_field = self.get_uniq_key()
+        self._logger.debug("Use field : '%s' as _id field" % id_field)
+        #TODO add a check id field exist on each doc
+        index = self.index
+        doc_type = self.doc_type
+        if add_if_new:
+            # get which document exist
+            body = {'ids': [doc[id_field] for doc in docs]}
+            res = self._es.mget(index=self.index, doc_type=self.doc_type, body=body, _source=False)
+            found = [doc["found"] for doc in res["docs"]]
+            actions = []
+            for num, doc in enumerate(docs):
+                doc_action = {
+                    '_index': index,
+                    '_type': doc_type,
+                    '_id': doc[id_field],
+                }
+                if found[num]:
+                    doc_action["_op_type"] = "update"
+                    doc_action["doc"] = doc
+                else:
+                    doc_action["_source"] = doc
+                actions.append(doc_action)
+        else:
+            actions = [{
+                "_op_type": "update",
+                            # ^ create, index, update are possible but
+                '_index': index,
+                '_type': doc_type,
+                '_id': doc[id_field],
+                "doc": doc,
+            } for num, doc in enumerate(docs)]
+        ESH.bulk(self._es, actions=actions)
 
 
 class ESIndexScan(Composable):

@@ -114,22 +114,25 @@ class Index:
                 fails_on.append(kdoc.docnum)
         return fails_on
 
-    def update_document(self, docnum, doc):
+    def update_document(self, doc, add_if_new=False):
         """ Partial update a document.
         
         Note: this is a partial update, ie. only the given fields will be updated.
         Fields that are present in the index but not given will stay has they are.
         
-        :param docnum: the document identifier
         :param doc: the new document
+        :param add_if_new: add document has new ones if they do not exist yet
+        
+        The docnum should be provided !
         """
         raise NotImplementedError
 
-    def update_documents(self, docs):
+    def update_documents(self, docs, add_if_new=False):
         """ Partial update a set of documents.
 
-        :param docs: a dictionary `{docnum:doc}`
+        :param docs: a list of document
+        :param add_if_new: add document has new ones if they do not exist yet
         """
         warnings.warn("Unefficient implementation: it calls self.update_document for each doc", RuntimeWarning)
-        return (self.update_document(docnum, doc) for docnum, doc in docs.iteritems())
+        return (self.update_document(doc, add_if_new=add_if_new) for doc in docs)
 

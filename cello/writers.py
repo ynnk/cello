@@ -134,29 +134,37 @@ class BulkIndexWriter(AbstractWriter):
 class BulkUpdate(AbstractWriter):
     """ Update documents in an :class:`.Index` 
     """
-    def __init__(self, idx, fields, csize=400):
+    def __init__(self, idx, fields=None, csize=400, add_if_new=False):
         """
         :param idx: initialissed :class:`.Index` object
         :param fields: the list of the field to update
         :param csize: size of the cache
+        :param add_if_new: add document has new ones if they do not exist yet
         """
         super(BulkUpdate, self).__init__()
         self.idx = idx
         self.fields = fields
         self.csize = csize
+        self.add_if_new = add_if_new
 
     def __call__(self, docs):
         fields = self.fields
         update_docs = self.idx.update_documents
+        add_if_new = self.add_if_new
         csize = self.csize
-        chunk = {}
+        chunk = []
         for doc in docs:
             _id = doc["docnum"] #FIXME pas tjs forcément ok
-            ndoc = dict((key, doc[key]) for key in fields if doc[key])
-            chunk[_id] = ndoc
+            #FIXME vérifier que docnum est dans les fields !
+            if fields:
+                ndoc = dict((key, doc[key]) for key in fields if doc[key])
+            else:
+                ndoc = doc
+            chunk.append(ndoc)
             if len(chunk) > csize:
-                update_docs(chunk)
+                update_docs(chunk, add_if_new=add_if_new)
                 chunk = {}
             yield doc
-        update_docs(chunk)
+        if len(chunk) > 0:
+            update_docs(chunk, add_if_new=add_if_new)
 
