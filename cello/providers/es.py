@@ -281,23 +281,49 @@ class ESQueryStringBuilder(Optionable):
 class ESSearch(Optionable):
     #TODO: add docstring ? not easy with ES connection
     def __init__(self, index=None, doc_type=None, host="localhost:9200", name=None):
+        """
+        :param index: index name
+        :param doc_type: document type to search, if list of str then option will be added, if None
+        :param host: ES hostname
+        :param name: component name
+        """
         super(ESSearch, self).__init__(name=name)
         self.add_option("size", Numeric(vtype=int, default=10, min=0, help="number of document to returns"))
         # configure ES connection
         self.host = host
         self._es_conn = elasticsearch.Elasticsearch(hosts=self.host)
         if not self._es_conn.ping():
-            raise RuntimeError("Imposible to ping ES server at '%s'" % self.host)
+            raise RuntimeError("Couldn't ping ES server at '%s'" % self.host)
         self.index = index
-        self.doc_type = doc_type
+        # manage doctype: add an option if needed
+        self.doc_type = None
+        if isinstance(doc_type, basestring):
+            # only one doctype
+            self.doc_type = doc_type
+        else:
+            if doc_type is None:
+                # fetch all the existing doctype
+                mappings = self._es_conn.indices.get_mapping(index=self.index)
+                doc_type = mappings[self.index]['mappings'].keys()
+            if len(doc_type):
+                self.add_option("doc_type", Text(multi=True, choices=doc_type,
+                    default=doc_type, help="Documents type"))
+            else:
+                # if empty list no option, no doctype selection
+                self.doc_type = None
 
     @Optionable.check
-    def __call__(self, query_dsl, size=None):
+    def __call__(self, query_dsl, doc_type=None, size=None):
         self._logger.info("query: %s" % query_dsl)
         body = {
             "query": query_dsl,
         }
-        return self._es_conn.search(index=self.index, doc_type=self.doc_type, body=body, size=size)
+        dtype = None
+        if isinstance(doc_type, (list, tuple)):
+            dtype = ",".join(doc_type)
+        elif doc_type is None and self.doc_type is not None:
+            dtype = self.doc_type
+        return self._es_conn.search(index=self.index, doc_type=dtype, body=body, size=size)
 
 
 class ESPhraseSuggest(Optionable):
