@@ -164,6 +164,7 @@ class EsIndex(Index):
         return res
 
     def add_documents(self, docs):
+        id_field = self.get_uniq_key()
         index = self.index
         doc_type = self.doc_type
         actions = [{
@@ -171,10 +172,11 @@ class EsIndex(Index):
                         # ^ create, index, update are possible but
             '_index': index,
             '_type': doc_type,
-            '_id': doc["docnum"],
+            '_id': doc[id_field],
             "_source": doc,
         } for doc in docs]
         res = ESH.bulk(client=self._es, actions=actions)
+        #TODO add error check on res !
         #res = ESH.bulk_index(client=self._es, actions=docs)
         return res
 
