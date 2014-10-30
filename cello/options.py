@@ -20,11 +20,10 @@ import logging
 
 from cello.types import GenericType, Numeric
 
-
-class ValueOption(object):
-    """ Single value option
+class Option(object):
+    """ Abstract option value
     """
-    
+
     @staticmethod
     def FromType(name, otype):
         """ ValueOption subclasses factory, creates a convenient option to store
@@ -49,11 +48,12 @@ class ValueOption(object):
             raise NotImplementedError("for now, options can't be set of values")
             #return SetField(ftype)
         elif otype.multi:
-            raise NotImplementedError("for now, options can't have multiple values")
-            #return ListField(ftype)
+            #XXX: dbl check needed?
+            #raise NotImplementedError("for now, options can't have multiple values")
+            return ListOption(name, otype)
         else:
             return ValueOption(name, otype)
-    
+
     def __init__(self, name, otype):
         """
         :param name: option name
@@ -134,16 +134,15 @@ class ValueOption(object):
         :param value: the value to validate
         :returns: the value
         """
-        return self.otype.validate(value)
+        raise NotImplementedError
 
-    def parse(self, value_str):
-        """ Convert the value from a string.
+    def parse(self, value):
+        """ Convert the value from data just decoded from json.
 
-        :param value_str: a potential value for the option
-        :type value_str: str
+        :param value: a potential value for the option
         :returns: the value converted to the good type
         """
-        return self.otype.parse(value_str)
+        raise NotImplementedError
 
     def set(self, value, parse=False):
         """ Set the value of the option.
@@ -171,4 +170,23 @@ class ValueOption(object):
         #TODO: est-ce que l'on ne met pas a plat et les attr de otype et ceux de l'option
         return opt_info
 
+class ListOption(Option):
+    """ option with multiple value
+    """
+
+    def validate(self, values):
+        return [self.otype.validate(value) for value in values]
+
+    def parse(self, values):
+        return [self.otype.parse(value) for value in values]
+
+class ValueOption(Option):
+    """ Single value option
+    """
+
+    def validate(self, value):
+        return self.otype.validate(value)
+
+    def parse(self, value):
+        return self.otype.parse(value)
 
