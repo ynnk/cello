@@ -124,16 +124,18 @@ def engine_shema(engine, out_names=None):
     output_node_name = "out"
     dg.add_node(input_node_name, label=input_node_name, shape="ellipse")
     block_source = {} # witch block is the source for witch data
-    block_source[engine.in_name] = input_node_name
+    for e_in_name in engine.in_name:
+        block_source[e_in_name] = input_node_name
     # creation des sommets
     for block in engine:
         dg.add_node(block.name, label=' %s ' % block.name, shape="box")
     # creation des liens
     for block in engine:
-        dg.add_edge(block_source[block.in_name], block.name,
-            label=" %s " % block.in_name,
-            fontsize=10,
-        )
+        for in_name in block.in_name:
+            dg.add_edge(block_source[in_name], block.name,
+                label=" %s " % in_name,
+                fontsize=10,
+            )
         block_source[block.out_name] = block.name
     if out_names is not None:
         dg.add_node(output_node_name, label=' %s ' % output_node_name, shape="ellipse")
