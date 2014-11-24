@@ -12,7 +12,7 @@ import elasticsearch
 import elasticsearch.helpers as ESH
 
 
-from cello.types import Numeric, Text
+from cello.types import Numeric, Text, Boolean
 
 from cello.pipeline import Composable, Optionable
 from cello.index import Index, CelloIndexError
@@ -252,9 +252,9 @@ class ESQueryStringBuilder(Optionable):
                 that fieldOne has a boost of 2.3, fieldTwo has the default boost, 
                 and fieldThree has a boost of 0.4 ...
     >>> qbuilder("cat")
-    {'query_string': {'query': 'cat', 'default_operator': u'OR', 'fields': [u'_all']}}
+    {'query': {'query_string': {'query': 'cat', 'default_operator': u'OR', 'fields': [u'_all']}}}
     >>> qbuilder("cat", operator=u'AND')
-    {'query_string': {'query': 'cat', 'default_operator': u'AND', 'fields': [u'_all']}}
+    {'query': {'query_string': {'query': 'cat', 'default_operator': u'AND', 'fields': [u'_all']}}}
     """
     #TODO: add docstring
     def __init__(self, name=None):
@@ -270,14 +270,43 @@ class ESQueryStringBuilder(Optionable):
 
     @Optionable.check
     def __call__(self, query, fields=None, operator=None):
-        query_dsl = {
-            "query_string": {
-                "query": query,
-                "fields": fields.split(),
-                "default_operator": operator,
+        query_body = {
+            "query": {
+                "query_string": {
+                    "query": query,
+                    "fields": fields.split(),
+                    "default_operator": operator,
+                }
             }
         }
-        return query_dsl
+        return query_body
+
+
+class ESSortBy(Optionable):
+    #TODO: better options/configurable sorting
+    def __init__(self, fields, name=None):
+        """ Modify a query body to add sorting
+
+        :attr fields: list of the fields to sort on
+        """
+        super(ESSortBy, self).__init__(name=name)
+        self.fields = fields
+        self.add_option("sort", Boolean(default=True,
+            help=u"Sort results by: [%s]" % ", ".join(self.fields))
+        )
+
+    @Optionable.check
+    def __call__(self, query, sort=None):
+        if sort:
+            query["sort"] = []
+            for field in self.fields:
+                sorter = {
+                    field: {
+                        "order": "desc"
+                    }
+                }
+                query["sort"].append(sorter)
+        return query
 
 
 class ESSearch(Optionable):
@@ -315,11 +344,11 @@ class ESSearch(Optionable):
                 self.doc_type = None
 
     @Optionable.check
-    def __call__(self, query_dsl, doc_type=None, size=None):
-        self._logger.info("query: %s" % query_dsl)
-        body = {
-            "query": query_dsl,
-        }
+    def __call__(self, query, doc_type=None, size=None):
+        self._logger.info("query: %s" % query)
+        from pprint import pprint
+        body = query
+        pprint(body)
         dtype = None
         if isinstance(doc_type, (list, tuple)):
             dtype = ",".join(doc_type)
