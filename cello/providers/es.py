@@ -228,6 +228,13 @@ class EsIndex(Index):
 
 class ESIndexScan(Composable):
     """ produce a generator over all documents of a :class:`ESIndex`
+    
+    The `query` param for :func:`__call__` should be `None` if you want to scan
+    all the index without filrers.
+    
+    see:
+     * http://www.elasticsearch.org/guide/en/elasticsearch/guide/current/scan-scroll.html
+     * http://www.elasticsearch.org/guide/en/elasticsearch/reference/current/search-request-scroll.html#scroll-scan
     """
     def __init__(self, es_index):
         super(ESIndexScan, self).__init__()
@@ -235,6 +242,9 @@ class ESIndexScan(Composable):
         self._es = self.es_index._es
 
     def __call__(self, query):
+        """
+        :param query: the ES scan query, `None` to scan the whole index.
+        """
         self._logger.debug("Start scan with query: %s" % query)
         for doc in ESH.scan(self._es, query=query, scroll='5m', index=self.es_index.index, doc_type=self.es_index.doc_type):
             yield doc
