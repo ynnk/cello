@@ -76,8 +76,13 @@ class ColorFormatter(logging.Formatter):
         return message + ColorFormatter.RESET_SEQ
 
 
-def get_app_logger_color(appname, app_log_level=logging.INFO, log_level=logging.WARN):
-    """ Configure the logging for an app using cello
+def get_app_logger_color(appname, app_log_level=logging.INFO, log_level=logging.WARN, logfile=None):
+    """ Configure the logging for an app using cello (it log's both the app and cello lib)
+
+    :param appname: the name of the application to log
+    :parap app_log_level: log level for the app
+    :param log_level: log level for the cello
+    :param logfile: file that store the log, time rotating file (by day), no if None
     """
     # create lib handler
     stderr_handler = logging.StreamHandler()
@@ -103,6 +108,16 @@ def get_app_logger_color(appname, app_log_level=logging.INFO, log_level=logging.
     app_logger.setLevel(logging.DEBUG)
     # add the handlers to the loggers
     app_logger.addHandler(app_stderr_handler)
+
+    if logfile is not None:
+        file_format = '%(asctime)s:%(levelname)s:%(name)s: %(message)s'
+        from logging.handlers import TimedRotatingFileHandler
+        file_handler = TimedRotatingFileHandler(logfile, when="D", interval=1, backupCount=7)
+        file_handler.setFormatter(logging.Formatter(file_format))
+        # add the handlers to the loggers
+        logger.addHandler(file_handler)
+        # add the handlers to the loggers
+        app_logger.addHandler(file_handler)
     return app_logger
 
 

@@ -137,7 +137,11 @@ def engine_shema(engine, out_names=None):
                 fontsize=10,
             )
         block_source[block.out_name] = block.name
-    if out_names is not None:
+    
+    if out_names is None:
+        out_names = set([block.out_name for block in engine])
+    
+    if len(out_names):
         dg.add_node(output_node_name, label=' %s ' % output_node_name, shape="ellipse")
         for out_name in out_names:
             if out_name not in block_source:

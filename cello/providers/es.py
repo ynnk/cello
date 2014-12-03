@@ -12,7 +12,7 @@ import elasticsearch
 import elasticsearch.helpers as ESH
 
 
-from cello.types import Numeric, Text
+from cello.types import Numeric, Text, Boolean
 
 from cello.pipeline import Composable, Optionable
 from cello.index import Index, CelloIndexError
@@ -274,6 +274,13 @@ class EsIndex(Index):
 
 class ESIndexScan(Composable):
     """ produce a generator over all documents of a :class:`ESIndex`
+    
+    The `query` param for :func:`__call__` should be `None` if you want to scan
+    all the index without filrers.
+    
+    see:
+     * http://www.elasticsearch.org/guide/en/elasticsearch/guide/current/scan-scroll.html
+     * http://www.elasticsearch.org/guide/en/elasticsearch/reference/current/search-request-scroll.html#scroll-scan
     """
     def __init__(self, es_index):
         super(ESIndexScan, self).__init__()
@@ -281,6 +288,9 @@ class ESIndexScan(Composable):
         self._es = self.es_index._es
 
     def __call__(self, query):
+        """
+        :param query: the ES scan query, `None` to scan the whole index.
+        """
         self._logger.debug("Start scan with query: %s" % query)
         for doc in ESH.scan(self._es, query=query, scroll='5m', index=self.es_index.index, doc_type=self.es_index.doc_type):
             yield doc
@@ -298,9 +308,9 @@ class ESQueryStringBuilder(Optionable):
                 that fieldOne has a boost of 2.3, fieldTwo has the default boost, 
                 and fieldThree has a boost of 0.4 ...
     >>> qbuilder("cat")
-    {'query_string': {'query': 'cat', 'default_operator': u'OR', 'fields': [u'_all']}}
+    {'query': {'query_string': {'query': 'cat', 'default_operator': u'OR', 'fields': [u'_all']}}}
     >>> qbuilder("cat", operator=u'AND')
-    {'query_string': {'query': 'cat', 'default_operator': u'AND', 'fields': [u'_all']}}
+    {'query': {'query_string': {'query': 'cat', 'default_operator': u'AND', 'fields': [u'_all']}}}
     """
     #TODO: add docstring
     def __init__(self, name=None):
@@ -316,14 +326,43 @@ class ESQueryStringBuilder(Optionable):
 
     @Optionable.check
     def __call__(self, query, fields=None, operator=None):
-        query_dsl = {
-            "query_string": {
-                "query": query,
-                "fields": fields.split(),
-                "default_operator": operator,
+        query_body = {
+            "query": {
+                "query_string": {
+                    "query": query,
+                    "fields": fields.split(),
+                    "default_operator": operator,
+                }
             }
         }
-        return query_dsl
+        return query_body
+
+
+class ESSortBy(Optionable):
+    #TODO: better options/configurable sorting
+    def __init__(self, fields, name=None):
+        """ Modify a query body to add sorting
+
+        :attr fields: list of the fields to sort on
+        """
+        super(ESSortBy, self).__init__(name=name)
+        self.fields = fields
+        self.add_option("sort", Boolean(default=True,
+            help=u"Sort results by: [%s]" % ", ".join(self.fields))
+        )
+
+    @Optionable.check
+    def __call__(self, query, sort=None):
+        if sort:
+            query["sort"] = []
+            for field in self.fields:
+                sorter = {
+                    field: {
+                        "order": "desc"
+                    }
+                }
+                query["sort"].append(sorter)
+        return query
 
 
 class ESSearch(Optionable):
@@ -361,11 +400,11 @@ class ESSearch(Optionable):
                 self.doc_type = None
 
     @Optionable.check
-    def __call__(self, query_dsl, doc_type=None, size=None):
-        self._logger.info("query: %s" % query_dsl)
-        body = {
-            "query": query_dsl,
-        }
+    def __call__(self, query, doc_type=None, size=None):
+        self._logger.info("query: %s" % query)
+        from pprint import pprint
+        body = query
+        pprint(body)
         dtype = None
         if isinstance(doc_type, (list, tuple)):
             dtype = ",".join(doc_type)
@@ -375,9 +414,20 @@ class ESSearch(Optionable):
 
 
 class ESPhraseSuggest(Optionable):
+    """ Spelling correction / Query suggest according to one field of documents
+
+    Note/TODO: to have better phrase suggest ngram of token indexing is needed...
+
+    See:
+    * http://elasticsearch-py.readthedocs.org/en/latest/api.html#elasticsearch.Elasticsearch.suggest
+    * http://www.elasticsearch.org/guide/en/elasticsearch/reference/current/search-suggesters.html
+    * http://www.elasticsearch.org/guide/en/elasticsearch/reference/current/search-suggesters-phrase.html
+    """
     #TODO: add docstring ? not easy with ES connection
-    def __init__(self, index=None, host="localhost:9200", name=None):
+    def __init__(self, field, nb_suggest=5, index=None, host="localhost:9200", name=None):
         super(ESPhraseSuggest, self).__init__(name=name)
+        self.field = field
+        self.nb_suggest = nb_suggest
         # configure ES connection
         self.host = host
         self._es_conn = elasticsearch.Elasticsearch(hosts=self.host)
@@ -393,13 +443,13 @@ class ESPhraseSuggest(Optionable):
             "text": text,
             "simple_phrase": {
                 "phrase": {
-                    "field": "intro",
-                    "size": size,
+                    "field": self.field,
+                    "size": self.nb_suggest,
                     "real_word_error_likelihood": 0.95,
                     "max_errors": 0.5,
-                    "gram_size": 1,
+                    "gram_size": 2,
                     "direct_generator": [{
-                        "field": "intro",
+                        "field": self.field,
                         "suggest_mode": "always",
                         "min_word_length": 1
                     }],
@@ -410,7 +460,34 @@ class ESPhraseSuggest(Optionable):
                 }
             }
         }
-        return self._es_conn.suggest(index=self.index, body=body)
+        return self._es_conn.suggest(index=self.index, body=body, doc_type="wiki")
+
+#    @Optionable.check
+#    def __call__(self, text):
+#        self._logger.info("text: %s" % text)
+#        size = 3 #number of proposition
+#        body = {
+#            "text": text,
+#            "simple_phrase": {
+#                "phrase": {
+#                    "field": "intro",
+#                    "size": size,
+#                    "real_word_error_likelihood": 0.95,
+#                    "max_errors": 0.5,
+#                    "gram_size": 1,
+#                    "direct_generator": [{
+#                        "field": "intro",
+#                        "suggest_mode": "always",
+#                        "min_word_length": 1
+#                    }],
+#                    "highlight": {
+#                        "pre_tag": "<em>",
+#                        "post_tag": "</em>"
+#                    }
+#                }
+#            }
+#        }
+#        return self._es_conn.suggest(index=self.index, body=body)
 
 #---
 

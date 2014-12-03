@@ -1,6 +1,6 @@
 #-*- coding:utf-8 -*-
-""" :mod:`cello.layout.web`
-===========================
+""" :mod:`cello.utils.web`
+==========================
 
 helpers to build HTTP/Json Api from cello engines
 """
