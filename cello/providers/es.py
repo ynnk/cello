@@ -29,10 +29,9 @@ class EsIndex(Index):
         :param index: index name
         :param doc_type: the name of document type to use
         :param schema: schema of documents
-        :param settings: index settings
+        :param settings: index settings / analysers 
         :param es: initialised Elastic Search python client :class:`elasticsearch.Elasticsearch` (if None one is created with given host)
         :param host: base url for connection
-        :param idx: solr index name
         """
         #TODO: wrap param
         Index.__init__(self)
@@ -53,6 +52,56 @@ class EsIndex(Index):
         """ return count of document in index """
         res = self._es.count(self.index, doc_type=self.doc_type)
         return res["count"]
+
+    def __contains__(self, key):
+        """
+        True if index has document with `key`
+        """
+        return self.has_document(key)
+    
+    
+    
+    def get(self, key, default=None):
+        item = self.__getitem__(key)
+        return item if item is not None else default
+
+    def __getitem__(self, key):
+        return self.get_document(key)
+
+    def __setitem__(self,  key, document):
+        uniqkey = self.get_uniq_key()
+        
+        if document is  None: 
+            raise ValueError("document cant be 'None'")
+        if uniqkey is None:
+            raise ValueError("Can t use setitem if index has no uniq key")
+        if key != document[uniqkey]:
+            raise ValueError( "key should match uniqkey value in document %s != %s" % ( key, document[uniqkey] ))   
+
+        self.add_document(document)
+
+
+    def __iter__(self):
+        uniqkey = self.get_uniq_key()
+        scan = ESIndexScan(self)
+        # todo check doc_type
+        for doc in scan(None):
+            key = doc['_source'][uniqkey]
+            yield uniqkey, doc['_source']
+
+    def iteritems(self):
+        return iter(self)
+
+    def iterkeys(self):
+        for k, v in iter(self):
+            yield k
+            
+    def itervalues(self):
+        for k, v in iter(self):
+            yield v
+            
+    def iter_docnums(self, incr=1000):
+        return self.iterkeys()
 
     def refresh(self):
         """ Make sure that all current operation are available for search
@@ -154,9 +203,6 @@ class EsIndex(Index):
         docs = self._es.mget(index=self.index, doc_type=self.doc_type, body=body, **kwargs)
         docs = list(doc["_source"] for doc in docs["docs"] if doc["found"])
         return docs
-
-    def iter_docnums(self, incr=1000):
-        raise NotImplementedError
 
     def add_document(self, doc):
         #TODO: ensure there is a docnum ?
