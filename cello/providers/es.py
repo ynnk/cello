@@ -358,9 +358,20 @@ class ESSearch(Optionable):
 
 
 class ESPhraseSuggest(Optionable):
+    """ Spelling correction / Query suggest according to one field of documents
+
+    Note/TODO: to have better phrase suggest ngram of token indexing is needed...
+
+    See:
+    * http://elasticsearch-py.readthedocs.org/en/latest/api.html#elasticsearch.Elasticsearch.suggest
+    * http://www.elasticsearch.org/guide/en/elasticsearch/reference/current/search-suggesters.html
+    * http://www.elasticsearch.org/guide/en/elasticsearch/reference/current/search-suggesters-phrase.html
+    """
     #TODO: add docstring ? not easy with ES connection
-    def __init__(self, index=None, host="localhost:9200", name=None):
+    def __init__(self, field, nb_suggest=5, index=None, host="localhost:9200", name=None):
         super(ESPhraseSuggest, self).__init__(name=name)
+        self.field = field
+        self.nb_suggest = nb_suggest
         # configure ES connection
         self.host = host
         self._es_conn = elasticsearch.Elasticsearch(hosts=self.host)
@@ -376,13 +387,13 @@ class ESPhraseSuggest(Optionable):
             "text": text,
             "simple_phrase": {
                 "phrase": {
-                    "field": "intro",
-                    "size": size,
+                    "field": self.field,
+                    "size": self.nb_suggest,
                     "real_word_error_likelihood": 0.95,
                     "max_errors": 0.5,
-                    "gram_size": 1,
+                    "gram_size": 2,
                     "direct_generator": [{
-                        "field": "intro",
+                        "field": self.field,
                         "suggest_mode": "always",
                         "min_word_length": 1
                     }],
@@ -393,7 +404,34 @@ class ESPhraseSuggest(Optionable):
                 }
             }
         }
-        return self._es_conn.suggest(index=self.index, body=body)
+        return self._es_conn.suggest(index=self.index, body=body, doc_type="wiki")
+
+#    @Optionable.check
+#    def __call__(self, text):
+#        self._logger.info("text: %s" % text)
+#        size = 3 #number of proposition
+#        body = {
+#            "text": text,
+#            "simple_phrase": {
+#                "phrase": {
+#                    "field": "intro",
+#                    "size": size,
+#                    "real_word_error_likelihood": 0.95,
+#                    "max_errors": 0.5,
+#                    "gram_size": 1,
+#                    "direct_generator": [{
+#                        "field": "intro",
+#                        "suggest_mode": "always",
+#                        "min_word_length": 1
+#                    }],
+#                    "highlight": {
+#                        "pre_tag": "<em>",
+#                        "post_tag": "</em>"
+#                    }
+#                }
+#            }
+#        }
+#        return self._es_conn.suggest(index=self.index, body=body)
 
 #---
 
