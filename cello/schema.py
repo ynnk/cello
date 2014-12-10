@@ -432,7 +432,7 @@ class VectorField(DocField):
         """
         d = {'keys': dict(  zip(self.keys(), range(len(self.keys()))  ))}
         for name in self._attrs.keys():
-            d[name] = self.get_attribute(name).values()
+            d[name] = self.get_attribute(name).export()
         return d
 
     def add(self, key, **kwargs):
@@ -572,13 +572,14 @@ class VectorAttr(object):
         self.attr = attr
 
     def __iter__(self):
-        vector, attr = self.vector, self.attr
-        for attr_value in vector._attrs[attr]:
-            yield attr_value.get_value()
+        return (attr_value.get_value() for attr_value in self.vector._attrs[self.attr])
 
     def values(self):
         # should we use doc.terms.tf() ??? 
         return list(self)
+
+    def export(self):
+        return [attr_value.export() for attr_value in self.vector._attrs[self.attr]]
 
     def __getslice__(self, i, j):
         vector, attr = self.vector, self.attr
@@ -792,5 +793,6 @@ class Doc(dict):
         fields = ( (key, self.get_field(key)) for key in self.schema
             if not key.startswith("_") and key not in exclude )
         
-        doc = { name: field.export() for name, field in fields}
-        return doc 
+        doc = {name: field.export() for name, field in fields}
+        return doc
+
