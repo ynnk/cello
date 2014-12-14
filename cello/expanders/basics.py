@@ -21,6 +21,70 @@ from cello.schema import VectorField
 from cello.types import GenericType, Text, Numeric
 
 
+
+class GuestLanguage(Composable):
+    """ Guest the language of a document according to a text field
+    """
+    def __init__(self, text_fields, out_field="language"):
+        """
+        :param text_fields: document fields that contains the text used to guest language
+        :param out_field: field where to store language
+        """
+        super(GuestLanguage, self).__init__()
+        if isinstance(text_fields, basestring):
+            text_fields = [text_fields]
+        self.text_fields = text_fields
+        self.out_field = out_field
+        from guess_language import guess_language
+        self.guess_language = guess_language
+
+    def __call__(self, docs):
+        text_fields = self.text_fields
+        out_field = self.out_field
+        guess_language = self.guess_language
+        for doc in docs:
+            if out_field not in doc:
+                doc[out_field] = Text()
+            texte = "\n".join(doc[text_field] for text_field in text_fields)
+            doc[out_field] = guess_language(texte)
+        return docs
+
+
+class RmStopwords(Composable):
+    """ Remove stopwords
+    """
+    def __init__(self, terms_field, get_lang=None):
+        """
+        
+        :param terms_field: document field containings the terms
+        :param get_lang: function that return the language of a document
+        """
+        super(RmStopwords, self).__init__()
+        self.terms_field = terms_field
+        if get_lang is None:
+            get_lang = lambda doc: "english"
+        self.get_lang = get_lang
+        from nltk.corpus import stopwords
+        self._stopwords = stopwords.words
+
+    def __call__(self, docs):
+        terms_field = self.terms_field
+        get_lang = self.get_lang
+        stopwords = self._stopwords
+        for doc in docs:
+            lang = get_lang(doc)
+            lang_stopwords = stopwords(lang)
+            tfield = doc[terms_field]
+            to_del = []
+            for term in tfield:
+                if term in lang_stopwords:
+                    to_del.append(term)
+            self._logger.debug("Remove %s stopwords" % (len(to_del)))
+            for keys in to_del:
+                del tfield[keys]
+        return docs
+
+
 class AddFixedScore(Composable):
     """ Add a score field with a fixed value for each term
     """
@@ -70,191 +134,5 @@ class FieldFilter(Composable):
                 doc.pop(field)
             yield doc
 
-
-class DocLength(FieldFilter):
-    """ Counts documents length, (C{terms_df} -> C{dlen})
-    """
-    def __init__(self, terms_tf_field="terms_tf", dlen_field="dlen"):
-        """
-        :param terms_tf_field: name of :class:`Doc` field containing the *term frequenc* list (default: "terms_df")
-        :param dlen_field: name of :class:`Doc` field where the document length will be save (default: "dlen")
-        """
-        FieldFilter.__init__(self, sum, terms_tf_field, dlen_field, keep_original=True)
-
-#XXX ?
-class Merges:
-    @staticmethod
-    def first(x,y): return y
-    @staticmethod
-    def sum(x,y): return x+y
-    @staticmethod
-    def append(x,y): return x+y
-
-#XXX wtf ??
-class TermSet(VectorField):
-    def __init__(self, ts_field, term_field, merges=[], posting=False):
-        """
-        create a termset from docs attribute
-        use merges as a reduce function 
-    
-        :param merges : [('termset_attr','term_attr', Merges.method)]
-            used to keep an attributes 
-            if value is same for a term in all docs
-            value
-        :param posting: keep posting list if True   
-            (keep a reference to Doc instance)
-        """
-        # create container
-        self._ts_field = ts_field
-        self._term_field = term_field
-        attrs = [ ts for ts, t , f in merges] 
-        self._merges = merges or []
-        self._posting = posting 
-        VectorField.__init__(self, Text(attrs={}))
-        
-        self.add_attribute('df_rd', Numeric(default=0))
-        if posting : 
-            self.add_attribute('postings', GenericType(multi=True))
-
-    def __repr__(self):
-        return "<%s:('%s', '%s') %s>" % ( self.__class__.__name__, self._ts_field, self._term_field, self._attrs.keys())
-        
-
-    def __call__(self, docs):
-        termset = self
-        ts_field, term_field = self._ts_field, self._term_field, 
-        merges, posting = self._merges, self._posting
-        for doc in docs:
-            doc[ts_field] = termset # XXX should be marked as virtual ?
-            terms = doc[term_field]
-            for term in terms:
-                termset.add(term) 
-                vi = termset[term]
-                for ts_attr, t_attr, merge in merges:
-                    if not ts_attr in vi.attribute_names():
-                        # create attr
-                        fieldtype = doc.schema[term_field].attrs[t_attr]
-                        termset.add_attribute(ts_attr, fieldtype )
-                    vi[ts_attr] = merge(vi[ts_attr], terms[term][t_attr]) 
-                termset[term].df_rd += 1    
-                if posting :
-                    termset[term].postings.add(doc)
-        return docs
-
-
-#{ KodexLU creation or/and retrieve
-class TermSetBuildExpand(AbstractDocListExpand):
-    """ Create KodexLU for all terms in the result set.
-    This is a key expander for on-line processing.
-    
-    It does:
-    * create one KodexLU object for each term present in at least one document
-    of the result set,
-    * merge some attr (or data) fields present in the documents into KodexLU,
-    * create a attr (data) field in each document to store link to newly
-    created KodexLU (by default it is "klus"),
-    * compute the df_RD of each term
-    * extend all the kodexLU according to a given inverted index (if given).
-    """
-    def __init__(self, new_klus_field_name="klus",
-                       fields_to_merge=[("terms_tf", "tf_RD", lambda x, y: x + y),
-                                       ],
-                       posting_RD=False,
-                       fields_to_invert=[
-                                ('terms_tf', 'docs_tf'),
-                            ],
-                       inverted_index=None):
-        """
-        """
-        AbstractDocListExpand.__init__(self, "term_set_builder")
-        self._logger = logging.getLogger("kodex.expanders.TermSetBuildExpand")
-        self._klus_field_name = new_klus_field_name
-        # check the field_to_expand
-        if fields_to_merge is None:
-            fields_to_merge = []
-        for val in fields_to_merge:
-            if len(val) != 3 \
-            or not callable(val[2]):
-                raise ValueError("The attributes fields_to_merge should be a list of tuple like that: (kdoc_attr_source_field, klu_dest_field, merge_fct)")
-        self._fields_to_merge = fields_to_merge
-        # posting or not
-        self._posting = posting_RD
-        # check the field_to_expand
-        if fields_to_invert is None:
-            fields_to_invert = []
-        for val in fields_to_invert:
-            if len(val) != 2:
-                raise ValueError("The attributes fields_to_invert should be a list of tuple like that: (kdoc_attr_source_field, klu_dest_attr_field)")
-        self._fields_to_invert = fields_to_invert
-        # inverted index
-        self._inverted_index = inverted_index
-
-    def _compute_term_set(self, kdocs):
-        """ Build the "set" of L{KodexLU}.
-        
-        @param kdocs: list of L{KodexDoc}
-        @return: {term:L{KodexLU}, ...}
-        """
-        terms = {}
-        for kdoc in kdocs:
-            for term in kdoc.iter_all_fields():
-                if term in terms:
-                    # get KodexLU
-                    klu = terms[term]
-                    # fields to merge
-                    for source_field, dest_field, merge_fct in self._fields_to_merge:
-                        value = kdoc.get_element_attr(source_field, term)
-                        klu[dest_field] = merge_fct(klu[dest_field], value)
-                    terms[term] = klu
-                else:
-                    # creation du kodexLU
-                    klu = KodexLU(term)
-                    klu["df_RD"] = 0
-                    if self._posting:
-                        klu["posting_RD"] = {}
-                        for _, target_field in self._fields_to_invert:
-                            klu[target_field] = []
-                    # merge fields, initial value
-                    for source_field, dest_field, _ in self._fields_to_merge:
-                        klu[dest_field] = kdoc.get_element_attr(source_field, term)
-                    terms[term] = klu
-                # MAJ
-                klu["df_RD"] += 1
-                if self._posting:
-                    did = len(klu["posting_RD"])
-                    klu["posting_RD"][kdoc.docnum] = did
-                    for source_field, target_field in self._fields_to_invert:
-                        klu[target_field].append(kdoc.get_element_attr(source_field, term))
-        return terms
-
-    def _expand_terms(self, klus):
-        """ Expand terms (L{KodexLU}) according to a inverted index (if given)
-        """
-        if self._inverted_index is None:
-            return
-        stime = time()
-        new_klus = self._inverted_index.get_terms(klus.keys())
-        for new_klu in new_klus:
-            if isinstance(new_klu.form, str):
-                new_klu.form = new_klu.form.decode('utf8')
-            klus[new_klu.form].update(new_klu)
-        dtime = time() - stime
-        self._logger.info("%s KodexLU expanded in %1.2f sec, %1.2f klus/sec." \
-                                       % (len(klus), dtime, len(klus) / dtime))
-
-    def __call__(self, kdocs):
-        kdocs = [doc for doc in kdocs]
-        self._logger.info("Building term set and KLU for %d documents" % len(kdocs))
-        # build the list of terms, compute some stat
-        klus = self._compute_term_set(kdocs)
-        self._logger.info("> %d KodexLU built" % len(klus))
-        # update documents terms (from string to KodexLU)
-        for kdoc in kdocs:
-            kdoc.declare_attr_field(self._klus_field_name)
-            for term in kdoc.iter_all_fields():
-                kdoc.set_element_attr(self._klus_field_name, term, klus[term])
-        # retrieve other stats from the inverted_index
-        self._expand_terms(klus)
-        return kdocs
 
 

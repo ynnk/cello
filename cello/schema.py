@@ -129,6 +129,10 @@ class DocField(object):
         assert isinstance(ftype, GenericType)
         self._ftype = ftype
 
+    @property
+    def ftype(self):
+        return self._ftype
+
     def get_value(self):
         """ return the value of the field.
         """
@@ -169,6 +173,23 @@ class DocField(object):
 
 class ValueField(DocField):
     """ Stores only one value
+
+    usage example:
+
+    >>> from cello.types import Text
+    >>> schema = Schema(title=Text(), like=Numeric(default=45))
+    >>> doc = Doc(schema, docnum='abc42')
+    >>> # 'title' field
+    >>> doc.title = u"Un titre cool !"
+    >>> doc.title
+    u'Un titre cool !'
+    >>> doc.get_field('title').export()
+    u'Un titre cool !'
+    >>> doc.get_field('title').ftype
+    Text(multi=False, uniq=False, default=, attrs=None)
+    >>> # 'like' field
+    >>> doc.like
+    45
     """
     __slot__ = ['value']
     
@@ -320,15 +341,22 @@ class VectorField(DocField):
     >>> doc.terms.add('dog', tf=55)
     >>> doc.terms['dog'].tf
     55
-    
+
     One can also add an atribute after the field is created:
-    
+
     >>> doc.terms.add_attribute('foo', Numeric(default=42))
     >>> doc.terms.foo.values()
     [42, 42]
     >>> doc.terms['dog'].foo = 20
     >>> doc.terms.foo.values()
     [42, 20]
+
+    It is also possible to delete elements from the field
+    >>> doc.terms.export()
+    {'keys': {'dog': 1, 'chat': 0}, 'tf': [12, 55], 'foo': [42, 20]}
+    >>> del doc.terms["chat"]
+    >>> doc.terms.export()
+    {'keys': {'dog': 0}, 'tf': [55], 'foo': [20]}
     """
     def __init__(self, ftype):
         DocField.__init__(self, ftype)
@@ -414,6 +442,35 @@ class VectorField(DocField):
             raise KeyError("No such key ('%s') in this field" % key)
         return VectorItem(self, key)
 
+    def __delitem__(self, key):
+        """ Delete the element from the field
+
+        >>> from cello.types import Text, Numeric
+        >>> doc = Doc(docnum='1')
+        >>> doc.terms = Text(vtype=str, attrs={'tf': Numeric()}) 
+        >>> doc.terms.add('cat', tf=2)
+        >>> doc.terms.add('mouse', tf=20)
+        >>> doc.terms.add('bear', tf=100)
+        >>> doc.terms.add('dog', tf=55)
+        >>> doc.terms.add('kiwi', tf=5)
+        >>> doc.terms.export()
+        {'keys': {'kiwi': 4, 'mouse': 1, 'dog': 3, 'bear': 2, 'cat': 0}, 'tf': [2, 20, 100, 55, 5]}
+        >>> #
+        >>> # delete some elements
+        >>> del doc.terms["mouse"]
+        >>> del doc.terms['dog']
+        >>> doc.terms.export()
+        {'keys': {'kiwi': 2, 'bear': 1, 'cat': 0}, 'tf': [2, 100, 5]}
+        >>> len(doc.terms)
+        3
+        """
+        if not self.has(key):
+            raise KeyError("No such key ('%s') in this field" % key)
+        iid = self._keys[key]
+        for attr in self._attrs.itervalues():
+            attr[iid] = None
+        del self._keys[key]
+
     def get_value(self): 
         """ from DocField, convenient method """
         return self
@@ -430,10 +487,12 @@ class VectorField(DocField):
         >>> doc.terms.export()
         {'keys': {'rat': 1, 'chien': 2, 'chat': 0}, 'tf': [1, 5, 2]}
         """
-        d = {'keys': dict(  zip(self.keys(), range(len(self.keys()))  ))}
+        data = {}
+        data["keys"] = dict( zip(self.keys(), xrange(len(self))) )
+        # each attr
         for name in self._attrs.keys():
-            d[name] = self.get_attribute(name).values()
-        return d
+            data[name] = self.get_attribute(name).export()
+        return data
 
     def add(self, key, **kwargs):
         """ Add a key to the vector, do nothing if the key is already present
@@ -572,17 +631,18 @@ class VectorAttr(object):
         self.attr = attr
 
     def __iter__(self):
-        vector, attr = self.vector, self.attr
-        for attr_value in vector._attrs[attr]:
-            yield attr_value.get_value()
+        return (attr_value.get_value() for attr_value in self.vector._attrs[self.attr] if attr_value is not None)
 
     def values(self):
         # should we use doc.terms.tf() ??? 
         return list(self)
 
+    def export(self):
+        return [attr_value.export() for attr_value in self.vector._attrs[self.attr] if attr_value is not None]
+
     def __getslice__(self, i, j):
         vector, attr = self.vector, self.attr
-        return [ x.get_value() for x in vector._attrs[attr][i:j] ]
+        return [attr_value.get_value() for attr_value in vector._attrs[attr][i:j] if attr_value is not None]
 
     def __getitem__(self, idx):
         return self.vector._attrs[self.attr][idx].get_value()
@@ -792,5 +852,6 @@ class Doc(dict):
         fields = ( (key, self.get_field(key)) for key in self.schema
             if not key.startswith("_") and key not in exclude )
         
-        doc = { name: field.export() for name, field in fields}
-        return doc 
+        doc = {name: field.export() for name, field in fields}
+        return doc
+

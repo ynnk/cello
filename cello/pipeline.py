@@ -466,7 +466,7 @@ class OptionableSequence(Optionable):
         if isinstance(item, Optionable):
             item.set_options_values(kwargs, strict=False, parse=False)
             item_kwargs = item.get_options_values()
-        self._logger.info("calling %s '%s' with %s", item, item_name, item_kwargs)
+        self._logger.debug("calling %s '%s' with %s", item, item_name, item_kwargs)
         return item(*args, **item_kwargs)
 
 
