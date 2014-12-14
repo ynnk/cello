@@ -248,7 +248,7 @@ class Optionable(Composable):
         for opt_name, opt in self._options.iteritems():
             opt.clear()
 
-    def set_options_values(self, option_values, parse=False, strict=False):
+    def set_options_values(self, options, parse=False, strict=False):
         """ Set the options from a dict of values (in string).
         
         :param option_values: the values of options (in format `{"opt_name": "new_value"}`)
@@ -260,7 +260,7 @@ class Optionable(Composable):
         :type strict: bool
         """
         if strict:
-            for opt_name in option_values.iterkeys():
+            for opt_name in options.iterkeys():
                 if not self.has_option(opt_name):
                     raise ValueError("'%s' is not a option of the component" % opt_name)
                 elif self.option_is_hidden(opt_name):
@@ -268,8 +268,8 @@ class Optionable(Composable):
         for opt_name, opt in self._options.iteritems():
             if opt.hidden:
                 continue
-            if opt_name in option_values:
-                opt.set(option_values[opt_name], parse=parse)
+            if opt_name in options:
+                opt.set(options[opt_name], parse=parse)
 
     def get_options_values(self, hidden=False):
         """ return a dictionary of options values
