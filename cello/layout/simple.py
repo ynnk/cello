@@ -25,7 +25,7 @@ class KamadaKawaiLayout(Composable):
         :param name: mane of the component
         :param dim: the number of dimention of the output layouts (2 or 3)
         """
-        super(KamadaKawaiLayout, self).__init__(name)
+        super(KamadaKawaiLayout, self).__init__(name=name)
         assert dim == 2 or dim == 3
         self.dimensions = dim
 
@@ -46,7 +46,7 @@ class FruchtermanReingoldLayout(Composable):
         :param name: mane of the component
         :param dim: the number of dimention of the output layouts (2 or 3)
         """
-        super(FruchtermanReingoldLayout, self).__init__(name)
+        super(FruchtermanReingoldLayout, self).__init__(name=name)
         assert dim == 2 or dim == 3
         self.dimensions = dim
 
@@ -68,7 +68,7 @@ class RandomLayout(Composable):
         :param name: mane of the component
         :param dim: the number of dimention of the output layouts (2 or 3)
         """
-        super(RandomLayout, self).__init__(name)
+        super(RandomLayout, self).__init__(name=name)
         assert dim == 2 or dim == 3
         self.dimensions = dim
 
@@ -90,7 +90,7 @@ class GridLayout(Optionable):
         :param name: mane of the component
         :param dim: the number of dimention of the output layouts (2 or 3)
         """
-        super(GridLayout, self).__init__(name)
+        super(GridLayout, self).__init__(name=name)
         self.add_option("width", Numeric(default=0,
             help="""Number of vertices in a single row of the layout.
             Zero means that the height should be determined automatically."""))
