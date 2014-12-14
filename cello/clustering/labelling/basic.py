@@ -8,7 +8,7 @@ Classes
 import igraph as ig
 from itertools import chain
 
-from cello.pipeline import Optionable
+from cello.pipeline import Optionable, Composable
 from cello.types import Text
 from cello.clustering.labelling import Label, LabelledVertexCover
 
@@ -238,3 +238,9 @@ class TypeFalseLabel(VertexAsLabel):
         return label
 
 
+@Composable
+def normalize_score_max(vertex_cover, **kwargs):
+    for cid, cluster in enumerate(vertex_cover):
+        _max = max([ l.score for l in cluster.labels ])
+        for label in cluster.labels:
+            label.score = label.score / _max
