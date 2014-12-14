@@ -95,7 +95,7 @@ class IndexWriter(AbstractWriter):
         AbstractWriter.__init__(self)
         self.idx = idx
 
-    def add_document(self, doc):
+    def __call__(self, doc):
         try:
             self.idx.add_document(doc)
         except Exception as error :
@@ -124,11 +124,12 @@ class BulkIndexWriter(AbstractWriter):
         for doc in docs:
             dbuffer.append(doc)
             if len(dbuffer) > csize:
-                add_documents(dbuffer)
+                res = add_documents(dbuffer)
                 dbuffer = []
-            yield doc
-        add_documents(dbuffer)
-        dbuffer = []
+                
+        res = add_documents(dbuffer)
+
+        return docs
 
 
 class BulkUpdate(AbstractWriter):
