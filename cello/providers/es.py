@@ -7,10 +7,9 @@ Set of class to acces a Elastic Search server
 
 import os.path
 import logging
-
+from itertools import islice
 import elasticsearch
 import elasticsearch.helpers as ESH
-
 
 from cello.types import Numeric, Text, Boolean
 
@@ -19,14 +18,15 @@ from cello.index import Index, CelloIndexError
 from cello.search import AbstractSearch
 
 
+
+
 class EsIndex(Index):
     """ Elasticsearch index for a particular doc_type
     """
 
-    def __init__(self, index, doc_type="document", schema=None, settings=None, es=None, host=None):
+    def __init__(self, name, doc_type="document", schema=None, settings=None, es=None, host=None):
         """
-
-        :param index: index name
+        :param name: index name
         :param doc_type: the name of document type to use
         :param schema: schema of documents
         :param settings: index settings / analysers 
@@ -42,7 +42,7 @@ class EsIndex(Index):
             self._es = elasticsearch.Elasticsearch(hosts=host)
         else:
             self._es = es
-        self.index = index
+        self.name = name
         self.doc_type = doc_type
         self.schema = schema
         self.settings = settings
@@ -50,36 +50,8 @@ class EsIndex(Index):
 
     def __len__(self):
         """ return count of document in index """
-        res = self._es.count(self.index, doc_type=self.doc_type)
+        res = self._es.count(self.name, doc_type=self.doc_type)
         return res["count"]
-
-    def __contains__(self, key):
-        """
-        True if index has document with `key`
-        """
-        return self.has_document(key)
-    
-    
-    
-    def get(self, key, default=None):
-        item = self.__getitem__(key)
-        return item if item is not None else default
-
-    def __getitem__(self, key):
-        return self.get_document(key)
-
-    def __setitem__(self,  key, document):
-        uniqkey = self.get_uniq_key()
-        
-        if document is  None: 
-            raise ValueError("document cant be 'None'")
-        if uniqkey is None:
-            raise ValueError("Can t use setitem if index has no uniq key")
-        if key != document[uniqkey]:
-            raise ValueError( "key should match uniqkey value in document %s != %s" % ( key, document[uniqkey] ))   
-
-        self.add_document(document)
-
 
     def __iter__(self):
         uniqkey = self.get_uniq_key()
@@ -87,49 +59,40 @@ class EsIndex(Index):
         # todo check doc_type
         for doc in scan(None):
             key = doc['_source'][uniqkey]
-            yield uniqkey, doc['_source']
-
-    def iteritems(self):
-        return iter(self)
-
-    def iterkeys(self):
-        for k, v in iter(self):
-            yield k
-            
-    def itervalues(self):
-        for k, v in iter(self):
-            yield v
-            
-    def iter_docnums(self, incr=1000):
-        return self.iterkeys()
+            yield uniqkey, doc['_source'] 
 
     def refresh(self):
         """ Make sure that all current operation are available for search
         """
-        if self.exist():
-            self._es.indices.refresh(self.index)
+        if self.exists():
+            self._es.indices.refresh(self.name)
 
     def statistics(self):
         return {
             "ndocs": len(self)
         }
 
-    def exist(self):
+    def exists(self):
         """ True if index and doctype mapping exists
         """
-        if self._es.indices.exists(self.index):
-            mappings = self._es.indices.get_mapping(index=self.index)
-            return self.index in mappings and self.doc_type in mappings[self.index]['mappings']
+        index = self.name
+        if self._es.indices.exists(self.name):
+            mappings = self._es.indices.get_mapping(index=index)
+            return index in mappings and self.doc_type in mappings[index]['mappings']
         else:
             return False
 
     def create(self):
         """ Create the index, and add the doc type schema (if given)
         """
-        if self.exist():
+        
+        if self.exists():
             raise RuntimeError("Index already exist !")
+        
+        index = self.name
         body = {}
-        if not self._es.indices.exists(self.index):
+        
+        if not self._es.indices.exists(index):
             if self.settings is not None:
                 body["settings"] =  self.settings
             body["mappings"] = {}
@@ -137,37 +100,41 @@ class EsIndex(Index):
             if self.schema is not None:
                 body["mappings"][self.doc_type] = self.schema
             self._logger.info("Create the index")
-            self._es.indices.create(self.index, body=body)
+            self._es.indices.create(index, body=body)
         else:
             if self.schema is not None:
                 body[self.doc_type] = self.schema
                 self._logger.info("Add a mapping (Index already exist)")
-                self._es.indices.put_mapping(index=self.index, doc_type=self.doc_type, body=body)
+                self._es.indices.put_mapping(index=index, doc_type=self.doc_type, body=body)
             if self.settings is not None:
                 self._logger.warn("Settings where not updated (Index already exist)")
 
     def delete(self, full=False):
         """ Remove the index from ES instance
         """
-        mappings = self._es.indices.get_mapping(index=self.index)
-        if not full and self.index in mappings:
-            if self.doc_type in mappings[self.index]['mappings'] and len(mappings[self.index]['mappings']) > 1:
+        index = self.name
+        mappings = self._es.indices.get_mapping(index=index)
+        
+        if not full and index in mappings:
+            if self.doc_type in mappings[index]['mappings'] and len(mappings[index]['mappings']) > 1:
                 # More than one doctype, only delete mine !
                 self._logger.info("Remove just the mapping")
-                self._es.indices.delete_mapping(self.index, doc_type=self.doc_type, ignore=400)
-            elif self.doc_type in mappings[self.index]['mappings']:
+                self._es.indices.delete_mapping(index, doc_type=self.doc_type, ignore=400)
+            elif self.doc_type in mappings[index]['mappings']:
                 self._logger.info("Remove the full index")
-                self._es.indices.delete(self.index, ignore=400)
+                self._es.indices.delete(index, ignore=400)
         else: # delete the whole index
             self._logger.info("Remove the full index")
-            self._es.indices.delete(self.index, ignore=400)
+            self._es.indices.delete(index, ignore=400)
 
     def get_mapping(self):
         """ Get the mapping (or schema) for the current doc_type in the index
         """
-        mappings = self._es.indices.get_mapping(index=self.index, doc_type=self.doc_type)
-        if self.index in mappings and self.doc_type in mappings[self.index]['mappings']:
-            return mappings[self.index]['mappings'][self.doc_type]
+        index = self.name
+        mappings = self._es.indices.get_mapping(index=index, doc_type=self.doc_type)
+        
+        if index in mappings and self.doc_type in mappings[index]['mappings']:
+            return mappings[index]['mappings'][self.doc_type]
         else:
             return {}
 
@@ -184,10 +151,6 @@ class EsIndex(Index):
         """ Returns field names declared in the schema as a list """
         return self.get_mapping()['properties'].keys()
 
-    def has_document(self, docnum):
-        """Test for a document in Index.  Fetchs document and returns True wether exists """
-        return self.get_document(docnum) is not None
-
     def get_document(self, docnum, **kwargs):
         """ fetch a document given a docnum 
         it will match the given value in field specified as 'uniqueKey' in schema
@@ -200,28 +163,34 @@ class EsIndex(Index):
         it will match the given value in field specified as 'uniqueKey' in schema
         """
         body = {'ids': docnums}
-        docs = self._es.mget(index=self.index, doc_type=self.doc_type, body=body, **kwargs)
+        docs = self._es.mget(index=self.name, doc_type=self.doc_type, body=body, **kwargs)
         docs = list(doc["_source"] for doc in docs["docs"] if doc["found"])
         return docs
 
     def add_document(self, doc):
         #TODO: ensure there is a docnum ?
-        res = self._es.index(index=self.index, doc_type=self.doc_type, body=doc)
+        res = self._es.index(index=self.name, doc_type=self.doc_type, body=doc)
         return res
 
-    def add_documents(self, docs):
-        id_field = self.get_uniq_key()
-        index = self.index
+    def add_documents(self, docs, chunksize=100):
+        index = self.name
         doc_type = self.doc_type
-        actions = [{
+        id_field = self.get_uniq_key()
+        
+        gen = ({
             #"_op_type": "index",
                         # ^ create, index, update are possible but
             '_index': index,
             '_type': doc_type,
-            '_id': doc[id_field],
-            "_source": doc,
-        } for doc in docs]
-        res = ESH.bulk(client=self._es, actions=actions)
+            #'_id': doc[id_field], 
+            '_source': doc,
+        } for doc in docs )
+
+        while True:    
+            chunks = list(islice(gen, chunksize))
+            if chunks == []:
+                break
+            res = ESH.bulk(client=self._es, actions=chunks)
         #TODO add error check on res !
         #res = ESH.bulk_index(client=self._es, actions=docs)
         return res
@@ -240,13 +209,16 @@ class EsIndex(Index):
         id_field = self.get_uniq_key()
         self._logger.debug("Use field : '%s' as _id field" % id_field)
         #TODO add a check id field exist on each doc
-        index = self.index
+        index = self.name
         doc_type = self.doc_type
         if add_if_new:
             # get which document exist
-            body = {'ids': [doc[id_field] for doc in docs]}
-            res = self._es.mget(index=self.index, doc_type=self.doc_type, body=body, _source=False)
+            body = { 'ids': [doc[id_field] for doc in docs] }
+            
+            res = self._es.mget(index=index, doc_type=doc_type, body=body, _source=False)
+            
             found = [doc["found"] for doc in res["docs"]]
+            
             actions = []
             for num, doc in enumerate(docs):
                 doc_action = {
@@ -254,11 +226,13 @@ class EsIndex(Index):
                     '_type': doc_type,
                     '_id': doc[id_field],
                 }
+            
                 if found[num]:
                     doc_action["_op_type"] = "update"
                     doc_action["doc"] = doc
                 else:
                     doc_action["_source"] = doc
+            
                 actions.append(doc_action)
         else:
             actions = [{
@@ -271,6 +245,16 @@ class EsIndex(Index):
             } for num, doc in enumerate(docs)]
         ESH.bulk(self._es, actions=actions)
 
+    def search(self, body, size=50):
+        return self._es.search(index=self.name, doc_type=self.doc_type, body=body, size=size)
+
+    def suggest(self, body):
+        """ wrap es suggest
+        :param body: request body 
+        """
+        return self._es.suggest(index=self.name, body=body)
+        
+    
 
 class ESIndexScan(Composable):
     """ produce a generator over all documents of a :class:`ESIndex`
@@ -325,7 +309,7 @@ class ESQueryStringBuilder(Optionable):
        )
 
     @Optionable.check
-    def __call__(self, query, fields=None, operator=None):
+    def __call__(self, query, fields=u"_all", operator=u"OR"):
         query_body = {
             "query": {
                 "query_string": {
@@ -424,32 +408,29 @@ class ESPhraseSuggest(Optionable):
     * http://www.elasticsearch.org/guide/en/elasticsearch/reference/current/search-suggesters-phrase.html
     """
     #TODO: add docstring ? not easy with ES connection
-    def __init__(self, field, nb_suggest=5, index=None, host="localhost:9200", name=None):
+    def __init__(self, index=None, name=None, field=None, size=3):
         super(ESPhraseSuggest, self).__init__(name=name)
-        self.field = field
-        self.nb_suggest = nb_suggest
         # configure ES connection
-        self.host = host
-        self._es_conn = elasticsearch.Elasticsearch(hosts=self.host)
-        if not self._es_conn.ping():
-            raise RuntimeError("Imposible to ping ES server at '%s'" % self.host)
         self.index = index
-
+        
+        self.add_option("field", Text(default=field, help="Suggestions field"))
+        self.add_option("size", Numeric(vtype=int, default=size, help="max suggestions"))
+        
     @Optionable.check
-    def __call__(self, text):
+    def __call__(self, text, field=None, size=3):
         self._logger.info("text: %s" % text)
-        size = 3 #number of proposition
+        size = 5 #number of proposition
         body = {
-            "text": text,
             "simple_phrase": {
                 "phrase": {
-                    "field": self.field,
-                    "size": self.nb_suggest,
+                    "text": text,
+                    "field": field,
+                    "size": size,
                     "real_word_error_likelihood": 0.95,
                     "max_errors": 0.5,
                     "gram_size": 2,
                     "direct_generator": [{
-                        "field": self.field,
+                        "field": field,
                         "suggest_mode": "always",
                         "min_word_length": 1
                     }],
@@ -460,7 +441,8 @@ class ESPhraseSuggest(Optionable):
                 }
             }
         }
-        return self._es_conn.suggest(index=self.index, body=body, doc_type="wiki")
+        print body
+        return self.index.suggest(body=body)
 
 #    @Optionable.check
 #    def __call__(self, text):
