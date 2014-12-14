@@ -30,6 +30,46 @@ class Index:
         """
         raise NotImplementedError
 
+    def __contains__(self, key):
+        """
+        True if index has document with `key`
+        """
+        return self.has_document(key)
+    
+
+    def get(self, key, default=None):
+        item = self.__getitem__(key)
+        return item if item is not None else default
+
+    def __getitem__(self, key):
+        return self.get_document(key)
+
+    def __setitem__(self,  key, document):
+        uniqkey = self.get_uniq_key()
+        
+        if document is  None: 
+            raise ValueError("document cant be 'None'")
+        if uniqkey is None:
+            raise ValueError("Can t use setitem if index has no uniq key")
+        if key != document[uniqkey]:
+            raise ValueError( "key should match uniqkey value in document %s != %s" % ( key, document[uniqkey] ))   
+
+        self.add_document(document)
+
+    def iteritems(self):
+        return iter(self)
+
+    def iterkeys(self):
+        for k, v in iter(self):
+            yield k
+            
+    def itervalues(self):
+        for k, v in iter(self):
+            yield v
+            
+    def iter_docnums(self, incr=1000):
+        return self.iterkeys()
+
     def close(self):
         """ Close the index.
         """
@@ -45,8 +85,8 @@ class Index:
         """
         raise NotImplementedError
 
-    def exist(self):
-        """ Whether the index exist
+    def exists(self):
+        """ Whether the index exists
         """
         raise False
 
@@ -59,7 +99,7 @@ class Index:
         :return: True if the document is present in the index
         :rtype: boolean
         """
-        raise NotImplementedError
+        return self.get_document(docnum) is not None
 
     def get_document(self, docnum):
         """ Retrun a document
