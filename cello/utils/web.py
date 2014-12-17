@@ -96,25 +96,25 @@ class CelloFlaskView(Blueprint):
         data = {}
         options = {}
         
-        if request.headers['Content-Type'].startswith('application/json'):
-            #abort(415) # Unsupported Media Type
         ### get data
+        if request.headers['Content-Type'].startswith('application/json'):
+            # data in JSON
             data = request.json
             assert data is not None #FIXME: better error than assertError ?
             ### get the options
-            options = data.get("options", {})
-            ### inputs data
             if "options" in data:
+                options = data["options"]
                 del data["options"]
-                
-        else : 
-            args = request.args
-            if args.get('_f') == 'semicolons':
-                pairs = args.get('q').split(',')
-                data['query'] = dict( tuple(x.split(':')) for x in pairs ) 
-                
-        #TODO: parse data according to self._inputs
+        else:
+            # data in URL ?
+            abort(415) # Unsupported Media Type
+            # TODO: manage data in url
+#            args = request.args
+#            if args.get('_f') == 'semicolons':
+#                pairs = args.get('q').split(',')
+#                data['query'] = dict( tuple(x.split(':')) for x in pairs ) 
 
+        #TODO: parse data according to self._inputs
         # note: all the inputs can realy be parsed only if the engine is setted
         return data, options
 
