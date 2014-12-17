@@ -246,6 +246,7 @@ class EsIndex(Index):
         ESH.bulk(self._es, actions=actions)
 
     def search(self, body, size=50):
+        #print body
         return self._es.search(index=self.name, doc_type=self.doc_type, body=body, size=size)
 
     def suggest(self, body):
