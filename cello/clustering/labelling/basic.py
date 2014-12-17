@@ -240,7 +240,9 @@ class TypeFalseLabel(VertexAsLabel):
 
 @Composable
 def normalize_score_max(vertex_cover, **kwargs):
-    for cid, cluster in enumerate(vertex_cover):
-        _max = max([ l.score for l in cluster.labels ])
-        for label in cluster.labels:
+    for cid, vertices in enumerate(vertex_cover):
+        labels = vertex_cover.labels[cid]
+        _max = max([ l.score for l in labels ])
+        for label in labels:
             label.score = label.score / _max
+    return vertex_cover
