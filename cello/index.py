@@ -7,11 +7,10 @@
 import warnings
 import logging
 
-from cello.exceptions import CelloError
 from cello.schema import Doc    #FIXME: unused import
 
 
-class CelloIndexError(CelloError):
+class CelloIndexError(RuntimeError):
     """Raised when index cannot be open """
     pass
 

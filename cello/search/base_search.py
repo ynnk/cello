@@ -19,9 +19,10 @@ import logging
 
 import igraph as ig #TODO: pas térible d'avoir le import igraph ici
 
-from cello.types import Numeric, Text
+from reliure import Optionable
+
+from reliure.types import Numeric, Text
 from cello.schema import Schema, Doc
-from cello.pipeline import Optionable
 
 
 class AbstractSearch(Optionable):

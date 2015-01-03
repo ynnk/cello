@@ -6,8 +6,8 @@ import itertools
 
 import igraph as ig
 
-from cello.pipeline import Composable, Optionable
-from cello.types import Numeric, Boolean
+from reliure import Composable, Optionable
+from reliure.types import Numeric, Boolean
 
 from cello.graphs import EDGE_WEIGHT_ATTR
 
@@ -28,8 +28,9 @@ class RemoveNotConnected(Composable):
     """
     def __call__(self, graph):
         self._logger.info("Graph filtering (remove not connected vertices) :")
+        self._logger.info("-> before filtering: %d vertices and %d edges" % (graph.vcount(), graph.ecount()))
         graph.delete_vertices(graph.vs.select(lambda x: graph.degree(x, type=ig.ALL, loops=False)==0))
-        self._logger.info( "  -> %d vertices and %d edges" % (graph.vcount(), graph.ecount()))
+        self._logger.info("-> keep %d vertices and %d edges" % (graph.vcount(), graph.ecount()))
         self._logger.info("Filtering done.")
         return graph
 

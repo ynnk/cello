@@ -6,7 +6,8 @@ Mostly wrapper to igraph clustering methods
 """
 import igraph as ig
 
-from cello.types import Numeric
+from reliure.types import Numeric
+
 from cello.graphs import EDGE_WEIGHT_ATTR
 from cello.clustering.core import ClusteringMethod
 

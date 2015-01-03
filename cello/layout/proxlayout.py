@@ -7,8 +7,8 @@ Set of 'prox' graphs layout, moslty based on igraph layouts
 
 import igraph as ig
 
-from cello.types import Numeric, Boolean
-from cello.pipeline import Optionable, Composable
+from reliure import Optionable, Composable
+from reliure.types import Numeric, Boolean
 
 from cello.graphs import prox
 from cello.graphs import EDGE_WEIGHT_ATTR

@@ -7,8 +7,8 @@ import logging
 import igraph as ig
 import numpy as np
 
-from cello.pipeline import Composable, Optionable
-from cello.types import Text, Numeric, Boolean
+from reliure import Composable, Optionable
+from reliure.types import Text, Numeric, Boolean
 
 from cello.graphs import EDGE_WEIGHT_ATTR
 from cello.graphs.prox import prox_markov_dict

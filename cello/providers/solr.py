@@ -15,8 +15,9 @@ except:
     print("Error importing sunburnt library for Apache Solr, run $ sudo pip install sunburnt")
     raise
 
+from reliure import Optionable
+
 from cello.schema import Doc
-from cello.pipeline import Optionable
 
 #FIXME: unused import
 from cello.index import Index, CelloIndexError

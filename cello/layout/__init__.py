@@ -16,13 +16,13 @@ Helpers
 -------
 """
 
-
 def hsv_colors(n_colors, saturation=0.4, value=0.8):
     """ Helper, computes a set of colors for n clusters using hsv colors """ 
     colors = []
     for i in xrange(n_colors):
         colors.append( hsvToRgb((1.*i / n_colors * 360), saturation, value) )
     return colors
+
 
 def hsvToRgb(h,s,v):
     """ return a float rgb tuple as color
@@ -48,7 +48,6 @@ def hsvToRgb(h,s,v):
          5: (v,p,q)
     }
     return _rgbs[hi]
-
 
 
 def export_layout(layout):

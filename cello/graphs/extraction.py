@@ -25,9 +25,10 @@ These two components can be used this way:
 """
 import re
 
-from cello.exceptions import CelloPlayError
-from cello.types import Numeric, Text, Boolean
-from cello.pipeline import Composable, Optionable
+from reliure import Composable, Optionable
+from reliure.types import Numeric, Text, Boolean
+from reliure.exceptions import ReliurePlayError
+
 from cello.graphs import prox, IN, OUT, ALL, neighbors
 
 class VertexIds(Optionable):
@@ -116,33 +117,33 @@ class VtxMatch(Optionable):
     >>> match("A")
     Traceback (most recent call last):
     ...
-    CelloPlayError: Vertex's name 'A' not found; Vertex's label 'A' not found
+    ReliurePlayError: Vertex's name 'A' not found; Vertex's label 'A' not found
     >>> match("a")
     {0: 1.0}
 
 
-    This component can also throw some :class:`.CelloPlayError` if vertices are
+    This component can also throw some :class:`.ReliurePlayError` if vertices are
     not found:
 
     >>> match("bp")
     Traceback (most recent call last):
     ...
-    CelloPlayError: Vertex's name 'bp' not found; Vertex's label 'bp' not found
+    ReliurePlayError: Vertex's name 'bp' not found; Vertex's label 'bp' not found
     
     >>> match("bp;lj")
     Traceback (most recent call last):
     ...
-    CelloPlayError: Vertices' names 'bp and lj' not found; Vertices' labels 'bp and lj' not found
+    ReliurePlayError: Vertices' names 'bp and lj' not found; Vertices' labels 'bp and lj' not found
 
     >>> match("bp;1")
     Traceback (most recent call last):
     ...
-    CelloPlayError: Vertices' names 'bp and 1' not found; Vertex's label 'bp' not found
+    ReliurePlayError: Vertices' names 'bp and 1' not found; Vertex's label 'bp' not found
 
     >>> match("a;1")
     Traceback (most recent call last):
     ...
-    CelloPlayError: Vertex's name '1' not found; Vertex's label 'a' not found
+    ReliurePlayError: Vertex's name '1' not found; Vertex's label 'a' not found
     """
     #TODO add test an suport for str/unicode
 
@@ -246,7 +247,7 @@ class VtxMatch(Optionable):
                     str_err_temp = "Vertex's %s '%s' not found" % (key, val[0])
                 str_err_list.append(str_err_temp)
             str_err = "; ".join(str_err_list)
-            raise CelloPlayError("%s" % str_err) #TODO i18n
+            raise ReliurePlayError("%s" % str_err) #TODO i18n
 
         return pzero
 

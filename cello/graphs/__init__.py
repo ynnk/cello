@@ -18,9 +18,9 @@ Helpers
 """
 import random
 
-from cello.pipeline import Optionable
-from cello.schema import Doc
+from reliure import Optionable
 
+from cello.schema import Doc
 from cello.graphs.builder import GraphBuilder
 
 

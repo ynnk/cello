@@ -8,8 +8,9 @@ Classes
 import igraph as ig
 from itertools import chain
 
-from cello.pipeline import Optionable, Composable
-from cello.types import Text
+from reliure import Optionable, Composable
+from reliure.types import Text
+
 from cello.clustering.labelling import Label, LabelledVertexCover
 
 class VertexAsLabel(Optionable):

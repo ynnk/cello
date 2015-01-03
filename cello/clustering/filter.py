@@ -5,8 +5,8 @@
 """
 import igraph as ig
 
-from cello.types import Numeric
-from cello.pipeline import Optionable, Composable
+from reliure.types import Numeric
+from reliure import Optionable, Composable
 
 from functools import update_wrapper
 

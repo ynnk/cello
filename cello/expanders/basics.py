@@ -15,11 +15,11 @@ Class
 -----
 """
 
-from cello.pipeline import Composable
-from cello.expanders import AbstractDocListExpand
-from cello.schema import VectorField
-from cello.types import GenericType, Text, Numeric
+from reliure import Composable
+from reliure.types import GenericType, Text, Numeric
 
+from cello.schema import VectorField
+from cello.expanders import AbstractDocListExpand
 
 
 class GuestLanguage(Composable):

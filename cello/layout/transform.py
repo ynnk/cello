@@ -12,7 +12,7 @@ from matplotlib.mlab import PCA
 
 import igraph as ig
 
-from cello.pipeline import Composable
+from reliure import Composable
 
 
 class ReducePCA(Composable):

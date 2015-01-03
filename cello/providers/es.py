@@ -8,16 +8,15 @@ Set of class to acces a Elastic Search server
 import os.path
 import logging
 from itertools import islice
+
 import elasticsearch
 import elasticsearch.helpers as ESH
 
-from cello.types import Numeric, Text, Boolean
+from reliure import Composable, Optionable
+from reliure.types import Numeric, Text, Boolean
 
-from cello.pipeline import Composable, Optionable
 from cello.index import Index, CelloIndexError
 from cello.search import AbstractSearch
-
-
 
 
 class EsIndex(Index):

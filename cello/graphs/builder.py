@@ -14,7 +14,7 @@ import logging
 
 import igraph as ig
 
-from cello.pipeline import Optionable, Composable
+from reliure import Optionable, Composable
 
 
 class Subgraph(Composable):
@@ -398,8 +398,8 @@ class DocumentFieldBigraph(OptionableGraphBuilder):
     
     Given the following sample list of documents:
     
+    >>> from reliure.types import Text, Numeric
     >>> from cello.schema import Doc, Schema
-    >>> from cello.types import Text, Numeric
     >>> schema = Schema(
     ...    title=Text(vtype=str),
     ...    terms=Text(vtype=str, multi=True, attrs={'tf': Numeric(default=1)})

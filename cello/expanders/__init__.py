@@ -18,7 +18,7 @@ Abstract & Noop expanders
 -------------------------
 """
 
-from cello.pipeline import Optionable
+from reliure import Optionable
 
 class AbstractExpand(Optionable):
     """ Expand a list of L{Doc}.

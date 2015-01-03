@@ -17,8 +17,11 @@ Class
 -----
 """
 from collections import OrderedDict
-from cello.types import GenericType, Numeric, Text
-from cello.exceptions import SchemaError, ValidationError, FieldValidationError
+
+from reliure.types import GenericType, Numeric, Text
+from reliure.exceptions import ValidationError
+
+from cello.exceptions import SchemaError, FieldValidationError
 
 
 class Schema(object):
@@ -27,7 +30,7 @@ class Schema(object):
     
     Creating a schema:
     
-    >>> from cello.types import Text, Numeric
+    >>> from reliure.types import Text, Numeric
     >>> schema = Schema(title=Text(), score=Numeric())
     >>> schema.field_names()
     ['score', 'title']
@@ -38,7 +41,7 @@ class Schema(object):
         
         For exemple:
         
-        >>> from cello.types import Text, Numeric
+        >>> from reliure.types import Text, Numeric
         >>> schema = Schema(tags=Text(multi=True), score=Numeric(vtype=float, min=0., max=1.))
         """
         self._fields = {}
@@ -176,7 +179,7 @@ class ValueField(DocField):
 
     usage example:
 
-    >>> from cello.types import Text
+    >>> from reliure.types import Text
     >>> schema = Schema(title=Text(), like=Numeric(default=45))
     >>> doc = Doc(schema, docnum='abc42')
     >>> # 'title' field
@@ -214,7 +217,7 @@ class SetField(DocField, set):
     
     usage example:
     
-    >>> from cello.types import Text
+    >>> from reliure.types import Text
     >>> schema = Schema(tags=Text(multi=True, uniq=True))
     >>> doc = Doc(schema, docnum='abc42')
     >>> doc.tags.add(u'boo')
@@ -258,7 +261,7 @@ class ListField(DocField, list):
     
     usage example:
     
-    >>> from cello.types import Text
+    >>> from reliure.types import Text
     >>> schema = Schema(tags=Text(multi=True, uniq=False))
     >>> doc = Doc(schema, docnum='abc42')
     >>> doc.tags.add(u'boo')
@@ -313,7 +316,7 @@ class ListField(DocField, list):
     def export(self):
         u""" returns a list pre-seriasation of the field
         
-        >>> from cello.types import Text
+        >>> from reliure.types import Text
         >>> doc = Doc(docnum='1')
         >>> doc.terms = Text(vtype=unicode, multi=True) 
         >>> doc.terms.add(u'rat')
@@ -331,7 +334,7 @@ class VectorField(DocField):
 
     usage:
 
-    >>> from cello.types import Text, Numeric
+    >>> from reliure.types import Text, Numeric
     >>> doc = Doc(docnum='1')
     >>> doc.terms = Text(vtype=str, multi=True, uniq=True, attrs={'tf': Numeric()}) 
     >>> doc.terms.add('chat')
@@ -411,7 +414,7 @@ class VectorField(DocField):
     def __iter__(self):
         """ It is possible to iterate over a vector field:
 
-        >>> from cello.types import Text, Numeric
+        >>> from reliure.types import Text, Numeric
         >>> doc = Doc(docnum='1')
         >>> doc.terms = Text(vtype=str, multi=True, uniq=True, attrs={'tf': Numeric()}) 
         >>> doc.terms.add('cat', tf=2)
@@ -445,7 +448,7 @@ class VectorField(DocField):
     def __delitem__(self, key):
         """ Delete the element from the field
 
-        >>> from cello.types import Text, Numeric
+        >>> from reliure.types import Text, Numeric
         >>> doc = Doc(docnum='1')
         >>> doc.terms = Text(vtype=str, attrs={'tf': Numeric()}) 
         >>> doc.terms.add('cat', tf=2)
@@ -478,7 +481,7 @@ class VectorField(DocField):
     def export(self):
         """ returns a dictionary pre-seriasation of the field
         
-        >>> from cello.types import Text, Numeric
+        >>> from reliure.types import Text, Numeric
         >>> doc = Doc(docnum='1')
         >>> doc.terms = Text(multi=True, uniq=True, attrs={'tf': Numeric(default=1)}) 
         >>> doc.terms.add('chat')
@@ -616,7 +619,7 @@ class VectorField(DocField):
 class VectorAttr(object):
     """ Internal class used to acces an attribute of a :class:`.VectorField`
 
-    >>> from cello.types import Text, Numeric
+    >>> from reliure.types import Text, Numeric
     >>> doc = Doc(docnum='1')
     >>> doc.terms = Text(multi=True, uniq=True, attrs={'tf': Numeric()}) 
     >>> doc.terms.add('chat')
@@ -654,7 +657,7 @@ class VectorAttr(object):
 class VectorItem(object):
     """ Internal class used to acces an item (= a value) of a :class:`.VectorField`
 
-    >>> from cello.types import Text, Numeric
+    >>> from reliure.types import Text, Numeric
     >>> doc = Doc(docnum='1')
     >>> doc.terms = Text(multi=True, uniq=True, attrs={'tf': Numeric()}) 
     >>> doc.terms.add('chat')
@@ -693,7 +696,7 @@ class Doc(dict):
     Here is an exemple of document construction from a simple text.
     First we define document's schema:
     
-    >>> from cello.types import Text, Numeric
+    >>> from reliure.types import Text, Numeric
     >>> term_field = Text(attrs={'tf':Numeric(default=1), 'positions':Numeric(multi=True)})
     >>> schema = Schema(docnum=Numeric(), text=Text(), terms=term_field)
     
@@ -761,7 +764,7 @@ class Doc(dict):
         
         Simple exemple:
         
-        >>> from cello.types import Text, Numeric
+        >>> from reliure.types import Text, Numeric
         >>> doc = Doc(Schema(titre=Text()), titre=u'Un titre')
         """
         dict.__init__(self)

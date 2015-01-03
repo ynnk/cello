@@ -1,8 +1,0 @@
-
-.. automodule:: cello.offline
-    :show-inheritance:
-    :members:
-    :undoc-members:
-
-
-

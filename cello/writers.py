@@ -6,7 +6,7 @@
 :license: ${LICENSE}
 """
 import re
-from cello.pipeline import Composable
+from reliure import Composable
 
 class AbstractWriter(Composable):
     """ Abstract writer

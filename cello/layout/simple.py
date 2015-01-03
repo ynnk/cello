@@ -7,8 +7,9 @@ Set of basic graphs layout, moslty based on igraph layouts
 
 import igraph as ig
 
-from cello.types import Numeric, Boolean
-from cello.pipeline import Optionable, Composable
+from reliure import Optionable, Composable
+from reliure.types import Numeric, Boolean
+
 from cello.layout.transform import normalise
 
 class KamadaKawaiLayout(Composable):

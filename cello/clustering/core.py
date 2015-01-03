@@ -7,8 +7,8 @@ Define abstract clustering class (:class:`ClusteringMethod` and
 """
 import igraph as ig
 
-from cello.pipeline import Optionable
-from cello.types import Numeric
+from reliure import Optionable
+from reliure.types import Numeric
 
 from cello.graphs import EDGE_WEIGHT_ATTR
 
