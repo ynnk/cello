@@ -6,10 +6,32 @@ import itertools
 
 import igraph as ig
 
-from cello.pipeline import Optionable
+from cello.pipeline import Composable, Optionable
 from cello.types import Numeric, Boolean
 
 from cello.graphs import EDGE_WEIGHT_ATTR
+
+
+class RemoveNotConnected(Composable):
+    """" Removes not connected vertices 
+    
+
+    Here is an example:
+
+    >>> filter = RemoveNotConnected()
+    >>> g = ig.Graph.Formula("a--b--c---a, e, f")
+    >>> g.vs['name']
+    ['a', 'b', 'c', 'e', 'f']
+    >>> g = filter(g)
+    >>> g.vs['name']
+    ['a', 'b', 'c']
+    """
+    def __call__(self, graph):
+        self._logger.info("Graph filtering (remove not connected vertices) :")
+        graph.delete_vertices(graph.vs.select(lambda x: graph.degree(x, type=ig.ALL, loops=False)==0))
+        self._logger.info( "  -> %d vertices and %d edges" % (graph.vcount(), graph.ecount()))
+        self._logger.info("Filtering done.")
+        return graph
 
 class BottomFilter(Optionable):
     """ Removes some bottom (type=False) vertices from a bigraph.

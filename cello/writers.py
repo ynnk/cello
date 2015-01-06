@@ -30,13 +30,13 @@ class AbstractWriter(Composable):
         """
         pass
 
-    def __call__(self, kdocs):
+    def __call__(self, docs):
         """ Processing method, may be override if needed.
         """
         add_document = self.add_document
-        for kdoc in kdocs:
-            add_document(kdoc)
-            yield kdoc
+        for doc in docs:
+            add_document(doc)
+            yield doc
 
 
 class ScreenWriter(AbstractWriter):
@@ -95,7 +95,8 @@ class IndexWriter(AbstractWriter):
         AbstractWriter.__init__(self)
         self.idx = idx
 
-    def __call__(self, doc):
+    #note the __call__ is defined in AbstractWriter and not overiden here
+    def add_document(self, doc):
         try:
             self.idx.add_document(doc)
         except Exception as error :

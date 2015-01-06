@@ -206,6 +206,13 @@ class GraphBuilder(object):
                 attr_list.append(None)
         return self._vertices[vident]
 
+    def has_vertex(self, vident):
+        """ wheter a vertex exist
+
+        :param vident: the identifier of the vertex (will be a key in a dict)
+        """
+        return vident in self._vertices
+
     def declare_vattr(self, attrs_name):
         """ Declare attributes of graph's vertices.
 
@@ -300,23 +307,27 @@ class GraphBuilder(object):
     def set_eattr(self, eid, attr_name, value):
         """ Set the attribut *attr_name* of the edge *eid*
         """
+        assert attr_name in self._edge_attrs, "Edge attr '%s' do not exist" % attr_name
         self._edge_attrs[attr_name][eid] = value
 
     def append_eattr(self, eid, attr_name, value):
         """ Append *value* to the _list_ attribut *attr_name* (for the edge *eid*)
         """
+        assert attr_name in self._edge_attrs, "Edge attr '%s' do not exist" % attr_name
         if not self._edge_attrs[attr_name][eid]: self._edge_attrs[attr_name][eid] = [value]
         else: self._edge_attrs[attr_name][eid].append(value)
 
     def get_eattr(self, eid, attr_name, default=None):
         """ Get the attribut *attr_name* of the edge *eid*
         """
+        assert attr_name in self._edge_attrs, "Edge attr '%s' do not exist" % attr_name
         val = self._edge_attrs[attr_name][eid]
         return val if val != None else default
 
     def incr_eattr(self, eid, attr_name, inc=1):
         """ Increment (by the value *inc*) the value of the attributes
         *attr_name* for the edge *eid* """
+        assert attr_name in self._edge_attrs, "Edge attr '%s' do not exist" % attr_name
         _val = self.get_eattr(eid, attr_name, 0) + inc
         self.set_eattr(eid, attr_name, _val)
         return _val
@@ -360,8 +371,8 @@ class OptionableGraphBuilder(Optionable, GraphBuilder):
         Optionable.__init__(self, name)
         GraphBuilder.__init__(self, directed)
 
-    def __call__(self, docs, *args, **kargs):
-        graph = self.build_graph(docs, *args, **kargs)
+    def __call__(self, *args, **kargs):
+        graph = self.build_graph(*args, **kargs)
         return graph
 
 

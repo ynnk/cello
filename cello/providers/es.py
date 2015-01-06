@@ -409,8 +409,8 @@ class ESPhraseSuggest(Optionable):
     * http://www.elasticsearch.org/guide/en/elasticsearch/reference/current/search-suggesters-phrase.html
     """
     #TODO: add docstring ? not easy with ES connection
-    def __init__(self, index=None, name=None, field=None, size=3):
-        super(ESPhraseSuggest, self).__init__(name=name)
+    def __init__(self, index=None, field=None, size=3):
+        super(ESPhraseSuggest, self).__init__()
         # configure ES connection
         self.index = index
         
@@ -423,13 +423,13 @@ class ESPhraseSuggest(Optionable):
         size = 5 #number of proposition
         body = {
             "simple_phrase": {
+                "text": text,
                 "phrase": {
-                    "text": text,
                     "field": field,
                     "size": size,
                     "real_word_error_likelihood": 0.95,
                     "max_errors": 0.5,
-                    "gram_size": 2,
+                    "gram_size": 5,
                     "direct_generator": [{
                         "field": field,
                         "suggest_mode": "always",
@@ -442,7 +442,8 @@ class ESPhraseSuggest(Optionable):
                 }
             }
         }
-        print body
+        from pprint import pprint
+        pprint(body)
         return self.index.suggest(body=body)
 
 #    @Optionable.check
