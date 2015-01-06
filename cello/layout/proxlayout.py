@@ -67,8 +67,8 @@ def ProxLayoutPCA(name="ProxLayoutPCA", dim=3, weighted=False):
     >>> layout(g)
     <Layout with 5 vertices and 2 dimensions>
     """
-    layout_cpt = ProxLayout(weighted=weighted) | ReducePCA(dim=dim) | normalise
-    layout_cpt.name = name
+    layout_cpt = ProxLayout(name=name, weighted=weighted) | ReducePCA(dim=dim) | normalise
+    #layout_cpt.name = name
     return layout_cpt
 
 
