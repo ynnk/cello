@@ -64,11 +64,13 @@ def ProxLayoutPCA(name="ProxLayoutPCA", dim=3, weighted=False):
 
     >>> g = ig.Graph.Formula("a--b, a--c, a--d, a--f")
     >>> layout = ProxLayoutPCA(dim=2)
+    >>> layout.name
+    'ProxLayoutPCA'
     >>> layout(g)
     <Layout with 5 vertices and 2 dimensions>
     """
     layout_cpt = ProxLayout(name=name, weighted=weighted) | ReducePCA(dim=dim) | normalise
-    #layout_cpt.name = name
+    layout_cpt.name = name
     return layout_cpt
 
 
@@ -81,6 +83,8 @@ def ProxLayoutRandomProj(name="ProxLayoutRandomProj", dim=3):
     
     >>> g = ig.Graph.Formula("a--b, a--c, a--d, a--f")
     >>> layout = ProxLayoutRandomProj(dim=3)
+    >>> layout.name
+    'ProxLayoutRandomProj'
     >>> layout(g)
     <Layout with 5 vertices and 3 dimensions>
     """
