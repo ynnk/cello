@@ -1,5 +1,5 @@
 
-.. automodule:: reliure.exceptions
+.. automodule:: cello.exceptions
     :members:
     :undoc-members:
     :show-inheritance:
