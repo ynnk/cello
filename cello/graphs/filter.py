@@ -27,11 +27,14 @@ class RemoveNotConnected(Composable):
     ['a', 'b', 'c']
     """
     def __call__(self, graph):
-        self._logger.info("Graph filtering (remove not connected vertices) :")
-        self._logger.info("-> before filtering: %d vertices and %d edges" % (graph.vcount(), graph.ecount()))
+        self._logger.info("Remove not connected vertices:")
+        self._logger.info("Before filtering: |V|=%d, |E|=%d" % (graph.vcount(), graph.ecount()))
+        size_before = graph.ecount()
+        order_before = graph.vcount()
         graph.delete_vertices(graph.vs.select(lambda x: graph.degree(x, type=ig.ALL, loops=False)==0))
-        self._logger.info("-> keep %d vertices and %d edges" % (graph.vcount(), graph.ecount()))
-        self._logger.info("Filtering done.")
+        self._logger.info("%d vertices deleted" % (order_before-graph.vcount()))
+        self._logger.info("%d edges deleted" % (size_before-graph.ecount()))
+        self._logger.info("After filtering: |V|=%d, |E|=%d" % (graph.vcount(), graph.ecount()))
         return graph
 
 class BottomFilter(Optionable):
@@ -204,6 +207,7 @@ class GenericVertexFilter(Optionable):
 
     @Optionable.check
     def __call__(self, graph):
+        self._logger.info("Filter vertices:")
         self._logger.info("Before filtering: |V|=%d, |E|=%d" % (graph.vcount(), graph.ecount()))
         size_before = graph.ecount()
         to_del = graph.vs.select(self._vtx_select)
@@ -236,6 +240,7 @@ class GenericEdgeFilter(Optionable):
 
     @Optionable.check
     def __call__(self, graph):
+        self._logger.info("Filter edges:")
         self._logger.info("Before filtering: |V|=%d, |E|=%d" % (graph.vcount(), graph.ecount()))
         size_before = graph.ecount()
         to_del = graph.es.select(self._edg_select)
