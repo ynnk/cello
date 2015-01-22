@@ -184,8 +184,7 @@ class MaxDensity(Optionable):
 
 
 class GenericVertexFilter(Optionable):
-    """ Keep only a fixed number of edges.
-    Edges are ordered (before the cut) according to "weight" attribute.
+    """ Remove vertices selected by a custom filter.
 
     >>> remove_filter = lambda vtx: vtx["name"].islower()
     >>> filter = GenericVertexFilter(remove_filter)
@@ -206,8 +205,43 @@ class GenericVertexFilter(Optionable):
     @Optionable.check
     def __call__(self, graph):
         self._logger.info("Before filtering: |V|=%d, |E|=%d" % (graph.vcount(), graph.ecount()))
+        size_before = graph.ecount()
         to_del = graph.vs.select(self._vtx_select)
         graph.delete_vertices(to_del)
+        self._logger.info("%d vertices deleted" % (len(to_del)))
+        self._logger.info("%d edges deleted" % (size_before-graph.ecount()))
         self._logger.info("After filtering: |V|=%d, |E|=%d" % (graph.vcount(), graph.ecount()))
         return graph
+
+
+class GenericEdgeFilter(Optionable):
+    """ Remove edges selected by a custom filter.
+
+    >>> remove_filter = lambda edge: edge["w"] < 10
+    >>> filter = GenericEdgeFilter(remove_filter)
+
+    Here is an example:
+
+    >>> g = ig.Graph.Formula("a:b:c--A:B:C:D, d--D:E, c:d--F")
+    >>> g.es["w"] = range(g.ecount())
+    >>> g.es["w"]
+    [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]
+    >>> g = filter(g)
+    >>> g.es["w"]
+    [10, 11, 12, 13, 14, 15]
+    """
+    def __init__(self, edg_select, name=None):
+        Optionable.__init__(self, name=name)
+        self._edg_select = edg_select
+
+    @Optionable.check
+    def __call__(self, graph):
+        self._logger.info("Before filtering: |V|=%d, |E|=%d" % (graph.vcount(), graph.ecount()))
+        size_before = graph.ecount()
+        to_del = graph.es.select(self._edg_select)
+        graph.delete_edges(to_del)
+        self._logger.info("%d edges deleted" % (size_before-graph.ecount()))
+        self._logger.info("After filtering: |V|=%d, |E|=%d" % (graph.vcount(), graph.ecount()))
+        return graph
+
 
