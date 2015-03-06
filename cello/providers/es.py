@@ -276,7 +276,7 @@ class ESIndexScan(Composable):
         :param query: the ES scan query, `None` to scan the whole index.
         """
         self._logger.debug("Start scan with query: %s" % query)
-        for doc in ESH.scan(self._es, query=query, scroll='5m', index=self.es_index.index, doc_type=self.es_index.doc_type):
+        for doc in ESH.scan(self._es, query=query, scroll='5m', index=self.es_index.name, doc_type=self.es_index.doc_type):
             yield doc
 
 
