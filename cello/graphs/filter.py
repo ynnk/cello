@@ -231,7 +231,7 @@ class GenericEdgeFilter(Optionable):
     >>> g.es["w"]
     [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]
     >>> g = filter(g)
-    >>> g.es["w"]
+    >>> g.es["w"]   
     [10, 11, 12, 13, 14, 15]
     """
     def __init__(self, edg_select, name=None):
