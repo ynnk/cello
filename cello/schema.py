@@ -385,7 +385,7 @@ class VectorField(DocField):
         :type ftype: subclass of :class:`.GenericType`
         """
         if name in self._ftype.attrs:
-            raise SchemaError("Vector has a attribute named '%s'" % name)
+            raise SchemaError("VectorField has already attribute named '%s' (attrs: %s)" % (name, self._ftype.attrs.keys()))
         # add the attr to the underlying GenericType
         self._ftype.attrs[name] = ftype
         # add the attr it self
@@ -402,7 +402,7 @@ class VectorField(DocField):
             self._attrs[name] = []
 
     def __repr__(self):
-        return "<%s:%s>" % ( self.__class__.__name__, self._attrs.keys())
+        return "<%s:%s>" % (self.__class__.__name__, self._ftype.attrs.keys())
 
     def __str__(self):
         return self.__repr__()
