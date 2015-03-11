@@ -33,6 +33,7 @@ class Label(object):
     """
     # should we restrict the Label object to following attr ?
     #__slot__ = ['label', 'score', 'role']
+    labelid = 0
 
     def __init__(self, label, score=1., role=None):
         """
@@ -51,6 +52,12 @@ class Label(object):
         self.label = label
         self.score = score
         self.role = role
+        self._id = Label.labelid
+        Label.labelid += 1
+
+    @property
+    def id(self):
+        return self._id
 
     def __str__(self):
         return self.label.encode("utf8")
@@ -63,8 +70,10 @@ class Label(object):
             lrepr.append("role='%s'" % self.role)
         return "Label(%s)" % (", ".join(lrepr))
 
-    def as_dict(self):
+    def as_dict(self, full=False):
         """ returns a serialisable copy of the label (ie a dict)
+        
+        :param full: if True also return the uniq id of the label
         
         >>> label = Label("black bird", score=1.5)
         >>> label.as_dict()
@@ -87,7 +96,10 @@ class Label(object):
         lcopy = {}
         lcopy.update({attr: value for attr, value in self.__dict__.iteritems()\
                         if not attr.startswith('_')})
+        if full:
+            lcopy["id"] = self._id
         return lcopy
+
 
 class LabelledVertexCover(ig.VertexCover):
     """ Sub class of :class:`igraph.VertexCover` with labels on clusters.
@@ -108,6 +120,7 @@ class LabelledVertexCover(ig.VertexCover):
         super(LabelledVertexCover, self).__init__(graph, clusters=clusters)
         self.misc_cluster = misc_cluster
         self._labels = [[] for _ in xrange(len(clusters))]
+        self._label_set = {}
         #note: on peut ajouter/enlevé des labels sur chaque clusters, mais si
         #on veux modifier le clustering il faut faire une nouvel VertexCover
 
@@ -137,7 +150,13 @@ class LabelledVertexCover(ig.VertexCover):
     def labels(self):
         """ List of list of labels (on list of labels for each cluster)
         """
-        return self._labels
+        lall = self._label_set
+        return [[lall[lid] for lid in labellist] for labellist in self._labels]
+
+    def all_labels(self):
+        """ Retunrs all the labels (present at least in one cluster)
+        """
+        return self._label_set.values()
 
     def add_labels(self, cid, labels):
         """ Add a list of labels to one cluster
@@ -174,7 +193,9 @@ class LabelledVertexCover(ig.VertexCover):
         """
         if not isinstance(label, Label):
             raise TypeError("label should be a Label object")
-        self._labels[cid].append(label)
+        if label.id not in self._label_set:
+            self._label_set[label.id] = label
+        self._labels[cid].append(label.id)
 
     def _formatted_cluster_iterator(self):
         """Iterates over the clusters and formats them into a string to be
@@ -187,6 +208,7 @@ class LabelledVertexCover(ig.VertexCover):
         for cid, cluster in enumerate(self):
             misc = "{Misc}" if cid == self.misc_cluster else ""
             vertices = ", ".join(str(names[member]) for member in cluster)
-            labels = "(labels: %s)" % (", ".join(map(str, self.labels[cid])))
+            labels_str = ", ".join(str(label) for label in self.labels[cid])
+            labels = "(labels: %s)" % (labels_str)
             yield "%s%s %s" % (misc, vertices, labels)
 

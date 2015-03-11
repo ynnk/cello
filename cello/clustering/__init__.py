@@ -120,31 +120,20 @@ def export_clustering(vertex_cover):
     >>> cover_dict = export_clustering(cover)
     >>> pprint(cover_dict)
     {'clusters': [{'docnums': ['d_0', 'd_4'],
-                   'labels': [{'label': u'd_0',
-                               'role': 'doc_title',
-                               'score': 1.0},
-                              {'label': u'd_4',
-                               'role': 'doc_title',
-                               'score': 1.0}],
+                   'labels': [0, 1],
                    'vids': [0, 3, 4]},
-                  {'docnums': ['d_0', 'd_2'],
-                   'labels': [{'label': u'd_0',
-                               'role': 'doc_title',
-                               'score': 1.0},
-                              {'label': u'd_2',
-                               'role': 'doc_title',
-                               'score': 1.0}],
-                   'vids': [0, 2]},
-                  {'docnums': ['d_0'],
-                   'labels': [{'label': u'd_0',
-                               'role': 'doc_title',
-                               'score': 1.0}],
-                   'vids': [0, 1]}],
+                  {'docnums': ['d_0', 'd_2'], 'labels': [2, 3], 'vids': [0, 2]},
+                  {'docnums': ['d_0'], 'labels': [4], 'vids': [0, 1]}],
+     'labels': [{'id': 0, 'label': u'd_0', 'role': 'doc_title', 'score': 1.0},
+                {'id': 1, 'label': u'd_4', 'role': 'doc_title', 'score': 1.0},
+                {'id': 2, 'label': u'd_0', 'role': 'doc_title', 'score': 1.0},
+                {'id': 3, 'label': u'd_2', 'role': 'doc_title', 'score': 1.0},
+                {'id': 4, 'label': u'd_0', 'role': 'doc_title', 'score': 1.0}],
      'misc': 2}
 
     """
     from cello.clustering.labelling.model import LabelledVertexCover
-    labels = isinstance(vertex_cover, LabelledVertexCover)
+    has_labels = isinstance(vertex_cover, LabelledVertexCover)
     
     cover = {}
     if hasattr(vertex_cover, "misc_cluster") : # "misc" cluster id
@@ -159,6 +148,12 @@ def export_clustering(vertex_cover):
             if doc is not None
         }
 
+    # label's collection
+    if has_labels:
+        cover["labels"] = [label.as_dict(full=True) for label in vertex_cover.all_labels()]
+        full_labels = vertex_cover.labels
+
+    # clusters them self
     clusters = []
     for cnum, vids in enumerate(vertex_cover):
         cluster = {}
@@ -168,8 +163,8 @@ def export_clustering(vertex_cover):
         if gid_to_doc:
             cluster['docnums'] = [gid_to_doc[gid] for gid in vids if gid in gid_to_doc]
         # labels ?
-        if labels:
-            cluster['labels'] = [label.as_dict() for label in vertex_cover.labels[cnum]]
+        if has_labels:
+            cluster['labels'] = [label.id for label in full_labels[cnum]]
         # add the cluster
         clusters.append(cluster)
     cover['clusters'] = clusters
