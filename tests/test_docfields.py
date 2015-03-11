@@ -1,11 +1,13 @@
 #-*- coding:utf-8 -*-
 import unittest
 
+from reliure.types import Numeric, Text
+from reliure.exceptions import ValidationError
+
 import cello
-from cello.exceptions import SchemaError, ValidationError
+from cello.exceptions import SchemaError
 from cello.schema import DocField, ValueField, VectorField, SetField, ListField
 from cello.schema import Schema, Doc
-from cello.types import Numeric, Text
 
 class TestDocFields(unittest.TestCase):
     """ test ot DocField subclasses
