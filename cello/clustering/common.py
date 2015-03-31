@@ -53,20 +53,29 @@ class Walktrap(ClusteringMethod):
             return ig.VertexCover(graph, [])
         vertex_clustering = graph.community_walktrap(weights=EDGE_WEIGHT_ATTR, steps=l)
         #Fix the dendrogramm to add singletons because igraph forget it...
-        merges = vertex_clustering.merges
-        n = graph.vcount()
-        singles = graph.vs.select(_degree=0)
-        for vtx in singles:
-            last_merge = n - len(singles) + len(merges) - 1
-            merges.append((last_merge, vtx.index))
-        fixed_vertex_clustering = ig.VertexDendrogram(
-            graph,
-            merges,
-            vertex_clustering.optimal_count,
-            modularity_params=dict(weights=EDGE_WEIGHT_ATTR)
-        )
+        self.fix_dendrogram(graph, vertex_clustering)        
+
         return fixed_vertex_clustering.as_clustering().as_cover()
 
+    def fix_dendrogram(self, graph, cl):
+        from itertools import izip
+        already_merged = set()
+        for merge in cl.merges:
+            already_merged.update(merge)
+
+        num_dendrogram_nodes = graph.vcount() + len(cl.merges)
+        not_merged_yet = sorted(set(xrange(num_dendrogram_nodes)) - already_merged)
+        if len(not_merged_yet) < 2:
+            return
+
+        v1, v2 = not_merged_yet[:2]
+        cl._merges.append((v1, v2))
+        del not_merged_yet[:2]
+
+        missing_nodes = xrange(num_dendrogram_nodes,
+                num_dendrogram_nodes + len(not_merged_yet))
+        cl._merges.extend(izip(not_merged_yet, missing_nodes))
+        cl._nmerges = graph.vcount()-1
 
 class Infomap(ClusteringMethod):
     """ Infomap clustering method
