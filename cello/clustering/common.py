@@ -55,7 +55,7 @@ class Walktrap(ClusteringMethod):
         #Fix the dendrogramm to add singletons because igraph forget it...
         self.fix_dendrogram(graph, vertex_clustering)        
 
-        return fixed_vertex_clustering.as_clustering().as_cover()
+        return vertex_clustering.as_clustering().as_cover()
 
     def fix_dendrogram(self, graph, cl):
         from itertools import izip
