@@ -175,7 +175,7 @@ class EsIndex(Index):
         index = self.name
         doc_type = self.doc_type
         id_field = self.get_uniq_key()
-        
+
         gen = ({
             #"_op_type": "index",
                         # ^ create, index, update are possible but
@@ -185,7 +185,9 @@ class EsIndex(Index):
             '_source': doc,
         } for doc in docs )
 
+        res = []
         while True:    
+            
             chunks = list(islice(gen, chunksize))
             if chunks == []:
                 break
@@ -276,7 +278,7 @@ class ESIndexScan(Composable):
         :param query: the ES scan query, `None` to scan the whole index.
         """
         self._logger.debug("Start scan with query: %s" % query)
-        for doc in ESH.scan(self._es, query=query, scroll='5m', index=self.es_index.index, doc_type=self.es_index.doc_type):
+        for doc in ESH.scan(self._es, query=query, scroll='5m', index=self.es_index.name, doc_type=self.es_index.doc_type):
             yield doc
 
 
