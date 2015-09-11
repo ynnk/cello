@@ -49,7 +49,7 @@ def bipartite_clustering_methods():
     return methods
 #}
 
-def export_clustering(vertex_cover):
+def export_clustering(vertex_cover, vertex_id_attr=None):
     """ Build a dictionary view of a vertex cover (a clustering)
 
     :param vertex_cover: the vertex cover to convert
@@ -162,7 +162,11 @@ def export_clustering(vertex_cover):
     clusters = []
     for cnum, vids in enumerate(vertex_cover):
         cluster = {}
-        cluster['vids'] = vids
+        if vertex_id_attr is not None:
+            vs = vertex_cover.graph.vs
+            cluster['vids'] = [vs[i][vertex_id_attr] for i in vids]
+        else :
+            cluster['vids'] = vids
         # doc ?
         cluster['docnums'] = []
         if gid_to_doc:
