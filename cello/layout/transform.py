@@ -74,7 +74,7 @@ class ReducePCA(Composable):
         """ Process a PCA
         """
         if len(layout) > 0 and len(layout) != layout.dim:
-            raise ValueError('The layout should have same number of vertices and dimentions')
+            raise ValueError('The layout should have same number of vertices and dimensions')
         mat = np.array(layout.coords)
         if len(layout) == 0:
             result = []
@@ -83,6 +83,7 @@ class ReducePCA(Composable):
                 result = np.hstack((mat, np.zeros((len(layout), self.out_dim - layout.dim)))).tolist()
             else:
                 result = self.robust_pca(mat).tolist()
+
         return ig.Layout(result, dim=self.out_dim)
 
 
