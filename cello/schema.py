@@ -16,6 +16,9 @@ inheritance diagrams
 Class
 -----
 """
+import six
+from builtins import range
+
 from collections import OrderedDict
 
 from reliure.types import GenericType, Numeric, Text
@@ -46,7 +49,7 @@ class Schema(object):
         """
         self._fields = {}
         # Create fields
-        for name, fieldtype in fields.iteritems():
+        for name, fieldtype in six.iteritems(fields):
             self.add_field(name, fieldtype)
 
     def copy(self):
@@ -80,7 +83,7 @@ class Schema(object):
         raise NotImplementedError()
 
     def iter_fields(self):
-        return self._fields.iteritems()
+        return six.iteritems(self._fields)
 
     def field_names(self):
         return self._fields.keys()
@@ -89,7 +92,7 @@ class Schema(object):
         return self.__contains__(name)
 
     def __iter__(self):
-        return self._fields.iterkeys()
+        return six.iterkeys(self._fields)
 
     def __contains__(self, name):
         return name in self._fields    
@@ -112,7 +115,7 @@ class Schema(object):
     def __repr__(self):
         fields_repr = "\n".join(
             " * %s: %s" % (key, value)
-            for key, value in self._fields.iteritems()
+            for key, value in six.iteritems(self._fields)
         )
         return "<%s:\n%s\n>" % (self.__class__.__name__, fields_repr)
 
@@ -310,7 +313,7 @@ class ListField(DocField, list):
 
     def __setslice__(self, i, j, values):
         assert j-i == len(values), "given data don't fit slice size (%s-%s != %s)" % (i, j, len(values))
-        for x, xi in enumerate(xrange(i, j)):
+        for x, xi in enumerate(range(i, j)):
             self[xi] = values[x]
 
     def export(self):
@@ -389,7 +392,7 @@ class VectorField(DocField):
         # add the attr to the underlying GenericType
         self._ftype.attrs[name] = ftype
         # add the attr it self
-        self._attrs[name] = [DocField.FromType(ftype) for _ in xrange(len(self))]
+        self._attrs[name] = [DocField.FromType(ftype) for _ in range(len(self))]
     
     def get_attribute(self, name):
         return getattr(self, name)
@@ -398,7 +401,7 @@ class VectorField(DocField):
         """ removes all attributes
         """
         self._attrs = {} # removes all attr
-        for name, attr_field in self._ftype.attrs.iteritems():
+        for name, attr_field in six.iteritems(self._ftype.attrs):
             self._attrs[name] = []
 
     def __repr__(self):
@@ -424,7 +427,7 @@ class VectorField(DocField):
         cat
         dog
         """
-        return self._keys.iterkeys()
+        return six.iterkeys(self._keys)
 
     def keys(self): 
         """ list of keys in the vector """
@@ -470,7 +473,7 @@ class VectorField(DocField):
         if not self.has(key):
             raise KeyError("No such key ('%s') in this field" % key)
         iid = self._keys[key]
-        for attr in self._attrs.itervalues():
+        for attr in six.itervalues(self._attrs):
             attr[iid] = None
         del self._keys[key]
 
@@ -491,7 +494,7 @@ class VectorField(DocField):
         {'keys': {'rat': 1, 'chien': 2, 'chat': 0}, 'tf': [1, 5, 2]}
         """
         data = {}
-        data["keys"] = dict( zip(self.keys(), xrange(len(self))) )
+        data["keys"] = dict( zip(self.keys(), range(len(self))) )
         # each attr
         for name in self._attrs.keys():
             data[name] = self.get_attribute(name).export()
@@ -518,14 +521,14 @@ class VectorField(DocField):
         """
         if not self.has(key):
             # check if kwargs are valid
-            for attr_name, value in kwargs.iteritems():
+            for attr_name, value in six.iteritems(kwargs):
                 if attr_name not in self._ftype.attrs:
                     raise ValueError("Invalid attribute name: '%s'" % attr_name)
                 self._ftype.attrs[attr_name].validate(value)
             # add the key
             self._keys[key] = len(self._keys)
             # append attributes
-            for name, attr_type in self._ftype.attrs.iteritems():
+            for name, attr_type in six.iteritems(self._ftype.attrs):
                 attr_field = DocField.FromType(attr_type)
                 if name in kwargs:
                     attr_field.set(kwargs[name])
@@ -608,7 +611,7 @@ class VectorField(DocField):
             if len(values) != len(self):
                 raise SchemaError('Wrong size : |values| (=%s) should be equals to |keys| (=%s) ' \
                         % (len(values), len(self)))
-            _attr = [DocField.FromType(self._ftype.attrs[name]) for _ in xrange(len(values)) ]
+            _attr = [DocField.FromType(self._ftype.attrs[name]) for _ in range(len(values)) ]
             for idx, val in enumerate(values):
                 _attr[idx].set(val)
             self._attrs[name] = _attr

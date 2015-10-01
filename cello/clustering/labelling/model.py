@@ -5,6 +5,8 @@
 Labelling data models
 ---------------------
 """
+import six
+from builtins import range
 
 import igraph as ig
 
@@ -46,7 +48,7 @@ class Label(object):
         .. warning:: If the given label is not in unicode it will be decode from
             utf8 by default
         """
-        if not isinstance(label, unicode):
+        if six.PY2 and not isinstance(label, unicode):
             label = label.decode("utf8")
         self.label = label
         self.score = score
@@ -85,7 +87,7 @@ class Label(object):
 
         """
         lcopy = {}
-        lcopy.update({attr: value for attr, value in self.__dict__.iteritems()\
+        lcopy.update({attr: value for attr, value in six.iteritems(self.__dict__)\
                         if not attr.startswith('_')})
         return lcopy
 
@@ -107,7 +109,7 @@ class LabelledVertexCover(ig.VertexCover):
     def __init__(self, graph, clusters=None, labels=None, misc_cluster=None):
         super(LabelledVertexCover, self).__init__(graph, clusters=clusters)
         self.misc_cluster = misc_cluster
-        self._labels = [[] for _ in xrange(len(clusters))]
+        self._labels = [[] for _ in range(len(clusters))]
         #note: on peut ajouter/enlevé des labels sur chaque clusters, mais si
         #on veux modifier le clustering il faut faire une nouvel VertexCover
 
