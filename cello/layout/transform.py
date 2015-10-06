@@ -224,9 +224,18 @@ class Shaker(Composable):
 
 class ByConnectedComponent(Optionable):
     """ Compute a given layout on each connected component, and then merge it.
+    
+    >>> from cello.layout.simple import KamadaKawaiLayout
+    >>> merge_layout = ByConnectedComponent(layout=GridLayout())
+    >>> 
+    >>> graph = ig.Graph.Formula("a--b--c, d--e")
+    >>> layout = merge_layout(graph)
+    >>> layout
+
     """
     def __init__(self, layout):
         self._layout_mth = layout
+        self._merge_dim = 3 #TODO make it an option
         # expose layout option
         if isinstance(self._layout_mth, Optionable):
             pass
@@ -247,11 +256,20 @@ class ByConnectedComponent(Optionable):
         layout_mth = self._layout_mth
         layouts = [layout_mth(cc, **kwargs) for cc in subgraphs]
         # move each layout
-        #TODO
-        cc_graph = ig.Graph.Full()
-        
+        nb_cc = len(connected_components)
+        ## full graph of CC
+        cc_graph = ig.Graph.Full(nb_cc)
+        ## compute a weight for each CC, the more nodes the more weight
+        cc_weight = [np.log(len(cc) + 1) for cc in connected_components]
+        ## weights for the edges between CC
+        weights = [cc_weight[edg.source] + cc_weight[edg.target] for edg in cc_graph.es]
+        ## Compute CC graph layout
+        cc_layout = cc_graph.layout_fruchterman_reingold(weights=weights, dim=self._merge_dim)
+        for cc_num, layout in enumerate(layouts):
+            cc_position = cc_layout[cc_num]
+            layout.fit_into([cc_weight[cc_num]] * layout.dim)
+            layout.center(cc_position)
         # merge layouts
         layout = [layouts[cc_num][v_num] for cc_num, v_num in vertex_cc]
         return ig.Layout(layout)
-
 
