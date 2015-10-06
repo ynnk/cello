@@ -233,9 +233,10 @@ class ByConnectedComponent(Optionable):
     >>> layout
 
     """
-    def __init__(self, layout):
+    def __init__(self, layout, dim=3):
+        super(ByConnectedComponent, self).__init__()
         self._layout_mth = layout
-        self._merge_dim = 3 #TODO make it an option
+        self._merge_dim = dim #TODO make it an option
         # expose layout option
         if isinstance(self._layout_mth, Optionable):
             pass
