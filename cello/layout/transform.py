@@ -6,6 +6,8 @@ Set of component to transform a layout (reduce dimention, normalize, shake, ...)
 """
 import warnings
 
+from builtins import range
+
 import numpy as np
 import scipy as sc
 from matplotlib.mlab import PCA
@@ -63,7 +65,7 @@ class ReducePCA(Composable):
                 # retry
                 result = self.robust_pca(mat_saved + np.identity(nb_dim), nb_fail=nb_fail+1)
             except Warning as warn: # catch warnings as error
-                self._logger.warn('pca() %s' % warn)
+                self._logger.warning('pca() %s' % warn)
                 if nb_dim <= 3:
                     result = np.identity(nb_dim)
                 else:
@@ -191,8 +193,8 @@ class Shaker(Composable):
                 break
             # calcul des vecteurs de deplacement de chaque sphere (= somme des forces qui s'exerce sur chaque sommet)
             deplacements[:, :] = 0 # raz
-            for source in xrange(nbs):
-                for dest in xrange(source+1, nbs):
+            for source in range(nbs):
+                for dest in range(source+1, nbs):
                     if dists[source, dest] < dists_min[source, dest]:
                         # vecteur de deplacement de source vers dest
                         vect_depl = layout_mat[dest] - layout_mat[source]
@@ -261,14 +263,18 @@ class ByConnectedComponent(Optionable):
         ## full graph of CC
         cc_graph = ig.Graph.Full(nb_cc)
         ## compute a weight for each CC, the more nodes the more weight
-        cc_weight = [np.log(len(cc) + 1) for cc in connected_components]
+        #cc_weight = [np.log(len(cc) + 1) for cc in connected_components]
+        cc_weight = [len(cc) for cc in connected_components]
+        #print(cc_weight)
         ## weights for the edges between CC
-        weights = [cc_weight[edg.source] + cc_weight[edg.target] for edg in cc_graph.es]
+        wmax = 1.*max(cc_weight)
+        weights = [2.*wmax - (cc_weight[edg.source] + cc_weight[edg.target]) for edg in cc_graph.es]
         ## Compute CC graph layout
         cc_layout = cc_graph.layout_fruchterman_reingold(weights=weights, dim=self._merge_dim)
         for cc_num, layout in enumerate(layouts):
             cc_position = cc_layout[cc_num]
-            layout.fit_into([cc_weight[cc_num]] * layout.dim)
+            # resize each small layout
+            layout.fit_into([cc_weight[cc_num]/wmax] * layout.dim)
             layout.center(cc_position)
         # merge layouts
         layout = [layouts[cc_num][v_num] for cc_num, v_num in vertex_cc]
