@@ -12,7 +12,7 @@ from matplotlib.mlab import PCA
 
 import igraph as ig
 
-from reliure import Composable
+from reliure import Composable, Optionable
 
 
 class ReducePCA(Composable):
@@ -219,4 +219,39 @@ class Shaker(Composable):
         if len(layout) == 0:
             return layout
         return self.shake(layout)
+
+
+
+class ByConnectedComponent(Optionable):
+    """ Compute a given layout on each connected component, and then merge it.
+    """
+    def __init__(self, layout):
+        self._layout_mth = layout
+        # expose layout option
+        if isinstance(self._layout_mth, Optionable):
+            pass
+            # TODO
+
+    def __call__(self, graph, **kwargs):
+        # split the graph in N connected components
+        connected_components = graph.clusters()
+        subgraphs = connected_components.subgraphs()
+        # compute a list of vertex position (cc id, and id in subgraph)
+        vertex_cc = []
+        next_by_cc = [0] * len(connected_components)
+        for cc_num in connected_components.membership:
+            v_num = next_by_cc[cc_num]
+            next_by_cc[cc_num] += 1
+            vertex_cc.append((cc_num, v_num))
+        # compute layout for each cc
+        layout_mth = self._layout_mth
+        layouts = [layout_mth(cc, **kwargs) for cc in subgraphs]
+        # move each layout
+        #TODO
+        cc_graph = ig.Graph.Full()
+        
+        # merge layouts
+        layout = [layouts[cc_num][v_num] for cc_num, v_num in vertex_cc]
+        return ig.Layout(layout)
+
 
