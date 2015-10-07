@@ -3,6 +3,7 @@
 ==============================
 """
 import logging
+import six
 
 import igraph as ig
 import numpy as np
@@ -120,7 +121,7 @@ class MergeGraphs(Composable):
                 vid = vertex_id(graph, vtx)
                 vgid = gbuilder.add_get_vertex(vid)
                 # add attributes
-                for vattr, val in vtx.attributes().iteritems():
+                for vattr, val in six.iteritems(vtx.attributes()):
                     gbuilder.set_vattr(vgid, vattr, val)
         #
         # build the edges
@@ -132,7 +133,7 @@ class MergeGraphs(Composable):
                 tgid = gbuilder.add_get_vertex(tid)
                 eid = gbuilder.add_get_edge(sgid, tgid)
                 # add attributes
-                for eattr, val in edge.attributes().iteritems():
+                for eattr, val in six.iteritems(edge.attributes()):
                     gbuilder.set_eattr(eid, eattr, val)
                     #TODO : how to deal with conflict ?
         #
@@ -221,7 +222,7 @@ class EdgeAttr(Composable):
         self._eattrs = kwargs
 
     def __call__(self, graph):
-        for attr, value in self._eattrs.iteritems():
+        for attr, value in six.iteritems(self._eattrs):
             if callable(value):
                 graph.es[attr] = [value(graph, edg) for edg in graph.es]
             else:
@@ -294,7 +295,7 @@ class VtxAttr(Composable):
         self._vattrs = kwargs
 
     def __call__(self, graph):
-        for attr, value in self._vattrs.iteritems():
+        for attr, value in six.iteritems(self._vattrs):
             if callable(value):
                 graph.vs[attr] = [value(graph, vtx) for vtx in graph.vs]
             else:
@@ -388,13 +389,13 @@ class SymFalseBigraph(Optionable):
         #
         # ETAPE 1: self loops
         # pour tout les True (doc) : ajout le lien sym si autre existe
-        for vtx_doc_hash, vtx_doc_index in true_by_hash.iteritems():
+        for vtx_doc_hash, vtx_doc_index in six.iteritems(true_by_hash):
             if vtx_doc_hash in false_by_hash:
                 new_edges.append((vtx_doc_index, false_by_hash[vtx_doc_hash]))
         #
         # ETAPE 2 : symetrisation
         # pour tout les True (doc) :
-        for vtx_doc_hash, vtx_doc_index in true_by_hash.iteritems():
+        for vtx_doc_hash, vtx_doc_index in six.iteritems(true_by_hash):
             if vtx_doc_hash not in false_by_hash:
                 # this document is not linked by any other...
                 # so it can't make in link to the others

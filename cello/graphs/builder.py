@@ -11,6 +11,7 @@ Class
 -----
 """
 import logging
+import six
 
 import igraph as ig
 
@@ -188,7 +189,7 @@ class GraphBuilder(object):
 
     def set_gattrs(self, **kwargs):
         """ Set the graph attribut *attr_name* """
-        for attr_name, value in kwargs.iteritems():
+        for attr_name, value in six.iteritems(kwargs):
             self._graph_attrs[attr_name] = value
 
     ####### Vertices ########
@@ -202,7 +203,7 @@ class GraphBuilder(object):
             # add the vertex
             self._vertices[vident] = len(self._vertices)
             # ajout empty attr
-            for attr_list in self._vertex_attrs.itervalues():
+            for attr_list in six.itervalues(self._vertex_attrs):
                 attr_list.append(None)
         return self._vertices[vident]
 
@@ -276,7 +277,7 @@ class GraphBuilder(object):
         if key not in self._edges:
             self._edges[key] = len(self._edges)
             self._edge_list.append(key)
-            for attr_list in self._edge_attrs.itervalues():
+            for attr_list in six.itervalues(self._edge_attrs):
                 attr_list.append(None)
         return self._edges[key]
 

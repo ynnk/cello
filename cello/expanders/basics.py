@@ -14,6 +14,7 @@ inheritance diagrams
 Class
 -----
 """
+import six
 
 from reliure import Composable
 from reliure.types import GenericType, Text, Numeric
@@ -31,7 +32,7 @@ class GuestLanguage(Composable):
         :param out_field: field where to store language
         """
         super(GuestLanguage, self).__init__()
-        if isinstance(text_fields, basestring):
+        if isinstance(text_fields, six.string_types):
             text_fields = [text_fields]
         self.text_fields = text_fields
         self.out_field = out_field
