@@ -1,4 +1,7 @@
 #-*- coding:utf-8 -*-
+from __future__ import unicode_literals
+from builtins import range
+
 import unittest
 
 from reliure.types import Numeric, Text
@@ -68,7 +71,6 @@ class TestDocFields(unittest.TestCase):
         set_field.set((4, 5, 6))
         self.assertEqual(set_field, set([4, 5, 6]))
         # test errors
-        self.assertRaises(SchemaError, set_field.set, 'boo')
         self.assertRaises(SchemaError, set_field.set, 57)
         # > test than the failed set didn't change values
         self.assertEqual(set_field, set([4, 5, 6]))
@@ -83,20 +85,19 @@ class TestDocFields(unittest.TestCase):
             l_field = ListField(Numeric(attrs={"size": Numeric()}))
         # affectation with append
         l_field = ListField(Numeric(multi=True))
-        for x in xrange(5):
+        for x in range(5):
             l_field.append(x)
         self.assertEqual(l_field, [0, 1, 2, 3, 4])
         # get_value()
         self.assertEqual(l_field.get_value(), l_field)
         # affectation with set
         l_field2 = ListField(Numeric(multi=True))
-        l_field2.set(xrange(5))
-        self.assertEqual(l_field2, list(xrange(5)))
+        l_field2.set(range(5))
+        self.assertEqual(l_field2, list(range(5)))
         # affectation fail
-        self.assertRaises(SchemaError, l_field2.set, 'boo')
         self.assertRaises(SchemaError, l_field2.set, 57)
         # > test than the failed set didn't change values
-        self.assertEqual(l_field2, list(xrange(5)))
+        self.assertEqual(l_field2, list(range(5)))
         # add and append
         l_field2.add(55)
         self.assertEqual(l_field2, [0, 1, 2, 3, 4, 55])
@@ -105,7 +106,7 @@ class TestDocFields(unittest.TestCase):
         l_field[1:3] = [5,6]
         self.assertEqual(l_field, [0, 5, 6, 3, 4])
         self.assertEqual(l_field[3:5], [3, 4])
-        with self.assertRaises(AssertionError):
+        with self.assertRaises(ValueError):
             l_field[1:3] = [5,6,4]
         # remove element
         del l_field[1]
@@ -113,7 +114,7 @@ class TestDocFields(unittest.TestCase):
 
     def test_VectorField_base(self):
         # create a simple field
-        v_field = VectorField(Text(vtype=str,
+        v_field = VectorField(Text(
             attrs={
                 'tf': Numeric(default=1),
                 'positions': Numeric(multi=True),
@@ -141,9 +142,9 @@ class TestDocFields(unittest.TestCase):
         self.assertTrue("chat" in v_field)
         self.assertFalse("cat" in v_field)
         v_field.add("cat")
-        self.assertListEqual(v_field.keys(), ["chat", "cat"])
+        self.assertListEqual(list(v_field), ["chat", "cat"])
         # iter
-        self.assertListEqual(v_field.keys(), [key for key in v_field])
+        self.assertListEqual(list(v_field), [key for key in v_field])
         
         # test attributes, by direct method call
         self.assertEqual(v_field.get_attr_value("cat", "tf"), 1)
@@ -151,7 +152,7 @@ class TestDocFields(unittest.TestCase):
 
     def test_VectorField_VectorItem(self):
         # create a simple field
-        v_field = VectorField(Text(vtype=str,
+        v_field = VectorField(Text(
             attrs={
                 'tf': Numeric(default=1),
                 'positions': Numeric(multi=True),
@@ -173,7 +174,7 @@ class TestDocFields(unittest.TestCase):
 
     def test_VectorField_VectorAttr(self):
         # create a simple field
-        v_field = VectorField(Text(vtype=str,
+        v_field = VectorField(Text(
             attrs={
                 'tf': Numeric(default=1),
                 'positions': Numeric(multi=True),
@@ -208,7 +209,7 @@ class TestDoc(unittest.TestCase):
     maxDiff = None
 
     def test_doc(self):
-        schema = Schema(titre = Text(vtype=str))
+        schema = Schema(titre = Text())
         doc = Doc(schema)
         self.assertTrue("titre" in doc.schema)
         # no equal because DocNum added
@@ -244,7 +245,7 @@ class TestDoc(unittest.TestCase):
             doc.add_field("nb_pages", Numeric())
         
         # add a more complex field
-        doc.add_field("authors", Text(multi=True, uniq=True, vtype=str))
+        doc.add_field("authors", Text(multi=True, uniq=True))
         self.assertTrue("authors" in doc)
         doc.authors.add("Jule Rime")
         doc.authors.add("Jule Rime")

@@ -143,14 +143,14 @@ class Shaker(Composable):
     """ 'Shake' a layout to ensure that no vertices have the same position
 
     >>> import igraph as ig
-    >>> layout = ig.Layout([[1, 0], [1, 1], [1, 0]])
+    >>> layout = ig.Layout([[1., 0.], [1., 1.], [1., 0.01]])
     >>> layout
     <Layout with 3 vertices and 2 dimensions>
 
     >>> shaker = Shaker(0.2)
     >>> layout = shaker(layout)
     >>> layout.coords
-    [[-0.6666666666666666, -0.33333333333333337], [0.33333333333333337, 0.6666666666666666], [0.33333333333333337, -0.33333333333333337]]
+    [[0.0, -0.19083333333315153], [0.0, 0.33166666666666667], [0.0, -0.14083333333351528]]
 
     If the layout is empty:
     >>> shaker(ig.Layout())
@@ -167,7 +167,7 @@ class Shaker(Composable):
         from scipy.spatial.distance import pdist, squareform
         iter_max = 50  # try to keep low
 
-        layout_mat = np.array(layout.coords)
+        layout_mat = np.array(layout.coords, dtype=float)
         nbs, nbdim = layout_mat.shape       # nb objets, nb dimension de l'espace
         deplacements = np.zeros((nbs, nbdim))  # matrice des déplacement élémentaires
         # on calcul la taille des spheres,
@@ -228,11 +228,12 @@ class ByConnectedComponent(Optionable):
     """ Compute a given layout on each connected component, and then merge it.
     
     >>> from cello.layout.simple import KamadaKawaiLayout
-    >>> merge_layout = ByConnectedComponent(layout=GridLayout())
+    >>> merge_layout = ByConnectedComponent(layout=KamadaKawaiLayout())
     >>> 
     >>> graph = ig.Graph.Formula("a--b--c, d--e")
     >>> layout = merge_layout(graph)
     >>> layout
+    <Layout with 5 vertices and 3 dimensions>
 
     """
     def __init__(self, layout, dim=3):

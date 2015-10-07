@@ -7,6 +7,9 @@
 
 .. currentmodule:: cello.graphs.prox
 
+:hide:
+    >>> from pprint import pprint
+
 Python version of Prox over igraph.
 
 Here is a minimal exemple:
@@ -37,14 +40,17 @@ Zachary :
 0.06625652318218955
 
 
-There is also a monte carlo version :
+There is also a MonteCarlo version :
 
->>> import random; random.seed(0) # for testing purpose
 >>> graph = ig.Graph.Formula("a-b-c-d")
->>> prox_markov_mtcl(graph, [0, 3], 1, 10)
-{1: 0.3, 2: 0.7}
+>>> pprint(prox_markov_mtcl(graph, [0], 3, 20))            # doctest:+ELLIPSIS
+{1: ..., 3: ...}
 
 """
+import six
+from past.builtins import basestring
+from builtins import range
+
 from random import randint
 import numpy as np
 
@@ -61,8 +67,8 @@ def normalise(p0):
     >>> normalise(p0)
     {0: 0.5, 3: 0.5}
     """
-    vsum = 1.* np.sum(abs(val) for val in p0.itervalues())
-    return {vid: val/vsum for vid, val in p0.iteritems()}
+    vsum = 1.* np.sum(abs(val) for val in six.itervalues(p0))
+    return {vid: val/vsum for vid, val in six.iteritems(p0)}
 
 
 def normalize_pzero(graph, p0):
@@ -115,7 +121,7 @@ def sortcut(v_extract, vcount):
     """
     if type(v_extract) is list:
         v_extract = { i: v for i, v in enumerate(v_extract) }
-    v_extract = v_extract.items() #  sparce prox_vect : [(id, prox_value)]
+    v_extract = list(six.iteritems(v_extract)) #  sparce prox_vect : [(id, prox_value)]
     v_extract.sort(key=lambda x: x[1], reverse=True) # sorting by prox.prox_markov
     if vcount >= 0:
         v_extract = v_extract[:vcount]
@@ -159,7 +165,7 @@ def spreading(graph, in_vect, mode, add_loops):
     {0: 0.25, 1: 0.5, 2: 0.25}
     """
     vect = {}
-    for vtx, value in in_vect.iteritems():
+    for vtx, value in six.iteritems(in_vect):
         neighborhood = graph.neighbors(vtx, mode=mode)
         if add_loops:
             neighborhood.append(vtx)
@@ -234,7 +240,7 @@ def spreading_wgt(graph, in_vect, mode, weight, loops_weight):
     if len(weight) != graph.ecount():
         raise NotImplementedError
 
-    for from_vertex, value in in_vect.iteritems():
+    for from_vertex, value in six.iteritems(in_vect):
         incident_edges = graph.incident(from_vertex, mode=mode)
         wgts = [weight[edg] for edg in incident_edges]
         # add the loop weight
@@ -328,7 +334,7 @@ def prox_markov_dict(graph, p0, length, mode=OUT, add_loops=False, weight=None,
         raise NotImplementedError
     if weight is None:
         ## Not weighted version
-        for k in xrange(length):
+        for k in range(length):
             vect = spreading(graph, vect, mode, add_loops)
     else:
         ## Weighted version
@@ -356,7 +362,7 @@ def prox_markov_dict(graph, p0, length, mode=OUT, add_loops=False, weight=None,
         else:
             loops_weight = None
         # compute prox it self
-        for k in xrange(length):
+        for k in range(length):
             vect = spreading_wgt(graph, vect, mode, weight, loops_weight)
     return vect
 
@@ -378,7 +384,7 @@ def prox_markov_list(graph, p0, length, mode=OUT, add_loops=False, loops_weight=
     [0.28571428571474045, 0.42857142857142855, 0.28571428571383095]
     """
     vect = prox_markov_dict(graph, p0, length, mode, add_loops, weight, loops_weight, neighbors)
-    return [vect.get(vidx, 0.) for vidx in xrange(graph.vcount())]
+    return [vect.get(vidx, 0.) for vidx in range(graph.vcount())]
 
 
 
@@ -412,9 +418,9 @@ def prox_markov_mtcl(graph, p0, length, throws, mode=OUT, add_loops=False, loops
     
     if weight is not None:  #FIXME
         raise NotImplementedError
-    for throw in xrange(throws) :
-        neighborhood = normalize_pzero(graph, p0).keys() # FIXME not weighted
-        for j in xrange(length) :
+    for throw in range(throws) :
+        neighborhood = list(normalize_pzero(graph, p0)) # FIXME not weighted
+        for j in range(length) :
             len_n = len(neighborhood)
             if len_n  > 0 :
                 vtx = neighborhood[randint(0, len_n-1)]
@@ -425,7 +431,7 @@ def prox_markov_mtcl(graph, p0, length, throws, mode=OUT, add_loops=False, loops
         len_n = len(neighborhood)
         if len_n > 0 :
             vtx = neighborhood[randint(0, len_n -1)]
-            if prox_vect.has_key(vtx):
+            if vtx in prox_vect:
                 prox_vect[vtx] = prox_vect[vtx] + 1
             else :
                 prox_vect[vtx] = 1
@@ -471,7 +477,7 @@ def confluence(graph, vtxa, vtxb, length=3, add_loops=True, remove_edge=False,
 
 def confluence_simple(graph, p0, length=3, method=prox_markov_dict, neighbors=cello.graphs.neighbors):
     pm = method(graph, p0, length=length, neighbors=neighbors )
-    conf =  { k: 1.*v / (v+(1.*len(neighbors(graph,k))/(2*graph.ecount()))) for k,v in pm.iteritems()}
+    conf =  { k: 1.*v / (v+(1.*len(neighbors(graph,k))/(2*graph.ecount()))) for k,v in six.iteritems(pm)}
     return conf
 
 ##########################################################################

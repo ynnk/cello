@@ -15,6 +15,10 @@ SubModules
 Helpers
 -------
 """
+# python 2 and 3 compatibility
+from __future__ import unicode_literals
+import six
+
 
 import logging
 
@@ -67,7 +71,7 @@ def export_clustering(vertex_cover, vertex_id_attr=None):
             'clusters': [
                 {
                     'gids': [1, 3, 5, 8],
-                    'docnums': [u'docnum_1', ...]
+                    'docnums': ['docnum_1', ...]
                 },
                 ...
             ]
@@ -86,18 +90,18 @@ def export_clustering(vertex_cover, vertex_id_attr=None):
     >>> cover = clustering(g)
     >>> print(cover)
     Cover with 3 clusters
-    [0] a, d, f
-    [1] a, c
-    [2] a, b
+    [0] b, a
+    [1] c, a
+    [2] a, d, f
 
     and then export the clustering this way:
 
     >>> cover_dict = export_clustering(cover)
     >>> from pprint import pprint
     >>> pprint(cover_dict)
-    {'clusters': [{'docnums': ['d_0', 'd_4'], 'vids': [0, 3, 4]},
-                  {'docnums': ['d_0', 'd_2'], 'vids': [0, 2]},
-                  {'docnums': ['d_0'], 'vids': [0, 1]}],
+    {'clusters': [{'docnums': ['d_0'], 'vids': [1, 0]},
+                   {'docnums': ['d_2', 'd_0'], 'vids': [2, 0]},
+                   {'docnums': ['d_0', 'd_4'], 'vids': [0, 3, 4]}],
      'misc': -1}
 
     One can also have a misc cluster:
@@ -105,9 +109,9 @@ def export_clustering(vertex_cover, vertex_id_attr=None):
     >>> cover.misc_cluster = 2
     >>> cover_dict = export_clustering(cover)
     >>> pprint(cover_dict)
-    {'clusters': [{'docnums': ['d_0', 'd_4'], 'vids': [0, 3, 4]},
-                  {'docnums': ['d_0', 'd_2'], 'vids': [0, 2]},
-                  {'docnums': ['d_0'], 'vids': [0, 1]}],
+    {'clusters': [{'docnums': ['d_0'], 'vids': [1, 0]},
+                   {'docnums': ['d_2', 'd_0'], 'vids': [2, 0]},
+                   {'docnums': ['d_0', 'd_4'], 'vids': [0, 3, 4]}],
      'misc': 2}
 
     Or have labels on clusters:
@@ -119,27 +123,27 @@ def export_clustering(vertex_cover, vertex_id_attr=None):
     >>> cover = labelling(cover)
     >>> cover_dict = export_clustering(cover)
     >>> pprint(cover_dict)
-    {'clusters': [{'docnums': ['d_0', 'd_4'],
-                   'labels': [{'label': u'd_0',
-                               'role': 'doc_title',
-                               'score': 1.0},
-                              {'label': u'd_4',
-                               'role': 'doc_title',
-                               'score': 1.0}],
-                   'vids': [0, 3, 4]},
-                  {'docnums': ['d_0', 'd_2'],
-                   'labels': [{'label': u'd_0',
-                               'role': 'doc_title',
-                               'score': 1.0},
-                              {'label': u'd_2',
-                               'role': 'doc_title',
-                               'score': 1.0}],
-                   'vids': [0, 2]},
-                  {'docnums': ['d_0'],
-                   'labels': [{'label': u'd_0',
-                               'role': 'doc_title',
-                               'score': 1.0}],
-                   'vids': [0, 1]}],
+    {'clusters': [{'docnums': ['d_0'],
+                    'labels': [{'label': 'd_0',
+                                 'role': 'doc_title',
+                                 'score': 1.0}],
+                    'vids': [1, 0]},
+                   {'docnums': ['d_2', 'd_0'],
+                    'labels': [{'label': 'd_2',
+                                 'role': 'doc_title',
+                                 'score': 1.0},
+                                {'label': 'd_0',
+                                 'role': 'doc_title',
+                                 'score': 1.0}],
+                    'vids': [2, 0]},
+                   {'docnums': ['d_0', 'd_4'],
+                    'labels': [{'label': 'd_0',
+                                 'role': 'doc_title',
+                                 'score': 1.0},
+                                {'label': 'd_4',
+                                 'role': 'doc_title',
+                                 'score': 1.0}],
+                    'vids': [0, 3, 4]}],
      'misc': 2}
 
     """

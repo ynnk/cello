@@ -10,8 +10,11 @@ inheritance diagrams
 Class
 -----
 """
-import logging
+# python 2 and 3 compatibility
+from __future__ import unicode_literals
 import six
+
+import logging
 
 import igraph as ig
 
@@ -397,13 +400,16 @@ class DocumentFieldBigraph(OptionableGraphBuilder):
     The vertex attribute '`_doc`' contains for each document-vertex a reference
     to original :class:`.Doc` object.
     
+    :hide:
+        >>> from pprint import pprint
+    
     Given the following sample list of documents:
     
     >>> from reliure.types import Text, Numeric
     >>> from cello.schema import Doc, Schema
     >>> schema = Schema(
-    ...    title=Text(vtype=str),
-    ...    terms=Text(vtype=str, multi=True, attrs={'tf': Numeric(default=1)})
+    ...    title=Text(),
+    ...    terms=Text(multi=True, attrs={'tf': Numeric(default=1)})
     ... )
     >>> d1 = Doc(schema=schema, docnum='un', title='doc one !')
     >>> d1.terms.add('cat', tf=2)
@@ -446,8 +452,14 @@ class DocumentFieldBigraph(OptionableGraphBuilder):
     Here is an exemple of object-vertex:
     
     >>> cat_vtx = g.vs.select(label='cat')[0]
-    >>> cat_vtx.attributes()
-    {'TF_RD': 13, 'title': None, '_doc': None, 'label': 'cat', 'df_RD': 2, '_source': 'terms', 'type': False}
+    >>> pprint(cat_vtx.attributes())
+    {'TF_RD': 13,
+     '_doc': None,
+     '_source': 'terms',
+     'df_RD': 2,
+     'label': 'cat',
+     'title': None,
+     'type': False}
     >>> [vtx['_doc'].docnum for vtx in cat_vtx.neighbors()]
     ['un', 'trois']
 
