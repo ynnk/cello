@@ -181,7 +181,7 @@ class ValueField(DocField):
 
     >>> from reliure.types import Text
     >>> schema = Schema(title=Text(), like=Numeric(default=45))
-    >>> doc = Doc(schema, docnum='abc42')
+    >>> doc = Doc(schema, docnum=u'abc42')
     >>> # 'title' field
     >>> doc.title = u"Un titre cool !"
     >>> doc.title
@@ -219,7 +219,7 @@ class SetField(DocField, set):
     
     >>> from reliure.types import Text
     >>> schema = Schema(tags=Text(multi=True, uniq=True))
-    >>> doc = Doc(schema, docnum='abc42')
+    >>> doc = Doc(schema, docnum=u'abc42')
     >>> doc.tags.add(u'boo')
     >>> doc.tags.add(u'foo')
     >>> len(doc.tags)
@@ -263,7 +263,7 @@ class ListField(DocField, list):
     
     >>> from reliure.types import Text
     >>> schema = Schema(tags=Text(multi=True, uniq=False))
-    >>> doc = Doc(schema, docnum='abc42')
+    >>> doc = Doc(schema, docnum=u'abc42')
     >>> doc.tags.add(u'boo')
     >>> doc.tags.add(u'foo')
     >>> doc.tags.add(u'foo')
@@ -317,8 +317,8 @@ class ListField(DocField, list):
         u""" returns a list pre-seriasation of the field
         
         >>> from reliure.types import Text
-        >>> doc = Doc(docnum='1')
-        >>> doc.terms = Text(vtype=unicode, multi=True) 
+        >>> doc = Doc(docnum=u'1')
+        >>> doc.terms = Text(multi=True) 
         >>> doc.terms.add(u'rat')
         >>> doc.terms.add(u'chien')
         >>> doc.terms.add(u'chat')
@@ -335,14 +335,14 @@ class VectorField(DocField):
     usage:
 
     >>> from reliure.types import Text, Numeric
-    >>> doc = Doc(docnum='1')
-    >>> doc.terms = Text(vtype=str, multi=True, uniq=True, attrs={'tf': Numeric()}) 
-    >>> doc.terms.add('chat')
-    >>> doc.terms['chat'].tf = 12
-    >>> doc.terms['chat'].tf
+    >>> doc = Doc(docnum=u'1')
+    >>> doc.terms = Text(multi=True, uniq=True, attrs={'tf': Numeric()}) 
+    >>> doc.terms.add(u'chat')
+    >>> doc.terms[u'chat'].tf = 12
+    >>> doc.terms[u'chat'].tf
     12
-    >>> doc.terms.add('dog', tf=55)
-    >>> doc.terms['dog'].tf
+    >>> doc.terms.add(u'dog', tf=55)
+    >>> doc.terms[u'dog'].tf
     55
 
     One can also add an atribute after the field is created:
@@ -350,16 +350,16 @@ class VectorField(DocField):
     >>> doc.terms.add_attribute('foo', Numeric(default=42))
     >>> doc.terms.foo.values()
     [42, 42]
-    >>> doc.terms['dog'].foo = 20
+    >>> doc.terms[u'dog'].foo = 20
     >>> doc.terms.foo.values()
     [42, 20]
 
     It is also possible to delete elements from the field
     >>> doc.terms.export()
-    {'keys': {'dog': 1, 'chat': 0}, 'tf': [12, 55], 'foo': [42, 20]}
-    >>> del doc.terms["chat"]
+    {'keys': {u'dog': 1, u'chat': 0}, 'tf': [12, 55], 'foo': [42, 20]}
+    >>> del doc.terms[u"chat"]
     >>> doc.terms.export()
-    {'keys': {'dog': 0}, 'tf': [55], 'foo': [20]}
+    {'keys': {u'dog': 0}, 'tf': [55], 'foo': [20]}
     """
     def __init__(self, ftype):
         DocField.__init__(self, ftype)
@@ -415,10 +415,10 @@ class VectorField(DocField):
         """ It is possible to iterate over a vector field:
 
         >>> from reliure.types import Text, Numeric
-        >>> doc = Doc(docnum='1')
-        >>> doc.terms = Text(vtype=str, multi=True, uniq=True, attrs={'tf': Numeric()}) 
-        >>> doc.terms.add('cat', tf=2)
-        >>> doc.terms.add('dog', tf=55)
+        >>> doc = Doc(docnum=u'1')
+        >>> doc.terms = Text(multi=True, uniq=True, attrs={'tf': Numeric()}) 
+        >>> doc.terms.add(u'cat', tf=2)
+        >>> doc.terms.add(u'dog', tf=55)
         >>> for term in doc.terms:
         ...     print term
         cat
@@ -449,21 +449,21 @@ class VectorField(DocField):
         """ Delete the element from the field
 
         >>> from reliure.types import Text, Numeric
-        >>> doc = Doc(docnum='1')
-        >>> doc.terms = Text(vtype=str, attrs={'tf': Numeric()}) 
-        >>> doc.terms.add('cat', tf=2)
-        >>> doc.terms.add('mouse', tf=20)
-        >>> doc.terms.add('bear', tf=100)
-        >>> doc.terms.add('dog', tf=55)
-        >>> doc.terms.add('kiwi', tf=5)
+        >>> doc = Doc(docnum=u'1')
+        >>> doc.terms = Text(attrs={'tf': Numeric()}) 
+        >>> doc.terms.add(u'cat', tf=2)
+        >>> doc.terms.add(u'mouse', tf=20)
+        >>> doc.terms.add(u'bear', tf=100)
+        >>> doc.terms.add(u'dog', tf=55)
+        >>> doc.terms.add(u'kiwi', tf=5)
         >>> doc.terms.export()
-        {'keys': {'kiwi': 4, 'mouse': 1, 'dog': 3, 'bear': 2, 'cat': 0}, 'tf': [2, 20, 100, 55, 5]}
+        {'keys': {u'kiwi': 4, u'mouse': 1, u'dog': 3, u'bear': 2, u'cat': 0}, 'tf': [2, 20, 100, 55, 5]}
         >>> #
         >>> # delete some elements
-        >>> del doc.terms["mouse"]
-        >>> del doc.terms['dog']
+        >>> del doc.terms[u"mouse"]
+        >>> del doc.terms[u'dog']
         >>> doc.terms.export()
-        {'keys': {'kiwi': 2, 'bear': 1, 'cat': 0}, 'tf': [2, 100, 5]}
+        {'keys': {u'kiwi': 2, u'bear': 1, u'cat': 0}, 'tf': [2, 100, 5]}
         >>> len(doc.terms)
         3
         """
@@ -482,13 +482,13 @@ class VectorField(DocField):
         """ returns a dictionary pre-seriasation of the field
         
         >>> from reliure.types import Text, Numeric
-        >>> doc = Doc(docnum='1')
+        >>> doc = Doc(docnum=u'1')
         >>> doc.terms = Text(multi=True, uniq=True, attrs={'tf': Numeric(default=1)}) 
-        >>> doc.terms.add('chat')
-        >>> doc.terms.add('rat', tf=5)
-        >>> doc.terms.add('chien', tf=2)
+        >>> doc.terms.add(u'chat')
+        >>> doc.terms.add(u'rat', tf=5)
+        >>> doc.terms.add(u'chien', tf=2)
         >>> doc.terms.export()
-        {'keys': {'rat': 1, 'chien': 2, 'chat': 0}, 'tf': [1, 5, 2]}
+        {'keys': {u'rat': 1, u'chien': 2, u'chat': 0}, 'tf': [1, 5, 2]}
         """
         data = {}
         data["keys"] = dict( zip(self.keys(), xrange(len(self))) )
@@ -500,21 +500,21 @@ class VectorField(DocField):
     def add(self, key, **kwargs):
         """ Add a key to the vector, do nothing if the key is already present
         
-        >>> doc = Doc(docnum='1')
-        >>> doc.terms = Text(vtype=str, multi=True, attrs={'tf': Numeric(default=1, min=0)}) 
-        >>> doc.terms.add('chat')
-        >>> doc.terms.add('dog', tf=2)
+        >>> doc = Doc(docnum=u'1')
+        >>> doc.terms = Text(multi=True, attrs={'tf': Numeric(default=1, min=0)}) 
+        >>> doc.terms.add(u'chat')
+        >>> doc.terms.add(u'dog', tf=2)
         >>> doc.terms.tf.values()
         [1, 2]
         
-        >>> doc.terms.add('mouse', comment="a small mouse")
+        >>> doc.terms.add(u'mouse', comment="a small mouse")
         Traceback (most recent call last):
         ...
         ValueError: Invalid attribute name: 'comment'
         
-        >>> doc.terms.add('mouse', tf=-2)
+        >>> doc.terms.add(u'mouse', tf=-2)
         Traceback (most recent call last):
-        ValidationError: [u'Ensure this value ("-2") is greater than or equal to 0.']
+        ValidationError: ['Ensure this value ("-2") is greater than or equal to 0.']
         """
         if not self.has(key):
             # check if kwargs are valid
@@ -535,14 +535,14 @@ class VectorField(DocField):
         """ Set new keys.
         Mind this will clear all attributes and keys before adding new keys
         
-        >>> doc = Doc(docnum='1')
-        >>> doc.terms = Text(vtype=str, multi=True, attrs={'tf': Numeric(default=1)}) 
-        >>> doc.terms.add('copmputer', tf=12)
+        >>> doc = Doc(docnum=u'1')
+        >>> doc.terms = Text(multi=True, attrs={'tf': Numeric(default=1)}) 
+        >>> doc.terms.add(u'copmputer', tf=12)
         >>> doc.terms.tf.values()
         [12]
-        >>> doc.terms.set(['keyboard', 'mouse'])
+        >>> doc.terms.set([u'keyboard', u'mouse'])
         >>> doc.terms.keys()
-        ['keyboard', 'mouse']
+        [u'keyboard', u'mouse']
         >>> doc.terms.tf.values()
         [1, 1]
         """
@@ -556,10 +556,10 @@ class VectorField(DocField):
     def get_attr_value(self, key, attr):
         """ returns the value of a given attribute for a given key
         
-        >>> doc = Doc(docnum='1')
-        >>> doc.terms = Text(vtype=str, multi=True, uniq=True, attrs={'tf': Numeric()}) 
-        >>> doc.terms.add('chat', tf=55)
-        >>> doc.terms.get_attr_value('chat', 'tf')
+        >>> doc = Doc(docnum=u'1')
+        >>> doc.terms = Text(multi=True, uniq=True, attrs={'tf': Numeric()}) 
+        >>> doc.terms.add(u'chat', tf=55)
+        >>> doc.terms.get_attr_value(u'chat', 'tf')
         55
         """
         idx = self._keys[key]
@@ -577,8 +577,8 @@ class VectorField(DocField):
         :param name: attribute name
         :type name: str
 
-        >>> doc = Doc(docnum='1')
-        >>> doc.terms = Text(vtype=str, multi=True, attrs={'tf': Numeric(default=1)}) 
+        >>> doc = Doc(docnum=u'1')
+        >>> doc.terms = Text(multi=True, attrs={'tf': Numeric(default=1)}) 
         >>> doc.terms.add('computer', tf=12)
         >>> type(doc.terms.tf)
         <class 'cello.schema.VectorAttr'>
@@ -591,14 +591,14 @@ class VectorField(DocField):
     def __setattr__(self, name, values):
         """ Set all the attributes value
 
-        >>> doc = Doc(docnum='1')
-        >>> doc.terms = Text(vtype=str, multi=True, attrs={'tf': Numeric(default=1)}) 
-        >>> doc.terms.add('computer', tf=12)
-        >>> doc.terms.add('pad', tf=2)
+        >>> doc = Doc(docnum=u'1')
+        >>> doc.terms = Text(multi=True, attrs={'tf': Numeric(default=1)}) 
+        >>> doc.terms.add(u'computer', tf=12)
+        >>> doc.terms.add(u'pad', tf=2)
         >>> doc.terms.tf = [3, 10]
-        >>> doc.terms['computer'].tf
+        >>> doc.terms[u'computer'].tf
         3
-        >>> doc.terms['pad'].tf
+        >>> doc.terms[u'pad'].tf
         10
         """
         if name.startswith('_'):
@@ -620,9 +620,9 @@ class VectorAttr(object):
     """ Internal class used to acces an attribute of a :class:`.VectorField`
 
     >>> from reliure.types import Text, Numeric
-    >>> doc = Doc(docnum='1')
+    >>> doc = Doc(docnum=u'1')
     >>> doc.terms = Text(multi=True, uniq=True, attrs={'tf': Numeric()}) 
-    >>> doc.terms.add('chat')
+    >>> doc.terms.add(u'chat')
     >>> type(doc.terms.tf)
     <class 'cello.schema.VectorAttr'>
     """
@@ -658,10 +658,10 @@ class VectorItem(object):
     """ Internal class used to acces an item (= a value) of a :class:`.VectorField`
 
     >>> from reliure.types import Text, Numeric
-    >>> doc = Doc(docnum='1')
+    >>> doc = Doc(docnum=u'1')
     >>> doc.terms = Text(multi=True, uniq=True, attrs={'tf': Numeric()}) 
-    >>> doc.terms.add('chat')
-    >>> type(doc.terms['chat'])
+    >>> doc.terms.add(u'chat')
+    >>> type(doc.terms[u'chat'])
     <class 'cello.schema.VectorItem'>
     """
     def __init__(self, vector, key):
@@ -780,7 +780,7 @@ class Doc(dict):
         #    i.e. "self.schema = schema.copy()" but this is forbiden
         # Doc should always have a docnum !
         if 'docnum' not in self.schema:
-            self.add_field('docnum', Text(vtype=str))
+            self.add_field('docnum', Text())
 
         # fields value(s)
         for key, ftype in schema.iter_fields():
