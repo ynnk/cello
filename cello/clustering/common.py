@@ -51,8 +51,8 @@ class Walktrap(ClusteringMethod):
     def __call__(self, graph, l=4):
         if self.graph_is_trivial(graph, weighted=True):
             return ig.VertexCover(graph, [])
-        vertex_clustering = graph.community_walktrap(weights=EDGE_WEIGHT_ATTR, steps=l)
-        #Fix the dendrogramm to add singletons because igraph forget it...
+        vertex_clustering = graph.community_walktrap(weights=graph.es[EDGE_WEIGHT_ATTR], steps=l)
+        #self.fix_dendrogram(graph, vertex_clustering)
         merges = vertex_clustering.merges
         n = graph.vcount()
         singles = graph.vs.select(_degree=0)
@@ -63,9 +63,33 @@ class Walktrap(ClusteringMethod):
             graph,
             merges,
             vertex_clustering.optimal_count,
-            modularity_params=dict(weights=EDGE_WEIGHT_ATTR)
+            modularity_params=dict(weights=graph.es[EDGE_WEIGHT_ATTR])
         )
         return fixed_vertex_clustering.as_clustering().as_cover()
+
+    def fix_dendrogram(self, graph, cl):
+        """ Fix the dendrogramm to add singletons because igraph forget it...
+        """
+        #TODO: code proposé par yann dans  Commit 5fb4db847d394fc44b838a09fae6f77eaf849861 
+        #TODO: j'ai une erreur sur le doctest avec ce code... et je ne capte pas ce qu'il fait, desactivé pour le moment
+        from itertools import izip
+        already_merged = set()
+        for merge in cl.merges:
+            already_merged.update(merge)
+
+        num_dendrogram_nodes = graph.vcount() + len(cl.merges)
+        not_merged_yet = sorted(set(xrange(num_dendrogram_nodes)) - already_merged)
+        if len(not_merged_yet) < 2:
+            return
+
+        v1, v2 = not_merged_yet[:2]
+        cl._merges.append((v1, v2))
+        del not_merged_yet[:2]
+
+        missing_nodes = xrange(num_dendrogram_nodes,
+                num_dendrogram_nodes + len(not_merged_yet))
+        cl._merges.extend(izip(not_merged_yet, missing_nodes))
+        cl._nmerges = graph.vcount()-1
 
 
 class Infomap(ClusteringMethod):
@@ -100,6 +124,6 @@ class Infomap(ClusteringMethod):
     def __call__(self, graph):
         if self.graph_is_trivial(graph, weighted=True):
             return ig.VertexCover(graph, [])
-        vertex_clustering = graph.community_infomap(edge_weights=EDGE_WEIGHT_ATTR)
+        vertex_clustering = graph.community_infomap(edge_weights=graph.es[EDGE_WEIGHT_ATTR])
         return vertex_clustering.as_cover()
 

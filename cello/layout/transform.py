@@ -6,13 +6,15 @@ Set of component to transform a layout (reduce dimention, normalize, shake, ...)
 """
 import warnings
 
+from builtins import range
+
 import numpy as np
 import scipy as sc
 from matplotlib.mlab import PCA
 
 import igraph as ig
 
-from reliure import Composable
+from reliure import Composable, Optionable
 
 
 class ReducePCA(Composable):
@@ -63,7 +65,7 @@ class ReducePCA(Composable):
                 # retry
                 result = self.robust_pca(mat_saved + np.identity(nb_dim), nb_fail=nb_fail+1)
             except Warning as warn: # catch warnings as error
-                self._logger.warn('pca() %s' % warn)
+                self._logger.warning('pca() %s' % warn)
                 if nb_dim <= 3:
                     result = np.identity(nb_dim)
                 else:
@@ -74,7 +76,7 @@ class ReducePCA(Composable):
         """ Process a PCA
         """
         if len(layout) > 0 and len(layout) != layout.dim:
-            raise ValueError('The layout should have same number of vertices and dimentions')
+            raise ValueError('The layout should have same number of vertices and dimensions')
         mat = np.array(layout.coords)
         if len(layout) == 0:
             result = []
@@ -83,6 +85,7 @@ class ReducePCA(Composable):
                 result = np.hstack((mat, np.zeros((len(layout), self.out_dim - layout.dim)))).tolist()
             else:
                 result = self.robust_pca(mat).tolist()
+
         return ig.Layout(result, dim=self.out_dim)
 
 
@@ -140,14 +143,14 @@ class Shaker(Composable):
     """ 'Shake' a layout to ensure that no vertices have the same position
 
     >>> import igraph as ig
-    >>> layout = ig.Layout([[1, 0], [1, 1], [1, 0]])
+    >>> layout = ig.Layout([[1., 0.], [1., 1.], [1., 0.01]])
     >>> layout
     <Layout with 3 vertices and 2 dimensions>
 
     >>> shaker = Shaker(0.2)
     >>> layout = shaker(layout)
     >>> layout.coords
-    [[-0.6666666666666666, -0.33333333333333337], [0.33333333333333337, 0.6666666666666666], [0.33333333333333337, -0.33333333333333337]]
+    [[0.0, -0.19083333333315153], [0.0, 0.33166666666666667], [0.0, -0.14083333333351528]]
 
     If the layout is empty:
     >>> shaker(ig.Layout())
@@ -164,7 +167,7 @@ class Shaker(Composable):
         from scipy.spatial.distance import pdist, squareform
         iter_max = 50  # try to keep low
 
-        layout_mat = np.array(layout.coords)
+        layout_mat = np.array(layout.coords, dtype=float)
         nbs, nbdim = layout_mat.shape       # nb objets, nb dimension de l'espace
         deplacements = np.zeros((nbs, nbdim))  # matrice des déplacement élémentaires
         # on calcul la taille des spheres,
@@ -190,8 +193,8 @@ class Shaker(Composable):
                 break
             # calcul des vecteurs de deplacement de chaque sphere (= somme des forces qui s'exerce sur chaque sommet)
             deplacements[:, :] = 0 # raz
-            for source in xrange(nbs):
-                for dest in xrange(source+1, nbs):
+            for source in range(nbs):
+                for dest in range(source+1, nbs):
                     if dists[source, dest] < dists_min[source, dest]:
                         # vecteur de deplacement de source vers dest
                         vect_depl = layout_mat[dest] - layout_mat[source]
@@ -218,4 +221,63 @@ class Shaker(Composable):
         if len(layout) == 0:
             return layout
         return self.shake(layout)
+
+
+
+class ByConnectedComponent(Optionable):
+    """ Compute a given layout on each connected component, and then merge it.
+    
+    >>> from cello.layout.simple import KamadaKawaiLayout
+    >>> merge_layout = ByConnectedComponent(layout=KamadaKawaiLayout())
+    >>> 
+    >>> graph = ig.Graph.Formula("a--b--c, d--e")
+    >>> layout = merge_layout(graph)
+    >>> layout
+    <Layout with 5 vertices and 3 dimensions>
+
+    """
+    def __init__(self, layout, dim=3):
+        super(ByConnectedComponent, self).__init__()
+        self._layout_mth = layout
+        self._merge_dim = dim #TODO make it an option
+        # expose layout option
+        if isinstance(self._layout_mth, Optionable):
+            pass
+            # TODO
+
+    def __call__(self, graph, **kwargs):
+        # split the graph in N connected components
+        connected_components = graph.clusters()
+        subgraphs = connected_components.subgraphs()
+        # compute a list of vertex position (cc id, and id in subgraph)
+        vertex_cc = []
+        next_by_cc = [0] * len(connected_components)
+        for cc_num in connected_components.membership:
+            v_num = next_by_cc[cc_num]
+            next_by_cc[cc_num] += 1
+            vertex_cc.append((cc_num, v_num))
+        # compute layout for each cc
+        layout_mth = self._layout_mth
+        layouts = [layout_mth(cc, **kwargs) for cc in subgraphs]
+        # move each layout
+        nb_cc = len(connected_components)
+        ## full graph of CC
+        cc_graph = ig.Graph.Full(nb_cc)
+        ## compute a weight for each CC, the more nodes the more weight
+        #cc_weight = [np.log(len(cc) + 1) for cc in connected_components]
+        cc_weight = [len(cc) for cc in connected_components]
+        #print(cc_weight)
+        ## weights for the edges between CC
+        wmax = 1.*max(cc_weight)
+        weights = [2.*wmax - (cc_weight[edg.source] + cc_weight[edg.target]) for edg in cc_graph.es]
+        ## Compute CC graph layout
+        cc_layout = cc_graph.layout_fruchterman_reingold(weights=weights, dim=self._merge_dim)
+        for cc_num, layout in enumerate(layouts):
+            cc_position = cc_layout[cc_num]
+            # resize each small layout
+            layout.fit_into([cc_weight[cc_num]/wmax] * layout.dim)
+            layout.center(cc_position)
+        # merge layouts
+        layout = [layouts[cc_num][v_num] for cc_num, v_num in vertex_cc]
+        return ig.Layout(layout)
 

@@ -16,6 +16,11 @@ inheritance diagrams
 Class
 -----
 """
+# python 2 and 3 compatibility
+from __future__ import unicode_literals
+import six
+from builtins import range
+
 from collections import OrderedDict
 
 from reliure.types import GenericType, Numeric, Text
@@ -32,7 +37,7 @@ class Schema(object):
     
     >>> from reliure.types import Text, Numeric
     >>> schema = Schema(title=Text(), score=Numeric())
-    >>> schema.field_names()
+    >>> sorted(schema.field_names())
     ['score', 'title']
     """
 
@@ -46,7 +51,7 @@ class Schema(object):
         """
         self._fields = {}
         # Create fields
-        for name, fieldtype in fields.iteritems():
+        for name, fieldtype in six.iteritems(fields):
             self.add_field(name, fieldtype)
 
     def copy(self):
@@ -80,16 +85,16 @@ class Schema(object):
         raise NotImplementedError()
 
     def iter_fields(self):
-        return self._fields.iteritems()
+        return six.iteritems(self._fields)
 
     def field_names(self):
-        return self._fields.keys()
+        return list(self._fields)
 
     def has_field(self, name):
         return self.__contains__(name)
 
     def __iter__(self):
-        return self._fields.iterkeys()
+        return six.iterkeys(self._fields)
 
     def __contains__(self, name):
         return name in self._fields    
@@ -102,23 +107,23 @@ class Schema(object):
         return self.__getitem__(name)
 
     def __getitem__(self, name): 
-        if name == '_fields': 
+        if name == '_fields':
             return self._fields
         elif name in self._fields:
             return self._fields[name]
-        else : 
+        else:
             raise SchemaError("Field '%s' does not exist in Schema (%s)" % (name, self.field_names()))
 
     def __repr__(self):
         fields_repr = "\n".join(
             " * %s: %s" % (key, value)
-            for key, value in self._fields.iteritems()
+            for key, value in six.iteritems(self._fields)
         )
         return "<%s:\n%s\n>" % (self.__class__.__name__, fields_repr)
 
-"""
-Document fields implementations internal use only
-"""
+###
+# Document fields implementations internal use only
+
 class DocField(object):
     """ Abstract document field
     
@@ -183,11 +188,11 @@ class ValueField(DocField):
     >>> schema = Schema(title=Text(), like=Numeric(default=45))
     >>> doc = Doc(schema, docnum='abc42')
     >>> # 'title' field
-    >>> doc.title = u"Un titre cool !"
+    >>> doc.title = 'Un titre cool !'
     >>> doc.title
-    u'Un titre cool !'
+    'Un titre cool !'
     >>> doc.get_field('title').export()
-    u'Un titre cool !'
+    'Un titre cool !'
     >>> doc.get_field('title').ftype
     Text(multi=False, uniq=False, default=, attrs=None)
     >>> # 'like' field
@@ -220,12 +225,12 @@ class SetField(DocField, set):
     >>> from reliure.types import Text
     >>> schema = Schema(tags=Text(multi=True, uniq=True))
     >>> doc = Doc(schema, docnum='abc42')
-    >>> doc.tags.add(u'boo')
-    >>> doc.tags.add(u'foo')
+    >>> doc.tags.add('boo')
+    >>> doc.tags.add('foo')
     >>> len(doc.tags)
     2
-    >>> doc.tags.export()
-    [u'foo', u'boo']
+    >>> sorted(doc.tags.export())
+    ['boo', 'foo']
     """
     #XXX; maybe it can use collections.MutableSet
     # http://docs.python.org/2/library/collections.html#collections-abstract-base-classes
@@ -264,13 +269,13 @@ class ListField(DocField, list):
     >>> from reliure.types import Text
     >>> schema = Schema(tags=Text(multi=True, uniq=False))
     >>> doc = Doc(schema, docnum='abc42')
-    >>> doc.tags.add(u'boo')
-    >>> doc.tags.add(u'foo')
-    >>> doc.tags.add(u'foo')
+    >>> doc.tags.add('boo')
+    >>> doc.tags.add('foo')
+    >>> doc.tags.add('foo')
     >>> len(doc.tags)
     3
     >>> doc.tags.export()
-    [u'boo', u'foo', u'foo']
+    ['boo', 'foo', 'foo']
     """
     #XXX; maybe it can use collections.MutableSequence
     # http://docs.python.org/2/library/collections.html#collections-abstract-base-classes
@@ -305,26 +310,33 @@ class ListField(DocField, list):
         for v in values:
             list.append(self, v)
 
-    def __setitem__(self, idx, value):
-        list.__setitem__(self, idx, self._ftype.validate(value) )
+    #just for python2 compatibility
+    def __setslice__(self, s, c, v):
+        self[slice(s,c)] = v
 
-    def __setslice__(self, i, j, values):
-        assert j-i == len(values), "given data don't fit slice size (%s-%s != %s)" % (i, j, len(values))
-        for x, xi in enumerate(xrange(i, j)):
-            self[xi] = values[x]
+    def __setitem__(self, idx_or_slice, value):
+        if isinstance(idx_or_slice, slice):
+            sl = idx_or_slice
+            if sl.stop - sl.start != len(value):
+                raise ValueError("given data don't fit slice size (%s-%s != %s)" % (sl.stop, sl.start, len(value)))
+            for x, xi in enumerate(range(*sl.indices(len(self)))):
+                self[xi] = value[x]
+        else:
+            idx = idx_or_slice
+            list.__setitem__(self, idx, self._ftype.validate(value))
 
     def export(self):
-        u""" returns a list pre-seriasation of the field
+        """ returns a list pre-seriasation of the field
         
         >>> from reliure.types import Text
         >>> doc = Doc(docnum='1')
-        >>> doc.terms = Text(vtype=unicode, multi=True) 
-        >>> doc.terms.add(u'rat')
-        >>> doc.terms.add(u'chien')
-        >>> doc.terms.add(u'chat')
-        >>> doc.terms.add(u'léopart')
+        >>> doc.terms = Text(multi=True) 
+        >>> doc.terms.add('rat')
+        >>> doc.terms.add('chien')
+        >>> doc.terms.add('chat')
+        >>> doc.terms.add('léopart')
         >>> doc.terms.export()
-        [u'rat', u'chien', u'chat', u'l\\xe9opart']
+        ['rat', 'chien', 'chat', 'l\\xe9opart']
         """
         return list(self)
 
@@ -332,11 +344,14 @@ class ListField(DocField, list):
 class VectorField(DocField):
     """ More complex document field container
 
+    :hide:
+        >>> from pprint import pprint
+  
     usage:
 
     >>> from reliure.types import Text, Numeric
     >>> doc = Doc(docnum='1')
-    >>> doc.terms = Text(vtype=str, multi=True, uniq=True, attrs={'tf': Numeric()}) 
+    >>> doc.terms = Text(multi=True, uniq=True, attrs={'tf': Numeric()}) 
     >>> doc.terms.add('chat')
     >>> doc.terms['chat'].tf = 12
     >>> doc.terms['chat'].tf
@@ -355,11 +370,11 @@ class VectorField(DocField):
     [42, 20]
 
     It is also possible to delete elements from the field
-    >>> doc.terms.export()
-    {'keys': {'dog': 1, 'chat': 0}, 'tf': [12, 55], 'foo': [42, 20]}
-    >>> del doc.terms["chat"]
-    >>> doc.terms.export()
-    {'keys': {'dog': 0}, 'tf': [55], 'foo': [20]}
+    >>> pprint(doc.terms.export())
+    {'foo': [42, 20], 'keys': {'chat': 0, 'dog': 1}, 'tf': [12, 55]}
+    >>> del doc.terms['chat']
+    >>> pprint(doc.terms.export())
+    {'foo': [20], 'keys': {'dog': 0}, 'tf': [55]}
     """
     def __init__(self, ftype):
         DocField.__init__(self, ftype)
@@ -373,7 +388,7 @@ class VectorField(DocField):
         :return: set of attribute names
         :rtype: frozenset
         """
-        return frozenset(self._attrs.keys())
+        return frozenset(list(self._attrs))
 
     def add_attribute(self, name, ftype):
         """ Add a data attribute.
@@ -385,11 +400,11 @@ class VectorField(DocField):
         :type ftype: subclass of :class:`.GenericType`
         """
         if name in self._ftype.attrs:
-            raise SchemaError("VectorField has already attribute named '%s' (attrs: %s)" % (name, self._ftype.attrs.keys()))
+            raise SchemaError("VectorField has already attribute named '%s' (attrs: %s)" % (name, list(self._ftype.attrs)))
         # add the attr to the underlying GenericType
         self._ftype.attrs[name] = ftype
         # add the attr it self
-        self._attrs[name] = [DocField.FromType(ftype) for _ in xrange(len(self))]
+        self._attrs[name] = [DocField.FromType(ftype) for _ in range(len(self))]
     
     def get_attribute(self, name):
         return getattr(self, name)
@@ -398,11 +413,11 @@ class VectorField(DocField):
         """ removes all attributes
         """
         self._attrs = {} # removes all attr
-        for name, attr_field in self._ftype.attrs.iteritems():
+        for name, attr_field in six.iteritems(self._ftype.attrs):
             self._attrs[name] = []
 
     def __repr__(self):
-        return "<%s:%s>" % (self.__class__.__name__, self._ftype.attrs.keys())
+        return "<%s:%s>" % (self.__class__.__name__, list(self._ftype.attrs))
 
     def __str__(self):
         return self.__repr__()
@@ -416,15 +431,15 @@ class VectorField(DocField):
 
         >>> from reliure.types import Text, Numeric
         >>> doc = Doc(docnum='1')
-        >>> doc.terms = Text(vtype=str, multi=True, uniq=True, attrs={'tf': Numeric()}) 
+        >>> doc.terms = Text(multi=True, uniq=True, attrs={'tf': Numeric()}) 
         >>> doc.terms.add('cat', tf=2)
         >>> doc.terms.add('dog', tf=55)
         >>> for term in doc.terms:
-        ...     print term
+        ...     print(term)
         cat
         dog
         """
-        return self._keys.iterkeys()
+        return six.iterkeys(self._keys)
 
     def keys(self): 
         """ list of keys in the vector """
@@ -448,29 +463,33 @@ class VectorField(DocField):
     def __delitem__(self, key):
         """ Delete the element from the field
 
+        :hide:
+            >>> from pprint import pprint
+
         >>> from reliure.types import Text, Numeric
         >>> doc = Doc(docnum='1')
-        >>> doc.terms = Text(vtype=str, attrs={'tf': Numeric()}) 
+        >>> doc.terms = Text(attrs={'tf': Numeric()}) 
         >>> doc.terms.add('cat', tf=2)
         >>> doc.terms.add('mouse', tf=20)
         >>> doc.terms.add('bear', tf=100)
         >>> doc.terms.add('dog', tf=55)
         >>> doc.terms.add('kiwi', tf=5)
-        >>> doc.terms.export()
-        {'keys': {'kiwi': 4, 'mouse': 1, 'dog': 3, 'bear': 2, 'cat': 0}, 'tf': [2, 20, 100, 55, 5]}
+        >>> pprint(doc.terms.export())
+        {'keys': {'bear': 2, 'cat': 0, 'dog': 3, 'kiwi': 4, 'mouse': 1},
+        'tf': [2, 20, 100, 55, 5]}
         >>> #
         >>> # delete some elements
-        >>> del doc.terms["mouse"]
+        >>> del doc.terms['mouse']
         >>> del doc.terms['dog']
-        >>> doc.terms.export()
-        {'keys': {'kiwi': 2, 'bear': 1, 'cat': 0}, 'tf': [2, 100, 5]}
+        >>> pprint(doc.terms.export())
+        {'keys': {'bear': 1, 'cat': 0, 'kiwi': 2}, 'tf': [2, 100, 5]}
         >>> len(doc.terms)
         3
         """
         if not self.has(key):
             raise KeyError("No such key ('%s') in this field" % key)
         iid = self._keys[key]
-        for attr in self._attrs.itervalues():
+        for attr in six.itervalues(self._attrs):
             attr[iid] = None
         del self._keys[key]
 
@@ -481,17 +500,20 @@ class VectorField(DocField):
     def export(self):
         """ returns a dictionary pre-seriasation of the field
         
+        :hide:
+            >>> from pprint import pprint
+        
         >>> from reliure.types import Text, Numeric
         >>> doc = Doc(docnum='1')
         >>> doc.terms = Text(multi=True, uniq=True, attrs={'tf': Numeric(default=1)}) 
         >>> doc.terms.add('chat')
         >>> doc.terms.add('rat', tf=5)
         >>> doc.terms.add('chien', tf=2)
-        >>> doc.terms.export()
-        {'keys': {'rat': 1, 'chien': 2, 'chat': 0}, 'tf': [1, 5, 2]}
+        >>> pprint(doc.terms.export())
+        {'keys': {'chat': 0, 'chien': 2, 'rat': 1}, 'tf': [1, 5, 2]}
         """
         data = {}
-        data["keys"] = dict( zip(self.keys(), xrange(len(self))) )
+        data["keys"] = dict( zip(self.keys(), range(len(self))) )
         # each attr
         for name in self._attrs.keys():
             data[name] = self.get_attribute(name).export()
@@ -501,7 +523,7 @@ class VectorField(DocField):
         """ Add a key to the vector, do nothing if the key is already present
         
         >>> doc = Doc(docnum='1')
-        >>> doc.terms = Text(vtype=str, multi=True, attrs={'tf': Numeric(default=1, min=0)}) 
+        >>> doc.terms = Text(multi=True, attrs={'tf': Numeric(default=1, min=0)}) 
         >>> doc.terms.add('chat')
         >>> doc.terms.add('dog', tf=2)
         >>> doc.terms.tf.values()
@@ -514,18 +536,18 @@ class VectorField(DocField):
         
         >>> doc.terms.add('mouse', tf=-2)
         Traceback (most recent call last):
-        ValidationError: [u'Ensure this value ("-2") is greater than or equal to 0.']
+        ValidationError: ['Ensure this value ("-2") is greater than or equal to 0.']
         """
         if not self.has(key):
             # check if kwargs are valid
-            for attr_name, value in kwargs.iteritems():
+            for attr_name, value in six.iteritems(kwargs):
                 if attr_name not in self._ftype.attrs:
                     raise ValueError("Invalid attribute name: '%s'" % attr_name)
                 self._ftype.attrs[attr_name].validate(value)
             # add the key
             self._keys[key] = len(self._keys)
             # append attributes
-            for name, attr_type in self._ftype.attrs.iteritems():
+            for name, attr_type in six.iteritems(self._ftype.attrs):
                 attr_field = DocField.FromType(attr_type)
                 if name in kwargs:
                     attr_field.set(kwargs[name])
@@ -536,12 +558,12 @@ class VectorField(DocField):
         Mind this will clear all attributes and keys before adding new keys
         
         >>> doc = Doc(docnum='1')
-        >>> doc.terms = Text(vtype=str, multi=True, attrs={'tf': Numeric(default=1)}) 
+        >>> doc.terms = Text(multi=True, attrs={'tf': Numeric(default=1)}) 
         >>> doc.terms.add('copmputer', tf=12)
         >>> doc.terms.tf.values()
         [12]
         >>> doc.terms.set(['keyboard', 'mouse'])
-        >>> doc.terms.keys()
+        >>> list(doc.terms)
         ['keyboard', 'mouse']
         >>> doc.terms.tf.values()
         [1, 1]
@@ -557,7 +579,7 @@ class VectorField(DocField):
         """ returns the value of a given attribute for a given key
         
         >>> doc = Doc(docnum='1')
-        >>> doc.terms = Text(vtype=str, multi=True, uniq=True, attrs={'tf': Numeric()}) 
+        >>> doc.terms = Text(multi=True, uniq=True, attrs={'tf': Numeric()}) 
         >>> doc.terms.add('chat', tf=55)
         >>> doc.terms.get_attr_value('chat', 'tf')
         55
@@ -578,7 +600,7 @@ class VectorField(DocField):
         :type name: str
 
         >>> doc = Doc(docnum='1')
-        >>> doc.terms = Text(vtype=str, multi=True, attrs={'tf': Numeric(default=1)}) 
+        >>> doc.terms = Text(multi=True, attrs={'tf': Numeric(default=1)}) 
         >>> doc.terms.add('computer', tf=12)
         >>> type(doc.terms.tf)
         <class 'cello.schema.VectorAttr'>
@@ -592,7 +614,7 @@ class VectorField(DocField):
         """ Set all the attributes value
 
         >>> doc = Doc(docnum='1')
-        >>> doc.terms = Text(vtype=str, multi=True, attrs={'tf': Numeric(default=1)}) 
+        >>> doc.terms = Text(multi=True, attrs={'tf': Numeric(default=1)}) 
         >>> doc.terms.add('computer', tf=12)
         >>> doc.terms.add('pad', tf=2)
         >>> doc.terms.tf = [3, 10]
@@ -604,11 +626,11 @@ class VectorField(DocField):
         if name.startswith('_'):
             DocField.__setattr__(self, name, values)
             #self.__dict__[attr] = value
-        elif self.__dict__['_attrs'].has_key(name):
+        elif name in self.__dict__['_attrs']:
             if len(values) != len(self):
                 raise SchemaError('Wrong size : |values| (=%s) should be equals to |keys| (=%s) ' \
                         % (len(values), len(self)))
-            _attr = [DocField.FromType(self._ftype.attrs[name]) for _ in xrange(len(values)) ]
+            _attr = [DocField.FromType(self._ftype.attrs[name]) for _ in range(len(values)) ]
             for idx, val in enumerate(values):
                 _attr[idx].set(val)
             self._attrs[name] = _attr
@@ -643,12 +665,14 @@ class VectorAttr(object):
     def export(self):
         return [attr_value.export() for attr_value in self.vector._attrs[self.attr] if attr_value is not None]
 
-    def __getslice__(self, i, j):
-        vector, attr = self.vector, self.attr
-        return [attr_value.get_value() for attr_value in vector._attrs[attr][i:j] if attr_value is not None]
-
-    def __getitem__(self, idx):
-        return self.vector._attrs[self.attr][idx].get_value()
+    def __getitem__(self, idx_or_slice):
+        if isinstance(idx_or_slice, slice):
+            sl = idx_or_slice
+            vector, attr = self.vector, self.attr
+            return [attr_value.get_value() for attr_value in vector._attrs[attr][sl] if attr_value is not None]
+        else:
+            idx = idx_or_slice
+            return self.vector._attrs[self.attr][idx].get_value()
 
     def __setitem__(self, idx, value):
         self.vector._attrs[self.attr][idx].set(value)
@@ -703,15 +727,15 @@ class Doc(dict):
     
     Now it is how one can build a document from this simple text:
     
-    >>> text = u\"\"\"i have seen chicken passing the street and i believed
+    >>> text = \"\"\"i have seen chicken passing the street and i believed
     ... how many chicken must pass in the street before you
     ... believe\"\"\"
     
     Then we can create the document:
 
-    >>> doc = Doc(schema, docnum=1, text=unicode(text))
+    >>> doc = Doc(schema, docnum=1, text=text)
     >>> doc.text[:6]
-    u'i have'
+    'i have'
     >>> len(doc.text)
     113
     
@@ -765,7 +789,7 @@ class Doc(dict):
         Simple exemple:
         
         >>> from reliure.types import Text, Numeric
-        >>> doc = Doc(Schema(titre=Text()), titre=u'Un titre')
+        >>> doc = Doc(Schema(titre=Text()), titre='Un titre')
         """
         dict.__init__(self)
         # FIXME docnum needed or not ?
@@ -780,7 +804,7 @@ class Doc(dict):
         #    i.e. "self.schema = schema.copy()" but this is forbiden
         # Doc should always have a docnum !
         if 'docnum' not in self.schema:
-            self.add_field('docnum', Text(vtype=str))
+            self.add_field('docnum', Text())
 
         # fields value(s)
         for key, ftype in schema.iter_fields():
@@ -804,7 +828,7 @@ class Doc(dict):
         try:
             return dict.__getitem__(self, name)
         except KeyError as err:
-            raise SchemaError("'%s' is not a document field (existing attributes are: %s)" % (err, self.keys()))
+            raise SchemaError("'%s' is not a document field (existing attributes are: %s)" % (err, list(self)))
 
     def set_field(self, name, value, parse=False):
         """ set field """
@@ -847,7 +871,7 @@ class Doc(dict):
             # set a value to one field
             self.set_field(name, value)
         else:
-            raise SchemaError("'%s' is not a document field (existing attributes are: %s)" % (name, self.keys()))
+            raise SchemaError("'%s' is not a document field (existing attributes are: %s)" % (name, list(self)))
 
     def export(self, exclude=[]):
         """ returns a dictionary representation of the document

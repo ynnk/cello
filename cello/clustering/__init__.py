@@ -15,6 +15,10 @@ SubModules
 Helpers
 -------
 """
+# python 2 and 3 compatibility
+from __future__ import unicode_literals
+import six
+
 
 import logging
 
@@ -49,7 +53,7 @@ def bipartite_clustering_methods():
     return methods
 #}
 
-def export_clustering(vertex_cover):
+def export_clustering(vertex_cover, vertex_id_attr=None):
     """ Build a dictionary view of a vertex cover (a clustering)
 
     :param vertex_cover: the vertex cover to convert
@@ -67,7 +71,7 @@ def export_clustering(vertex_cover):
             'clusters': [
                 {
                     'gids': [1, 3, 5, 8],
-                    'docnums': [u'docnum_1', ...]
+                    'docnums': ['docnum_1', ...]
                 },
                 ...
             ]
@@ -86,18 +90,18 @@ def export_clustering(vertex_cover):
     >>> cover = clustering(g)
     >>> print(cover)
     Cover with 3 clusters
-    [0] a, d, f
-    [1] a, c
-    [2] a, b
+    [0] b, a
+    [1] c, a
+    [2] a, d, f
 
     and then export the clustering this way:
 
     >>> cover_dict = export_clustering(cover)
     >>> from pprint import pprint
     >>> pprint(cover_dict)
-    {'clusters': [{'docnums': ['d_0', 'd_4'], 'vids': [0, 3, 4]},
-                  {'docnums': ['d_0', 'd_2'], 'vids': [0, 2]},
-                  {'docnums': ['d_0'], 'vids': [0, 1]}],
+    {'clusters': [{'docnums': ['d_0'], 'vids': [1, 0]},
+                   {'docnums': ['d_2', 'd_0'], 'vids': [2, 0]},
+                   {'docnums': ['d_0', 'd_4'], 'vids': [0, 3, 4]}],
      'misc': -1}
 
     One can also have a misc cluster:
@@ -105,9 +109,9 @@ def export_clustering(vertex_cover):
     >>> cover.misc_cluster = 2
     >>> cover_dict = export_clustering(cover)
     >>> pprint(cover_dict)
-    {'clusters': [{'docnums': ['d_0', 'd_4'], 'vids': [0, 3, 4]},
-                  {'docnums': ['d_0', 'd_2'], 'vids': [0, 2]},
-                  {'docnums': ['d_0'], 'vids': [0, 1]}],
+    {'clusters': [{'docnums': ['d_0'], 'vids': [1, 0]},
+                   {'docnums': ['d_2', 'd_0'], 'vids': [2, 0]},
+                   {'docnums': ['d_0', 'd_4'], 'vids': [0, 3, 4]}],
      'misc': 2}
 
     Or have labels on clusters:
@@ -119,18 +123,17 @@ def export_clustering(vertex_cover):
     >>> cover = labelling(cover)
     >>> cover_dict = export_clustering(cover)
     >>> pprint(cover_dict)
-    {'clusters': [{'docnums': ['d_0', 'd_4'],
-                   'labels': [0, 1],
-                   'vids': [0, 3, 4]},
-                  {'docnums': ['d_0', 'd_2'], 'labels': [2, 3], 'vids': [0, 2]},
-                  {'docnums': ['d_0'], 'labels': [4], 'vids': [0, 1]}],
-     'labels': [{'id': 0, 'label': u'd_0', 'role': 'doc_title', 'score': 1.0},
-                {'id': 1, 'label': u'd_4', 'role': 'doc_title', 'score': 1.0},
-                {'id': 2, 'label': u'd_0', 'role': 'doc_title', 'score': 1.0},
-                {'id': 3, 'label': u'd_2', 'role': 'doc_title', 'score': 1.0},
-                {'id': 4, 'label': u'd_0', 'role': 'doc_title', 'score': 1.0}],
+    {'clusters': [{'docnums': ['d_0'], 'labels': [0], 'vids': [1, 0]},
+                  {'docnums': ['d_2', 'd_0'], 'labels': [1, 2], 'vids': [2, 0]},
+                  {'docnums': ['d_0', 'd_4'],
+                   'labels': [3, 4],
+                   'vids': [0, 3, 4]}],
+     'labels': [{'id': 0, 'label': 'd_0', 'role': 'doc_title', 'score': 1.0},
+                {'id': 1, 'label': 'd_2', 'role': 'doc_title', 'score': 1.0},
+                {'id': 2, 'label': 'd_0', 'role': 'doc_title', 'score': 1.0},
+                {'id': 3, 'label': 'd_0', 'role': 'doc_title', 'score': 1.0},
+                {'id': 4, 'label': 'd_4', 'role': 'doc_title', 'score': 1.0}],
      'misc': 2}
-
     """
     from cello.clustering.labelling.model import LabelledVertexCover
     has_labels = isinstance(vertex_cover, LabelledVertexCover)
@@ -157,7 +160,11 @@ def export_clustering(vertex_cover):
     clusters = []
     for cnum, vids in enumerate(vertex_cover):
         cluster = {}
-        cluster['vids'] = vids
+        if vertex_id_attr is not None:
+            vs = vertex_cover.graph.vs
+            cluster['vids'] = [vs[i][vertex_id_attr] for i in vids]
+        else :
+            cluster['vids'] = vids
         # doc ?
         cluster['docnums'] = []
         if gid_to_doc:

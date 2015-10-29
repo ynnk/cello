@@ -16,6 +16,10 @@ SubModules
 Helpers
 -------
 """
+# python 2 and 3 compatibility
+from __future__ import unicode_literals
+import six
+
 import random
 
 from reliure import Optionable
@@ -49,13 +53,12 @@ class AbstractGraph(object):
 
     def __setitem__(self, name, value):
         """ Set a graph attribute value """
-        return self.gattrs[name]
+        self.gattrs[name] = value
     """    
     vcount(self): 
          returns the vertex count
     ecount(self): 
         returns the edges count 
-    neighbors(self, vtx, mode=OUT):
     subgraph(self):    
     """
 
@@ -70,7 +73,7 @@ def random_vertex(graph, **kwargs):
 # LOCAL GRAPH FUNCTION
 #TODO exclude_gattrs, exclude_vattrs, exclude_eattrs
 #TODO: est-ce que l'on passe pas a des include plutot que exclude
-def export_graph(graph, exclude_gattrs=[], exclude_vattrs=[], exclude_eattrs=[]):
+def export_graph(graph, exclude_gattrs=[], exclude_vattrs=[], exclude_eattrs=[], id_attribute=None):
     """ Transform a graph (igraph graph) to a dictionary
     to send it to template (or json)
 
@@ -163,10 +166,15 @@ def export_graph(graph, exclude_gattrs=[], exclude_vattrs=[], exclude_eattrs=[])
     graph_dict['attributes']['v_attrs'] = sorted(graph_dict['attributes']['v_attrs'])
 
     # vertices
+    v_idx = { }
     for vid, vtx in enumerate(graph.vs):
         vertex = vtx.attributes()
+        if id_attribute is not None:
+            v_idx[vid] = vertex[id_attribute]
+        else:
+            v_idx[vid] = vid
+            vertex["id"] = vid
         # _id : structural vertex attr
-        vertex["id"] = vid
         if "_doc" in vertex:
             if vertex["_doc"] is not None:
                 assert isinstance(vertex["_doc"], Doc)
@@ -180,11 +188,13 @@ def export_graph(graph, exclude_gattrs=[], exclude_vattrs=[], exclude_eattrs=[])
         graph_dict['vs'].append(vertex)
 
     # edges
+    _getvid = lambda vtxid : v_idx[vtxid] if id_attribute else vtxid 
+
     for edg in graph.es:
         edge = edg.attributes() # recopie tous les attributs
         # add source et target
-        edge["s"] = edg.source # match with 'id' vertex attributs
-        edge["t"] = edg.target
+        edge["s"] = v_idx[edg.source] # match with 'id' vertex attributs
+        edge["t"] = v_idx[edg.target]
         #TODO check il n'y a pas de 's' 't' dans attr
         graph_dict['es'].append(edge)
 
@@ -196,6 +206,9 @@ def read_json(data):
 
     :param data: deserialized json data
     :param filename: path to a file
+
+    :hide:
+        >>> from pprint import pprint
 
     graph format:
 
@@ -248,7 +261,7 @@ def read_json(data):
     >>> print(graph.summary())
     IGRAPH UNW- 5 5 -- 
     + attr: bipartite (g), directed (g), docnum (v), name (v), weight (e)
-    >>> graph.vs[0].attributes()
+    >>> pprint(graph.vs[0].attributes())
     {'docnum': 'd_0', 'name': 'a'}
 
     """

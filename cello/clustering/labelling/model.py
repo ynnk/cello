@@ -5,6 +5,8 @@
 Labelling data models
 ---------------------
 """
+import six
+from builtins import range
 
 import igraph as ig
 
@@ -21,15 +23,7 @@ class Label(object):
 
     >>> label = Label("black bird", score=1.5)
     >>> label
-    Label(u'black bird', 1.5)
-
-    Labels are stored in uncode, but will be decode from utf8 by default:
-
-    >>> label = Label("être", score=1.5)
-    >>> label
-    Label(u'être', 1.5)
-    >>> str(label)          # and str will encode it un utf8 by default
-    '\\xc3\\xaatre'
+    Label('black bird', 1.5)
     """
     # should we restrict the Label object to following attr ?
     #__slot__ = ['label', 'score', 'role']
@@ -47,7 +41,7 @@ class Label(object):
         .. warning:: If the given label is not in unicode it will be decode from
             utf8 by default
         """
-        if not isinstance(label, unicode):
+        if six.PY2 and not isinstance(label, unicode):
             label = label.decode("utf8")
         self.label = label
         self.score = score
@@ -60,11 +54,14 @@ class Label(object):
         return self._id
 
     def __str__(self):
-        return self.label.encode("utf8")
+        if six.PY2:
+            return self.label.encode("utf8")
+        else:
+            return self.label
 
     def __repr__(self):
         lrepr = []
-        lrepr.append("u'%s'" % self.label.encode("utf8"))
+        lrepr.append("u'%s'" % str(self))
         lrepr.append('%s' % self.score)
         if self.role is not None:
             lrepr.append("role='%s'" % self.role)
@@ -74,27 +71,30 @@ class Label(object):
         """ returns a serialisable copy of the label (ie a dict)
         
         :param full: if True also return the uniq id of the label
+
+        :hide:
+            >>> from pprint import pprint
         
         >>> label = Label("black bird", score=1.5)
-        >>> label.as_dict()
-        {'score': 1.5, 'role': None, 'label': u'black bird'}
+        >>> pprint(label.as_dict())
+        {'label': 'black bird', 'role': None, 'score': 1.5}
 
         Note that attributs that are violently added during the object life are
         also exported :
         
         >>> label.tf = 25
-        >>> label.as_dict()
-        {'tf': 25, 'score': 1.5, 'role': None, 'label': u'black bird'}
+        >>> pprint(label.as_dict())
+        {'label': 'black bird', 'role': None, 'score': 1.5, 'tf': 25}
 
         But not if that attributes starts by `_`
 
         >>> label._id = 42
-        >>> label.as_dict()
-        {'tf': 25, 'score': 1.5, 'role': None, 'label': u'black bird'}
+        >>> pprint(label.as_dict())
+        {'label': 'black bird', 'role': None, 'score': 1.5, 'tf': 25}
 
         """
         lcopy = {}
-        lcopy.update({attr: value for attr, value in self.__dict__.iteritems()\
+        lcopy.update({attr: value for attr, value in six.iteritems(self.__dict__)\
                         if not attr.startswith('_')})
         if full:
             lcopy["id"] = self._id
@@ -119,7 +119,7 @@ class LabelledVertexCover(ig.VertexCover):
     def __init__(self, graph, clusters=None, labels=None, misc_cluster=None):
         super(LabelledVertexCover, self).__init__(graph, clusters=clusters)
         self.misc_cluster = misc_cluster
-        self._labels = [[] for _ in xrange(len(clusters))]
+        self._labels = [[] for _ in range(len(clusters))]
         self._label_set = {}
         #note: on peut ajouter/enlevé des labels sur chaque clusters, mais si
         #on veux modifier le clustering il faut faire une nouvel VertexCover
@@ -176,7 +176,7 @@ class LabelledVertexCover(ig.VertexCover):
         >>> vcover = LabelledVertexCover(g, [[0,1,2,3,4], [5,3,6]])
         >>> vcover.add_label(0, Label("cluster one", score=1, role='demo'))
         >>> vcover.labels[0]
-        [Label(u'cluster one', 1, role='demo')]
+        [Label('cluster one', 1, role='demo')]
 
         Warning the `label` should be a :class:`.Label`:
 

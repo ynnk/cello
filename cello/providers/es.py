@@ -175,7 +175,7 @@ class EsIndex(Index):
         index = self.name
         doc_type = self.doc_type
         id_field = self.get_uniq_key()
-        
+
         gen = ({
             #"_op_type": "index",
                         # ^ create, index, update are possible but
@@ -185,7 +185,9 @@ class EsIndex(Index):
             '_source': doc,
         } for doc in docs )
 
+        res = []
         while True:    
+            
             chunks = list(islice(gen, chunksize))
             if chunks == []:
                 break
@@ -283,6 +285,9 @@ class ESIndexScan(Composable):
 class ESQueryStringBuilder(Optionable):
     """ Create a json query for :class:`ESSearch`
     
+    :hide:
+        >>> from pprint import pprint
+    
     >>> qbuilder = ESQueryStringBuilder()
     >>> qbuilder.print_options()
     operator (Text, default=OR, in: {AND, OR}): operator used for chaining terms
@@ -291,10 +296,14 @@ class ESQueryStringBuilder(Optionable):
                 supported is "fieldOne^2.3 fieldTwo fieldThree^0.4", which indicates
                 that fieldOne has a boost of 2.3, fieldTwo has the default boost, 
                 and fieldThree has a boost of 0.4 ...
-    >>> qbuilder("cat")
-    {'query': {'query_string': {'query': 'cat', 'default_operator': u'OR', 'fields': [u'_all']}}}
-    >>> qbuilder("cat", operator=u'AND')
-    {'query': {'query_string': {'query': 'cat', 'default_operator': u'AND', 'fields': [u'_all']}}}
+    >>> pprint(qbuilder("cat"))
+    {'query': {'query_string': {'default_operator': 'OR',
+                            'fields': ['_all'],
+                            'query': 'cat'}}}
+    >>> pprint(qbuilder("cat", operator=u'AND'))
+    {'query': {'query_string': {'default_operator': 'AND',
+                            'fields': ['_all'],
+                            'query': 'cat'}}}
     """
     #TODO: add docstring
     def __init__(self, name=None):

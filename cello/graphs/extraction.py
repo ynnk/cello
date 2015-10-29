@@ -189,7 +189,7 @@ class VtxMatch(Optionable):
                 else:
                     vtx_label = vtx[attr].lower()
                     
-                if self._index[attr].has_key(vtx_label):
+                if vtx_label in self._index[attr]:
                     self._index[attr][vtx_label].append(vtx.index)
                 else:
                    self._index[attr][vtx_label] = [vtx.index]
@@ -223,7 +223,7 @@ class VtxMatch(Optionable):
                 # does we have it in the attr ?
                 if name not in self._index[attr]:
                     # not found !
-                    if missing_nodes.has_key(attr):
+                    if attr in missing_nodes:
                         missing_nodes[attr].append(name)
                     else:
                         missing_nodes[attr] = [name]
@@ -364,12 +364,11 @@ class ProxMtclExtractionGlobal(ProxExtractGlobal):
     Here is an usage example:
 
     >>> import igraph as ig
-    >>> global_graph = ig.Graph.Formula("a--b--c--d, b--d, b--e")
+    >>> global_graph = ig.Graph.Formula("a,b,c,d,e,a--b--c--d, b--d, b--e")
     >>> xtrct_markov_mtcl = ProxMtclExtractionGlobal(global_graph)
     >>> # then at query time:
-    >>> import random; random.seed(0) #for testing purpose
-    >>> xtrct_markov_mtcl([4], length=2, vcount=3, throws=200, add_loops=False)
-    [(2, 0.31), (3, 0.27), (4, 0.24)]
+    >>> xtrct_markov_mtcl([4], length=2, vcount=3, throws=200, add_loops=False)  # doctest:+ELLIPSIS
+    [(2, ...), (3, ...), (4, ...)]
     """
     def __init__(self, global_graph, name=None):
         super(ProxMtclExtractionGlobal, self).__init__(global_graph, prox.prox_markov_mtcl, name=name)
