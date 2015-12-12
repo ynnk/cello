@@ -146,7 +146,7 @@ def export_clustering(vertex_cover, vertex_id_attr=None):
 
     gid_to_doc = None
     if hasattr(vertex_cover, 'graph') and '_doc' in vertex_cover.graph.vs.attributes():
-        gid_to_doc = {gid: doc.docnum \
+        gid_to_doc = {gid: doc['docnum'] \
             for gid, doc in enumerate(vertex_cover.graph.vs['_doc']) \
             if doc is not None
         }
