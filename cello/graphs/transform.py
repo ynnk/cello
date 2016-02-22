@@ -209,7 +209,7 @@ class RemoveWeight(Optionable):
         return graph
 
 
-class EdgeAttr(Composable):
+class EdgeAttr(Optionable):
     """ Add one or more attributes to the edges of the graph
 
     >>> g = ig.Graph.Formula("a--B, a--C, a--D, C--f, D--f")
@@ -225,10 +225,11 @@ class EdgeAttr(Composable):
         super(EdgeAttr, self).__init__(name=name)
         self._eattrs = kwargs
 
-    def __call__(self, graph):
+    Optionable.check
+    def __call__(self, graph, **kwargs):
         for attr, value in six.iteritems(self._eattrs):
             if callable(value):
-                graph.es[attr] = [value(graph, edg) for edg in graph.es]
+                graph.es[attr] = [value(graph, edg, **kwargs) for edg in graph.es]
             else:
                 graph.es[attr] = value
         return graph
