@@ -92,6 +92,17 @@ def ProxLayoutRandomProj(name="ProxLayoutRandomProj", dim=3):
     layout_cpt.name = name
     return layout_cpt
 
+def ProxLayoutMDS(name="ProxLayoutMDS", dim=3, weighted=False):
+    """ Std Prox layout
+    
+    :param name: name of the component
+    :param dim: number of dimentions of the output layouts
+    :param weighted: whether to use the weight of the graph, is True the edge
+        attribute `cello.graphs.EDGE_WEIGHT_ATTR` is used.
+    """
+    layout_cpt = ProxLayout(name=name, weighted=weighted) | ReduceMDS(dim=dim) | normalise
+    layout_cpt.name = name
+    return layout_cpt
 
 class ProxBigraphLayout(Optionable):
     """ Returns a n*n layout computed with short length random walks
