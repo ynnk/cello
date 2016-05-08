@@ -12,7 +12,7 @@ from reliure.types import Numeric, Boolean
 
 from cello.graphs import prox
 from cello.graphs import EDGE_WEIGHT_ATTR
-from cello.layout.transform import ReducePCA, ReduceRandProj, normalise
+from cello.layout.transform import ReducePCA, ReduceRandProj, ReduceMDS, normalise
 
 
 class ProxLayout(Optionable):
