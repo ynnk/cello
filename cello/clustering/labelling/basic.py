@@ -5,8 +5,12 @@
 Classes
 -------
 """
-import igraph as ig
+# python 2 and 3 compatibility
+#from __future__ import unicode_literals
+import six
+
 from itertools import chain
+import igraph as ig
 
 from reliure import Optionable, Composable
 from reliure.types import Text
@@ -31,7 +35,7 @@ class VertexAsLabel(Optionable):
     [0] a, A, B, C, b (labels: A, B, C)
     [1] c, C, D (labels: C, D)
     >>> vcover.labels[1]
-    [Label(u'C', 1.2), Label(u'D', 1.2)]
+    [Label('C', 1.2), Label('D', 1.2)]
     
     Here is an other example:
 
@@ -136,6 +140,9 @@ class VertexAsLabel(Optionable):
 class TypeFalseLabel(VertexAsLabel):
     """ Transform all `type=False` vertices of the cluster to label.
 
+    :hide:
+        >>> from pprint import pprint
+
     For exemple on the following bipartite graph:
 
     >>> g = ig.Graph.Formula("a--A:B:C, b--A:B, c--C:D")
@@ -154,16 +161,16 @@ class TypeFalseLabel(VertexAsLabel):
     [0] a, A, B, C, b (labels: A, B, C)
     [1] c, C, D (labels: C, D)
     >>> vcover.labels[0]
-    [Label(u'A', 1.0, role='terms'), Label(u'B', 1.0, role='terms'), Label(u'C', 0.5, role='terms')]
+    [Label('A', 1.0, role='terms'), Label('B', 1.0, role='terms'), Label('C', 0.5, role='terms')]
     >>> vcover.labels[1]
-    [Label(u'C', 1.0, role='terms'), Label(u'D', 1.0, role='terms')]
+    [Label('C', 1.0, role='terms'), Label('D', 1.0, role='terms')]
 
     also note that the index of the original vertex is stored in each label:
 
     >>> vcover.labels[1][0].vtx
     3
-    >>> g.vs[vcover.labels[1][0].vtx].attributes()
-    {'type': False, 'name': 'C'}
+    >>> pprint(g.vs[vcover.labels[1][0].vtx].attributes())
+    {'name': 'C', 'type': False}
 
     One can chouse the scoring method with an option:
 
@@ -183,9 +190,9 @@ class TypeFalseLabel(VertexAsLabel):
     Here is an exemple with precision score:
 
     >>> vcover = ig.VertexCover(g, [[0,1,2,3,4], [5,3,6]])
-    >>> vcover = labeller(vcover, score="precision")
+    >>> vcover = labeller(vcover, score=u"precision")
     >>> vcover.labels[1]
-    [Label(u'C', 0.5, role='terms'), Label(u'D', 1.0, role='terms')]
+    [Label('C', 0.5, role='terms'), Label('D', 1.0, role='terms')]
 
     """
     def __init__(self, vtx_attr, role=None, name=None):
@@ -201,8 +208,8 @@ class TypeFalseLabel(VertexAsLabel):
         super(TypeFalseLabel, self).__init__(name=name)
         self.vtx_attr = vtx_attr
         self.role = role
-        self.add_option("score", Text(vtype=str,
-            default="recall", choices=["recall", "precision"],
+        self.add_option("score", Text(
+            default=u"recall", choices=[u"recall", u"precision"],
             help="Label scoring method"
         ))
 
@@ -230,7 +237,7 @@ class TypeFalseLabel(VertexAsLabel):
         if not 'type' in graph.vs.attributes():
             raise ValueError("The graph should be bipartite, and have a 'type' attribute on each vertex")
         if not vtx['type']:
-            if score == "precision":
+            if score == u"precision":
                 wgt = TypeFalseLabel.scoring_prop_inclust(graph, cluster, vtx)
             else:
                 wgt = TypeFalseLabel.scoring_prop_ofclust(graph, cluster, vtx)

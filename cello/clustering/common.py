@@ -51,13 +51,27 @@ class Walktrap(ClusteringMethod):
     def __call__(self, graph, l=4):
         if self.graph_is_trivial(graph, weighted=True):
             return ig.VertexCover(graph, [])
-        vertex_clustering = graph.community_walktrap(weights=EDGE_WEIGHT_ATTR, steps=l)
-        self.fix_dendrogram(graph, vertex_clustering)
-        return vertex_clustering.as_clustering().as_cover()
+        vertex_clustering = graph.community_walktrap(weights=graph.es[EDGE_WEIGHT_ATTR], steps=l)
+        #self.fix_dendrogram(graph, vertex_clustering)
+        merges = vertex_clustering.merges
+        n = graph.vcount()
+        singles = graph.vs.select(_degree=0)
+        for vtx in singles:
+            last_merge = n - len(singles) + len(merges) - 1
+            merges.append((last_merge, vtx.index))
+        fixed_vertex_clustering = ig.VertexDendrogram(
+            graph,
+            merges,
+            vertex_clustering.optimal_count,
+            modularity_params=dict(weights=graph.es[EDGE_WEIGHT_ATTR])
+        )
+        return fixed_vertex_clustering.as_clustering().as_cover()
 
     def fix_dendrogram(self, graph, cl):
         """ Fix the dendrogramm to add singletons because igraph forget it...
         """
+        #TODO: code proposé par yann dans  Commit 5fb4db847d394fc44b838a09fae6f77eaf849861 
+        #TODO: j'ai une erreur sur le doctest avec ce code... et je ne capte pas ce qu'il fait, desactivé pour le moment
         from itertools import izip
         already_merged = set()
         for merge in cl.merges:
@@ -110,6 +124,6 @@ class Infomap(ClusteringMethod):
     def __call__(self, graph):
         if self.graph_is_trivial(graph, weighted=True):
             return ig.VertexCover(graph, [])
-        vertex_clustering = graph.community_infomap(edge_weights=EDGE_WEIGHT_ATTR)
+        vertex_clustering = graph.community_infomap(edge_weights=graph.es[EDGE_WEIGHT_ATTR])
         return vertex_clustering.as_cover()
 

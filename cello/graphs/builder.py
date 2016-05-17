@@ -10,6 +10,10 @@ inheritance diagrams
 Class
 -----
 """
+# python 2 and 3 compatibility
+from __future__ import unicode_literals
+import six
+
 import logging
 
 import igraph as ig
@@ -188,7 +192,7 @@ class GraphBuilder(object):
 
     def set_gattrs(self, **kwargs):
         """ Set the graph attribut *attr_name* """
-        for attr_name, value in kwargs.iteritems():
+        for attr_name, value in six.iteritems(kwargs):
             self._graph_attrs[attr_name] = value
 
     ####### Vertices ########
@@ -202,7 +206,7 @@ class GraphBuilder(object):
             # add the vertex
             self._vertices[vident] = len(self._vertices)
             # ajout empty attr
-            for attr_list in self._vertex_attrs.itervalues():
+            for attr_list in six.itervalues(self._vertex_attrs):
                 attr_list.append(None)
         return self._vertices[vident]
 
@@ -276,7 +280,7 @@ class GraphBuilder(object):
         if key not in self._edges:
             self._edges[key] = len(self._edges)
             self._edge_list.append(key)
-            for attr_list in self._edge_attrs.itervalues():
+            for attr_list in six.itervalues(self._edge_attrs):
                 attr_list.append(None)
         return self._edges[key]
 
@@ -396,6 +400,9 @@ class DocumentFieldBigraph(OptionableGraphBuilder):
     The vertex attribute '`_doc`' contains for each document-vertex a reference
     to original :class:`.Doc` object.
     
+    :hide:
+        >>> from pprint import pprint
+    
     Given the following sample list of documents:
     
     >>> from reliure.types import Text, Numeric
@@ -445,8 +452,14 @@ class DocumentFieldBigraph(OptionableGraphBuilder):
     Here is an exemple of object-vertex:
     
     >>> cat_vtx = g.vs.select(label='cat')[0]
-    >>> cat_vtx.attributes()
-    {'TF_RD': 13, 'title': None, '_doc': None, 'label': 'cat', 'df_RD': 2, '_source': 'terms', 'type': False}
+    >>> pprint(cat_vtx.attributes())
+    {'TF_RD': 13,
+     '_doc': None,
+     '_source': 'terms',
+     'df_RD': 2,
+     'label': 'cat',
+     'title': None,
+     'type': False}
     >>> [vtx['_doc'].docnum for vtx in cat_vtx.neighbors()]
     ['un', 'trois']
 

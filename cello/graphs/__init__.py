@@ -16,6 +16,10 @@ SubModules
 Helpers
 -------
 """
+# python 2 and 3 compatibility
+from __future__ import unicode_literals
+import six
+
 import random
 
 from reliure import Optionable
@@ -203,6 +207,9 @@ def read_json(data):
     :param data: deserialized json data
     :param filename: path to a file
 
+    :hide:
+        >>> from pprint import pprint
+
     graph format:
 
     .. code-block:: python
@@ -254,7 +261,7 @@ def read_json(data):
     >>> print(graph.summary())
     IGRAPH UNW- 5 5 -- 
     + attr: bipartite (g), directed (g), docnum (v), name (v), weight (e)
-    >>> graph.vs[0].attributes()
+    >>> pprint(graph.vs[0].attributes())
     {'docnum': 'd_0', 'name': 'a'}
 
     """
