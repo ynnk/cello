@@ -474,7 +474,7 @@ class GraphProjection(Optionable):
         """ Projection of a bipartite graph to a unipartite graph
         """
         Optionable.__init__(self, name=name)
-        self.add_option("proj_wgt", Text(default='p', vtype=str,
+        self.add_option("proj_wgt", Text(default='p',
              help=u"projection weighting method",
              choices=['no', 'count', 'p', 'pmin', 'pmax', 'pavg', 'confl']))
 

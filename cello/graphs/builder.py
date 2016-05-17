@@ -401,8 +401,8 @@ class DocumentFieldBigraph(OptionableGraphBuilder):
     >>> from reliure.types import Text, Numeric
     >>> from cello.schema import Doc, Schema
     >>> schema = Schema(
-    ...    title=Text(vtype=str),
-    ...    terms=Text(vtype=str, multi=True, attrs={'tf': Numeric(default=1)})
+    ...    title=Text(),
+    ...    terms=Text(multi=True, attrs={'tf': Numeric(default=1)})
     ... )
     >>> d1 = Doc(schema=schema, docnum='un', title='doc one !')
     >>> d1.terms.add('cat', tf=2)
