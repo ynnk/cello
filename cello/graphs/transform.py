@@ -2,6 +2,11 @@
 """ :mod:`cello.graphs.transform`
 ==============================
 """
+# python 2 and 3 compatibility
+from __future__ import unicode_literals
+from builtins import range
+import six
+
 import logging
 
 import igraph as ig
@@ -120,7 +125,7 @@ class MergeGraphs(Composable):
                 vid = vertex_id(graph, vtx)
                 vgid = gbuilder.add_get_vertex(vid)
                 # add attributes
-                for vattr, val in vtx.attributes().iteritems():
+                for vattr, val in six.iteritems(vtx.attributes()):
                     gbuilder.set_vattr(vgid, vattr, val)
         #
         # build the edges
@@ -132,7 +137,7 @@ class MergeGraphs(Composable):
                 tgid = gbuilder.add_get_vertex(tid)
                 eid = gbuilder.add_get_edge(sgid, tgid)
                 # add attributes
-                for eattr, val in edge.attributes().iteritems():
+                for eattr, val in six.iteritems(edge.attributes()):
                     gbuilder.set_eattr(eid, eattr, val)
                     #TODO : how to deal with conflict ?
         #
@@ -204,7 +209,7 @@ class RemoveWeight(Optionable):
         return graph
 
 
-class EdgeAttr(Composable):
+class EdgeAttr(Optionable):
     """ Add one or more attributes to the edges of the graph
 
     >>> g = ig.Graph.Formula("a--B, a--C, a--D, C--f, D--f")
@@ -220,10 +225,11 @@ class EdgeAttr(Composable):
         super(EdgeAttr, self).__init__(name=name)
         self._eattrs = kwargs
 
-    def __call__(self, graph):
-        for attr, value in self._eattrs.iteritems():
+    Optionable.check
+    def __call__(self, graph, **kwargs):
+        for attr, value in six.iteritems(self._eattrs):
             if callable(value):
-                graph.es[attr] = [value(graph, edg) for edg in graph.es]
+                graph.es[attr] = [value(graph, edg, **kwargs) for edg in graph.es]
             else:
                 graph.es[attr] = value
         return graph
@@ -294,7 +300,7 @@ class VtxAttr(Composable):
         self._vattrs = kwargs
 
     def __call__(self, graph):
-        for attr, value in self._vattrs.iteritems():
+        for attr, value in six.iteritems(self._vattrs):
             if callable(value):
                 graph.vs[attr] = [value(graph, vtx) for vtx in graph.vs]
             else:
@@ -321,7 +327,7 @@ class TrueInFirst(Composable):
         new_ids = {vtx.index: vid for vid, vtx in enumerate(bigraph.vs.select(type=True))}
         nb_true = len(new_ids)
         new_ids.update({vtx.index: nb_true+vid for vid, vtx in enumerate(bigraph.vs.select(type_ne=True))})
-        new_order = [new_ids[vid] for vid in xrange(bigraph.vcount())]
+        new_order = [new_ids[vid] for vid in range(bigraph.vcount())]
         bigraph_true_first = bigraph.permute_vertices(new_order)
         return bigraph_true_first
 
@@ -388,13 +394,13 @@ class SymFalseBigraph(Optionable):
         #
         # ETAPE 1: self loops
         # pour tout les True (doc) : ajout le lien sym si autre existe
-        for vtx_doc_hash, vtx_doc_index in true_by_hash.iteritems():
+        for vtx_doc_hash, vtx_doc_index in six.iteritems(true_by_hash):
             if vtx_doc_hash in false_by_hash:
                 new_edges.append((vtx_doc_index, false_by_hash[vtx_doc_hash]))
         #
         # ETAPE 2 : symetrisation
         # pour tout les True (doc) :
-        for vtx_doc_hash, vtx_doc_index in true_by_hash.iteritems():
+        for vtx_doc_hash, vtx_doc_index in six.iteritems(true_by_hash):
             if vtx_doc_hash not in false_by_hash:
                 # this document is not linked by any other...
                 # so it can't make in link to the others
@@ -421,7 +427,7 @@ class GraphProjection(Optionable):
 
     This could be used without weights on original graph:
 
-    >>> g = ig.Graph.Formula("a:b:c--A:B:C:D, d--D:E, c:d--F")
+    >>> g = ig.Graph.Formula("a,b,c,d,a:b:c--A:B:C:D, d--D:E, c:d--F")
     >>> g.vs["type"] = [vtx["name"].islower() for vtx in g.vs]
 
     As the graph do not have True vertices in first we have to use :class:`TrueInFirst`:
@@ -438,7 +444,7 @@ class GraphProjection(Optionable):
     
     >>> gp.es["weight"]
     [1, 1, 1, 1, 1, 1]
-	>>>  # also note that no loops are created
+    >>>  # also note that no loops are created
     >>> gp.is_loop()
     [False, False, False, False, False, False]
 
@@ -474,7 +480,7 @@ class GraphProjection(Optionable):
         """ Projection of a bipartite graph to a unipartite graph
         """
         Optionable.__init__(self, name=name)
-        self.add_option("proj_wgt", Text(default='p', vtype=str,
+        self.add_option("proj_wgt", Text(default='p',
              help=u"projection weighting method",
              choices=['no', 'count', 'p', 'pmin', 'pmax', 'pavg', 'confl']))
 
@@ -486,8 +492,8 @@ class GraphProjection(Optionable):
         # this two points are checked with following assert
         if __debug__:
             docids = [vtx.index for vtx in graph.vs.select(type=True)]
-            assert len(docids) == 0 or sorted(docids) == range(max(docids) + 1), \
-                "Documents should be the first veritces of the graph"
+            assert len(docids) == 0 or sorted(docids) == list(range(max(docids) + 1)), \
+                "Vertices of type True (documents) should be the first veritces of the graph"
         if graph.vcount() == 0:
             pgraph = graph.copy()
         else:
@@ -519,7 +525,7 @@ class GraphProjection(Optionable):
                 - else: no weight
         """
         multiplicity = True if weight == "count" else False
-        pg, _ = graph.bipartite_projection(types="type", multiplicity=multiplicity, probe1=0)
+        pg = graph.bipartite_projection(types=graph.vs["type"], multiplicity=multiplicity, probe1=0, which=0)
         if weight in ["p", "pmin", "pmax", "pavg", "confl"]:
             P = [prox_markov_dict(graph, [vid.index], length=2, weight=wgt_attr, add_loops=False) for vid in pg.vs]
             if weight == "p":

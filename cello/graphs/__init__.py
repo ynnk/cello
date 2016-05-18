@@ -16,11 +16,15 @@ SubModules
 Helpers
 -------
 """
+# python 2 and 3 compatibility
+from __future__ import unicode_literals
+import six
+
 import random
 
 from reliure import Optionable
+from reliure.schema import Doc
 
-from cello.schema import Doc
 from cello.graphs.builder import GraphBuilder
 
 
@@ -106,7 +110,7 @@ def export_graph(graph, exclude_gattrs=[], exclude_vattrs=[], exclude_eattrs=[],
 
     The '_doc' vertex attribute is converted into a 'docnum' attribut:
 
-    >>> from cello.schema import Doc
+    >>> from reliure.schema import Doc
     >>> g = IgraphGraph.Formula("a--b, a--c, a--d, a--f, d--f")
     >>> g.vs["_doc"] = [Doc(docnum="d_%d" % vid) if vid%2 == 0 else None for vid in range(g.vcount())]
     >>> g.es["weight"] = [4, 4, 5, 5, 1]    # add an edge attribute
@@ -203,6 +207,9 @@ def read_json(data):
     :param data: deserialized json data
     :param filename: path to a file
 
+    :hide:
+        >>> from pprint import pprint
+
     graph format:
 
     .. code-block:: python
@@ -254,7 +261,7 @@ def read_json(data):
     >>> print(graph.summary())
     IGRAPH UNW- 5 5 -- 
     + attr: bipartite (g), directed (g), docnum (v), name (v), weight (e)
-    >>> graph.vs[0].attributes()
+    >>> pprint(graph.vs[0].attributes())
     {'docnum': 'd_0', 'name': 'a'}
 
     """

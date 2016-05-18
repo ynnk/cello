@@ -160,8 +160,8 @@ class MaximalCliques(ClusteringMethod):
     here is an usage exemple:
 
     >>> g = ig.Graph.Formula("a:b--b:c:d, e--f")
-    >>> [g.vs[cluster]["name"] for cluster in clustering(g)]
-    [['f', 'e'], ['a', 'b', 'd'], ['a', 'b', 'c']]
+    >>> sorted([sorted(g.vs[cluster]["name"]) for cluster in clustering(g)])
+    [['a', 'b', 'c'], ['a', 'b', 'd'], ['e', 'f']]
     """
     def __init__(self):
         ClusteringMethod.__init__(self, "maximal_cliques")
