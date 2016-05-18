@@ -23,8 +23,8 @@ import six
 import random
 
 from reliure import Optionable
+from reliure.schema import Doc
 
-from cello.schema import Doc
 from cello.graphs.builder import GraphBuilder
 
 
@@ -110,7 +110,7 @@ def export_graph(graph, exclude_gattrs=[], exclude_vattrs=[], exclude_eattrs=[],
 
     The '_doc' vertex attribute is converted into a 'docnum' attribut:
 
-    >>> from cello.schema import Doc
+    >>> from reliure.schema import Doc
     >>> g = IgraphGraph.Formula("a--b, a--c, a--d, a--f, d--f")
     >>> g.vs["_doc"] = [Doc(docnum="d_%d" % vid) if vid%2 == 0 else None for vid in range(g.vcount())]
     >>> g.es["weight"] = [4, 4, 5, 5, 1]    # add an edge attribute
