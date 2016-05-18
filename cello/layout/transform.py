@@ -44,7 +44,7 @@ class ReducePCA(Composable):
         self.out_dim = dim
 
     def robust_pca(self, mat, nb_fail=0):
-        from sklearn.decomposition import PCA as skPCA
+        from sklearn.decomposition import KernelPCA as skPCA
         if nb_fail > 5:
             raise ValueError("Fail (x%d) to compute PCA" % nb_fail)
         with warnings.catch_warnings():
@@ -57,7 +57,7 @@ class ReducePCA(Composable):
                 # centrage
                 mat = mat - mat.mean(0)
                 # pca
-                mypca = skPCA(n_components=self.out_dim, copy=True)
+                mypca = skPCA(n_components=self.out_dim, kernel="cosine")
                 result = mypca.fit_transform(mat)#[:,:self.out_dim]
             except np.linalg.LinAlgError as err: # uniform matrix
                 self._logger.warn("pca() np.linalg.LinAlgError : %s" % (err))
