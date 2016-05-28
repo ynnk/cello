@@ -161,6 +161,8 @@ def ProxMDSSugiyamaLayout(name="ProxMDSSugiyama", dim=3, weighted=False):
         ranks = [x[1] for x in graph.layout_sugiyama()[:len(graph.vs)]]
         prox_coords = ProxLayoutMDS(dim=dim-1)(graph)
         return ig.Layout([ prox_coords[i] + [rank] for i, rank in enumerate(ranks)], dim=dim)
+
+    computeLayout.name = name
     return computeLayout | normalise
 
 
