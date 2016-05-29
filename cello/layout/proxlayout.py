@@ -163,7 +163,7 @@ def ProxMDSSugiyamaLayout(name="ProxMDSSugiyama", dim=3, weighted=False):
         return ig.Layout([ prox_coords[i] + [rank] for i, rank in enumerate(ranks)], dim=dim)
 
     computeLayout.name = name
-    return computeLayout | normalise
+    return computeLayout
 
 
 def ProxBigraphLayoutPCA(name="ProxBigraphLayoutPCA", dim=3, weighted=False):

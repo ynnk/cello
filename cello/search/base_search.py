@@ -17,12 +17,12 @@ All search components returns a ordered list of :class:`Doc`
 # un obj par document ???
 import logging
 
-import igraph as ig #TODO: pas térible d'avoir le import igraph ici
+#import igraph as ig #TODO: pas térible d'avoir le import igraph ici
 
 from reliure import Optionable
 
 from reliure.types import Numeric, Text
-from cello.schema import Schema, Doc
+from reliure.schema import Schema, Doc
 
 
 class AbstractSearch(Optionable):
