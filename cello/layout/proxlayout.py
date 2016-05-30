@@ -151,6 +151,21 @@ class ProxBigraphLayout(Optionable):
         return ig.Layout(coords)
 
 
+def ProxMDSSugiyamaLayout(name="ProxMDSSugiyama", dim=3, weighted=False):
+    """
+    layout for graph with partial order, combine Sugiyama for Z and ProxMDS for (x,y)
+    """
+    
+    @Composable
+    def computeLayout(graph):
+        ranks = [x[1] for x in graph.layout_sugiyama()[:len(graph.vs)]]
+        prox_coords = ProxLayoutMDS(dim=dim-1)(graph)
+        return ig.Layout([ prox_coords[i] + [rank] for i, rank in enumerate(ranks)], dim=dim)
+
+    computeLayout.name = name
+    return computeLayout
+
+
 def ProxBigraphLayoutPCA(name="ProxBigraphLayoutPCA", dim=3, weighted=False):
     """ Std Prox layout for bipartite graphs
     

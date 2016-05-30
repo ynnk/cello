@@ -7,7 +7,6 @@
 import warnings
 import logging
 
-from cello.schema import Doc    #FIXME: unused import
 
 
 class CelloIndexError(RuntimeError):
