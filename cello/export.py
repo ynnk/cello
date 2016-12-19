@@ -3,7 +3,7 @@
 ========================
 
 """
-from cello.schema import Doc, Numeric
+from reliure.schema import Doc, Numeric
 
 def export_docs(kdocs, exclude=[]):
     """ Transform the list of kdoc

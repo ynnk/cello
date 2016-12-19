@@ -18,8 +18,8 @@ import six
 
 from reliure import Composable
 from reliure.types import GenericType, Text, Numeric
+from reliure.schema import VectorField
 
-from cello.schema import VectorField
 from cello.expanders import AbstractDocListExpand
 
 

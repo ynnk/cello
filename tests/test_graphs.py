@@ -7,7 +7,7 @@ import igraph
 import cello
 from cello.providers.igraphGraph import IgraphGraph
 from cello.graphs import random_vertex, read_json, export_graph
-from cello.schema import Doc
+from reliure.schema import Doc
 
 class TestGraph(unittest.TestCase):
     
