@@ -80,7 +80,7 @@ def export_clustering(vertex_cover, vertex_id_attr=None):
     For the following graph:
 
     >>> g = ig.Graph.Formula("a--b, a--c, a--d, a--f, d--f")
-    >>> from cello.schema import Doc
+    >>> from reliure.schema import Doc
     >>> g.vs["_doc"] = [Doc(docnum="d_%d" % vid) if vid%2 == 0 else None for vid in range(g.vcount())]
 
     you can compute a clustering:

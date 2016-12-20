@@ -406,7 +406,7 @@ class DocumentFieldBigraph(OptionableGraphBuilder):
     Given the following sample list of documents:
     
     >>> from reliure.types import Text, Numeric
-    >>> from cello.schema import Doc, Schema
+    >>> from reliure.schema import Doc, Schema
     >>> schema = Schema(
     ...    title=Text(),
     ...    terms=Text(multi=True, attrs={'tf': Numeric(default=1)})
