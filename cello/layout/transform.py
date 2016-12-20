@@ -45,6 +45,23 @@ class ReducePCA(Composable):
         super(ReducePCA, self).__init__()
         self.out_dim = dim
 
+    @staticmethod
+    def _pca(mat, dim):
+        """ Wrapper to PCA method, use sklearn
+        See: 
+        http://scikit-learn.org/stable/modules/generated/sklearn.decomposition.PCA.html
+
+
+        >>> mat = [[1., 1., 0.], [0., 1., 0.], [1., 0., 0.]]
+        >>> ReducePCA._pca(mat, 2)
+        array([[ 0.        ,  0.19526215],
+        [-0.70710678, -0.09763107],
+        [ 0.70710678, -0.09763107]])
+        """
+        from sklearn.decomposition import KernelPCA as skPCA
+        mypca = skPCA(n_components=dim, kernel="cosine")
+        return mypca.fit_transform(mat)#[:,:self.out_dim]
+
     def robust_pca(self, mat, nb_fail=0):
         from sklearn.decomposition import KernelPCA as skPCA
         if nb_fail > 5:
@@ -59,8 +76,7 @@ class ReducePCA(Composable):
                 # centrage
                 mat = mat - mat.mean(0)
                 # pca
-                mypca = skPCA(n_components=self.out_dim, kernel="cosine")
-                result = mypca.fit_transform(mat)#[:,:self.out_dim]
+                result = self._pca(mat, dim=self.out_dim)
             except np.linalg.LinAlgError as err: # uniform matrix
                 self._logger.warn("pca() np.linalg.LinAlgError : %s" % (err))
                 # retry
@@ -88,6 +104,14 @@ class ReducePCA(Composable):
                 result = self.robust_pca(mat).tolist()
 
         return ig.Layout(result, dim=self.out_dim)
+
+
+class ReducePCAMatplotlib(ReducePCA):
+    @staticmethod
+    def _pca(mat, dim):
+        from matplotlib.mlab import PCA
+        mypca = PCA(mat)
+        return mypca.Y[:, :dim]
 
 
 class ReduceRandProj(Composable):
