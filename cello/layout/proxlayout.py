@@ -92,6 +92,8 @@ def ProxLayoutRandomProj(name="ProxLayoutRandomProj", dim=3):
     layout_cpt.name = name
     return layout_cpt
 
+
+
 def ProxLayoutMDS(name="ProxLayoutMDS", dim=3, weighted=False):
     """ Std Prox layout
     

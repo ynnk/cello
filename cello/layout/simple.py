@@ -12,6 +12,36 @@ from reliure.types import Numeric, Boolean
 
 from cello.layout.transform import normalise
 
+
+class  DrlLayout(Composable):
+    """ DrLlayout
+    
+    >>> g = ig.Graph.Formula("a--b, a--c, a--d")
+    >>> layout = DrlLayout(dim=2)
+    >>> layout(g)
+    <Layout with 4 vertices and 2 dimensions>
+    """
+    def __init__(self, name="DrL", dim=3, weighted=False):
+        """ Build the layout component
+        
+        :param name: mane of the component
+        :param dim: the number of dimention of the output layouts (2 or 3)
+        """
+        super(DrlLayout, self).__init__(name=name)
+        assert dim == 2 or dim == 3
+        self.dimensions = dim
+        self.weighted = weighted
+        
+    def __call__(self, graph):
+        """
+        :param seed:  a (list of lists) initial matrix 
+        :see: http://igraph.org/python/doc/igraph.Graph-class.html#layout_drl
+        """
+        weights = None
+        if self.weighted:
+            weights = graph.es['weight']
+        return normalise(graph.layout_drl( weights=weights,  fixed=None, seed=None, options=None, dim=self.dimensions))
+
 class KamadaKawaiLayout(Composable):
     """ Kamada Kawai layout
     
@@ -29,9 +59,13 @@ class KamadaKawaiLayout(Composable):
         super(KamadaKawaiLayout, self).__init__(name=name)
         assert dim == 2 or dim == 3
         self.dimensions = dim
-
-    def __call__(self, graph):
-        return normalise(graph.layout_kamada_kawai(dim=self.dimensions))
+        
+    def __call__(self, graph, seed=None):
+        """
+        :param seed:  a (list of lists) initial matrix 
+        :see: http://igraph.org/python/doc/igraph.Graph-class.html#layout_kamada_kawai
+        """
+        return normalise(graph.layout_kamada_kawai(dim=self.dimensions, seed=seed))
 
 class FruchtermanReingoldLayout(Composable):
     """ Fruchterman Reingold layout
