@@ -75,7 +75,7 @@ class FruchtermanReingoldLayout(Composable):
     >>> layout(g)
     <Layout with 4 vertices and 3 dimensions>
     """
-    def __init__(self, name="fruchterman_reingold", dim=3):
+    def __init__(self, name="fruchterman_reingold", dim=3, weighted=False):
         """ Build the layout component
         
         :param name: mane of the component
@@ -84,9 +84,11 @@ class FruchtermanReingoldLayout(Composable):
         super(FruchtermanReingoldLayout, self).__init__(name=name)
         assert dim == 2 or dim == 3
         self.dimensions = dim
+        self.weighted = weighted
 
     def __call__(self, graph):
-        return graph.layout_fruchterman_reingold(dim=self.dimensions)
+        weights = graph.es['weight'] if self.weighted else None
+        return normalise(graph.layout_fruchterman_reingold(dim=self.dimensions, weights=weights))
 
 
 class RandomLayout(Composable):
