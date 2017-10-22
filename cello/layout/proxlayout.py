@@ -12,7 +12,7 @@ from reliure.types import Numeric, Boolean
 
 from cello.graphs import prox
 from cello.graphs import EDGE_WEIGHT_ATTR
-from cello.layout.transform import ReducePCA, ReduceRandProj, ReduceMDS, normalise
+from cello.layout.transform import ReducePCA, ReduceRandProj, ReduceMDS, ReduceTSNE, normalise
 
 
 class ProxLayout(Optionable):
@@ -103,6 +103,19 @@ def ProxLayoutMDS(name="ProxLayoutMDS", dim=3, weighted=False):
         attribute `cello.graphs.EDGE_WEIGHT_ATTR` is used.
     """
     layout_cpt = ProxLayout(name=name, weighted=weighted) | ReduceMDS(dim=dim) | normalise
+    layout_cpt.name = name
+    return layout_cpt
+
+
+def ProxLayoutTSNE(name="ProxLayoutTSNE", dim=3, weighted=False):
+    """ Prox layout with TSNE for dimension reduction
+
+    :param name: name of the component
+    :param dim: number of dimentions of the output layouts
+    :param weighted: whether to use the weight of the graph, is True the edge
+        attribute `cello.graphs.EDGE_WEIGHT_ATTR` is used.
+    """
+    layout_cpt = ProxLayout(name=name, weighted=weighted) | ReduceTSNE(dim=dim) | normalise
     layout_cpt.name = name
     return layout_cpt
 
