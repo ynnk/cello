@@ -166,7 +166,7 @@ class ReduceMDS(Composable):
                 result = np.hstack((mat, np.zeros((len(layout), self.out_dim - layout.dim)))).tolist()
             else:
                 mds = manifold.MDS(self.out_dim, max_iter=300, n_init=10)
-                result = mds.fit_transform(mat, dissimilarity='precomputed').tolist()
+                result = mds.fit_transform(mat).tolist()
         return ig.Layout(result, dim=self.out_dim)
 
 
