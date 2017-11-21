@@ -169,6 +169,35 @@ class ReduceMDS(Composable):
                 result = mds.fit_transform(mat).tolist()
         return ig.Layout(result, dim=self.out_dim)
 
+
+class ReduceTSNE(Composable):
+    """ Reduce a layout dimention by a Multi Dimensional Scaling
+
+    """
+
+    def __init__(self, dim=3):
+        super(ReduceTSNE, self).__init__()
+        self.out_dim = dim
+
+    def __call__(self, layout):
+        """ run a TSNE
+        """
+        from sklearn import manifold
+        if len(layout) > 0 and len(layout) != layout.dim:
+            raise ValueError('The layout should have same number of vertices and dimensions')
+        mat = np.array(layout.coords)
+        if len(layout) == 0:
+            result = []
+        else:
+            if layout.dim <= self.out_dim:
+                result = np.hstack((mat, np.zeros((len(layout), self.out_dim - layout.dim)))).tolist()
+            else:
+                tsne = manifold.TSNE(self.out_dim, n_iter_without_progress=50)
+                result = tsne.fit_transform(mat).tolist()
+        return ig.Layout(result, dim=self.out_dim)
+
+
+
 def normalise(layout):
     """ Normalize a :class:`igraph.Layout` between -0.5 and 0.5
 
