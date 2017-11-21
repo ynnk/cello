@@ -265,21 +265,25 @@ class GraphBuilder(object):
         return _val
 
     ####### Edges ########
-    def add_get_edge(self, vid_from, vid_to):
+    def add_get_edge(self, vid_from, vid_to, extra=""):
         """ Add the edges if not already present.
         Note: if the graph is set to be undirected (in the __init__) then the 
         vertex ids *vid_from* and *vid_to* may be swapped.
 
         :param vid_from: source of the edge
         :param vid_to: target of the edge
+        :param extra: extra added to key for multi edge
         :return: the id of the edges in the graph
         """
-        if self._directed: key = (vid_from, vid_to)
-        else: key = (min(vid_from, vid_to), max(vid_from, vid_to))
+        if self._directed: key = (vid_from, vid_to, extra)
+        else: key = (min(vid_from, vid_to), max(vid_from, vid_to), extra)
+        
+        #if self._directed: key = (vid_from, vid_to)
+        #else: key = (min(vid_from, vid_to), max(vid_from, vid_to))
         
         if key not in self._edges:
             self._edges[key] = len(self._edges)
-            self._edge_list.append(key)
+            self._edge_list.append(key[:2])
             for attr_list in six.itervalues(self._edge_attrs):
                 attr_list.append(None)
         return self._edges[key]
