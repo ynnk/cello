@@ -57,6 +57,36 @@ import numpy as np
 import cello
 from cello.graphs import IN, OUT, ALL
 
+from reliure import Composable, Optionable
+from reliure.types import Numeric, Boolean
+
+
+class ProxSubgraph(Optionable):
+    """ Proxsubgraph.
+        return g' subgraph of g
+        where ids are filtered by prox value.
+        prox vector computed given a walk `length`, cut by nth first vertex
+        random walks starts from `pzeros` [ vid, vid ... ] if none given pzeros is equiprobable on al vertices """
+    
+    def __init__(self, name=None, ):
+        super(ProxSubgraph, self).__init__(name=name)
+        self.add_option("length", Numeric(vtype=int, default=80, min=1, help="random walk length"))
+        self.add_option("cut", Numeric(vtype=int, default=100, min=1, help="vcount cut"))
+        self.add_option("pzeros", Numeric(multi=True, uniq=True, vtype=int, default=[], min=0, help="pzero vertex index all if empty list or None"))
+        self.add_option("add_loops", Boolean(default=True, help="add loops on vertices"))
+        self.add_option("mode", Numeric(choices=[ IN, OUT, ALL], default=ALL, help="add loops on vertices"))
+
+    @Optionable.check
+    def __call__(self, graph, length=3, cut=100, pzeros=None, add_loops=True, mode=ALL):
+       
+        # Extract n prox vertex
+        
+        self._logger.info(  "%s %s %s" % (length, cut, pzeros))
+        pzeros =  pzeros if  pzeros is not None and len(pzeros) else range(graph.vcount()) 
+
+        extract = prox_markov_dict(graph, pzeros, length,mode=ALL, add_loops=add_loops)
+        subvs =  [ i for i,v in sortcut(extract,cut)]
+        return graph.subgraph( subvs )
 
 def normalise(p0):
     """ normalise p0 dict vector 

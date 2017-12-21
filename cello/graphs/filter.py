@@ -221,8 +221,6 @@ class GenericVertexFilter(Optionable):
 class GenericEdgeFilter(Optionable):
     """ Remove edges selected by a custom filter.
 
-    >>> remove_filter = lambda edge: edge["w"] < 10
-    >>> filter = GenericEdgeFilter(remove_filter)
 
     Here is an example:
 
@@ -230,6 +228,8 @@ class GenericEdgeFilter(Optionable):
     >>> g.es["w"] = range(g.ecount())
     >>> g.es["w"]
     [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]
+    >>> remove_filter = lambda edge: edge["w"] < 10
+    >>> filter = GenericEdgeFilter(remove_filter)
     >>> g = filter(g)
     >>> g.es["w"]   
     [10, 11, 12, 13, 14, 15]
