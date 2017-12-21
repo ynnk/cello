@@ -13,7 +13,7 @@ with open('requirements.txt') as f:
 
 setup(
     name='cello',
-    version='1.0',
+    version='1.0.1',
     description='Cello',
     author='KodexLab',
     author_email='contact@kodexlab.com',
