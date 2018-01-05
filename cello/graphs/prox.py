@@ -61,21 +61,26 @@ from reliure import Composable, Optionable
 from reliure.types import Numeric, Boolean
 
 
-class ProxSubgraph(Optionable):
+class ProxExtract(Optionable):
     """ Proxsubgraph.
         return g' subgraph of g
         where ids are filtered by prox value.
         prox vector computed given a walk `length`, cut by nth first vertex
         random walks starts from `pzeros` [ vid, vid ... ] if none given pzeros is equiprobable on al vertices """
     
-    def __init__(self, name=None, ):
-        super(ProxSubgraph, self).__init__(name=name)
-        self.add_option("length", Numeric(vtype=int, default=80, min=1, help="random walk length"))
-        self.add_option("cut", Numeric(vtype=int, default=100, min=1, help="vcount cut"))
-        self.add_option("pzeros", Numeric(multi=True, uniq=True, vtype=int, default=[], min=0, help="pzero vertex index all if empty list or None"))
-        self.add_option("add_loops", Boolean(default=True, help="add loops on vertices"))
-        self.add_option("mode", Numeric(choices=[ IN, OUT, ALL], default=ALL, help="add loops on vertices"))
-
+    def __init__(self, name=None, **kwargs):
+        super(ProxExtract, self).__init__(name=name)
+        options = [
+        ("length", Numeric(vtype=int, default=3, min=1, help="random walk length")),
+        ("cut", Numeric(vtype=int, default=100, min=1, help="vcount cut")),
+        ("pzeros", Numeric(multi=True, uniq=True, vtype=int, default=[], min=0, help="pzero vertex index all if empty list or None")),
+        ("add_loops", Boolean(default=True, help="add loops on vertices")),
+        ("mode", Numeric(choices=[ IN, OUT, ALL], default=ALL, help="add loops on vertices"))
+        ]
+        for e,v in options: 
+            self.add_option(e, v ) 
+            if e in kwargs : self.set_option_value(e, kwargs[e])
+            
     @Optionable.check
     def __call__(self, graph, length=3, cut=100, pzeros=None, add_loops=True, mode=ALL):
        
@@ -83,10 +88,21 @@ class ProxSubgraph(Optionable):
         
         self._logger.info(  "%s %s %s" % (length, cut, pzeros))
         pzeros =  pzeros if  pzeros is not None and len(pzeros) else range(graph.vcount()) 
-
         extract = prox_markov_dict(graph, pzeros, length,mode=ALL, add_loops=add_loops)
-        subvs =  [ i for i,v in sortcut(extract,cut)]
+        subvs =   sortcut(extract,cut)
+        return dict(subvs)
+
+
+def ProxSubgraph(ProxExtract):
+    def __init__(self, name=None, ):
+        super(ProxSubgraph, self).__init__(name=name)
+    
+    @Optionable.check
+    def __call__(self, graph, length=3, cut=100, pzeros=None, add_loops=True, mode=ALL):
+        subvs = super(ProxSubgraph, self).__call__(graph, **kwargs)
         return graph.subgraph( subvs )
+        
+       
 
 def normalise(p0):
     """ normalise p0 dict vector 

@@ -6,13 +6,21 @@ Mostly wrapper to igraph clustering methods
 """
 import igraph as ig
 
-from reliure.types import Numeric
+from reliure.types import Numeric, Boolean
 
 from cello.graphs import EDGE_WEIGHT_ATTR
 from cello.clustering.core import ClusteringMethod
 
 
-class Walktrap(ClusteringMethod):
+class Weighted(ClusteringMethod):
+
+    def __init__(self, name=None, **kwargs):
+        super(Weighted, self).__init__(name=name)
+        self.add_option("weighted", Boolean(default=kwargs.get("weighted",True), help="use weighted edge."))
+        
+    
+    
+class Walktrap(Weighted):
     """ Walktrap clustering method
 
     .. note:: the graph edges should have a 'weight' on attribute (see cello.graphs.EDGE_WEIGHT_ATTR)
@@ -44,14 +52,15 @@ class Walktrap(ClusteringMethod):
     [[0], [0], [1]]
 
     """
-    def __init__(self, name=None):
-        super(Walktrap, self).__init__(name=name)
-        self.add_option("l", Numeric(default=4, help="lenght of the random walks"))
+    def __init__(self, name=None, **kwargs):
+        super(Walktrap, self).__init__(name=name, **kwargs)
+        self.add_option("l", Numeric(default=4, help="length of the random walks"))
 
-    def __call__(self, graph, l=4):
+    def __call__(self, graph, l=4, weighted = True):
         if self.graph_is_trivial(graph, weighted=True):
             return ig.VertexCover(graph, [])
-        vertex_clustering = graph.community_walktrap(weights=graph.es[EDGE_WEIGHT_ATTR], steps=l)
+        weights = graph.es[EDGE_WEIGHT_ATTR] if weighted else [1]* graph.vcount()
+        vertex_clustering = graph.community_walktrap(weights=weights, steps=l)
         #self.fix_dendrogram(graph, vertex_clustering)
         merges = vertex_clustering.merges
         n = graph.vcount()
@@ -92,7 +101,7 @@ class Walktrap(ClusteringMethod):
         cl._nmerges = graph.vcount()-1
 
 
-class Infomap(ClusteringMethod):
+class Infomap(Weighted):
     """ Infomap clustering method
 
     .. note:: the graph edges should have a 'weight' on attribute (see cello.graphs.EDGE_WEIGHT_ATTR)
@@ -118,12 +127,14 @@ class Infomap(ClusteringMethod):
     >>> clustering(g).membership
     [[], [], [], [], []]
     """
-    def __init__(self, name=None):
-        super(Infomap, self).__init__(name=name)
+    def __init__(self, name=None, **kwargs):
+        super(Infomap, self).__init__(name=name, **kwargs)
 
-    def __call__(self, graph):
+    def __call__(self, graph, weighted=True):
         if self.graph_is_trivial(graph, weighted=True):
             return ig.VertexCover(graph, [])
-        vertex_clustering = graph.community_infomap(edge_weights=graph.es[EDGE_WEIGHT_ATTR])
+            
+        weights = graph.es[EDGE_WEIGHT_ATTR] if weighted else [1]* graph.vcount()
+        vertex_clustering = graph.community_infomap(edge_weights=weights)
         return vertex_clustering.as_cover()
 

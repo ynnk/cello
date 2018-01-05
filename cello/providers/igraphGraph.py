@@ -8,10 +8,10 @@ import igraph
 import random
 from cello.graphs import AbstractGraph, random_vertex
 
-class IgraphGraph(AbstractGraph, igraph.Graph):
+class IgraphGraph(igraph.Graph):
 
     def __init__(self, *args, **kwargs ):
-        AbstractGraph.__init__( self, *args, **kwargs)
+        #AbstractGraph.__init__( self, *args, **kwargs)
         igraph.Graph.__init__( self, *args, **kwargs)
 
     @classmethod
