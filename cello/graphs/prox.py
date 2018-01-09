@@ -75,20 +75,22 @@ class ProxExtract(Optionable):
         ("cut", Numeric(vtype=int, default=100, min=1, help="vcount cut")),
         ("pzeros", Numeric(multi=True, uniq=True, vtype=int, default=[], min=0, help="pzero vertex index all if empty list or None")),
         ("add_loops", Boolean(default=True, help="add loops on vertices")),
-        ("mode", Numeric(choices=[ IN, OUT, ALL], default=ALL, help="add loops on vertices"))
+        ("mode", Numeric(choices=[ IN, OUT, ALL], default=ALL, help="add loops on vertices")),
+        ("weighted", Boolean( default=True))
         ]
         for e,v in options: 
             self.add_option(e, v ) 
             if e in kwargs : self.set_option_value(e, kwargs[e])
             
     @Optionable.check
-    def __call__(self, graph, length=3, cut=100, pzeros=None, add_loops=True, mode=ALL):
+    def __call__(self, graph, length=3, cut=100, pzeros=None, weighted=True, add_loops=True, mode=ALL):
        
         # Extract n prox vertex
-        
+        weight = "weight" if weighted else None
+         
         self._logger.info(  "%s %s %s" % (length, cut, pzeros))
         pzeros =  pzeros if  pzeros is not None and len(pzeros) else range(graph.vcount()) 
-        extract = prox_markov_dict(graph, pzeros, length,mode=ALL, add_loops=add_loops)
+        extract = prox_markov_dict(graph, pzeros, length,mode=ALL, add_loops=add_loops, weight=weight)
         subvs =   sortcut(extract,cut)
         return dict(subvs)
 
