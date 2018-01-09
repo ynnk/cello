@@ -75,7 +75,7 @@ class ProxExtract(Optionable):
         ("cut", Numeric(vtype=int, default=100, min=1, help="vcount cut")),
         ("pzeros", Numeric(multi=True, uniq=True, vtype=int, default=[], min=0, help="pzero vertex index all if empty list or None")),
         ("add_loops", Boolean(default=True, help="add loops on vertices")),
-        ("mode", Numeric(choices=[ IN, OUT, ALL], default=ALL, help="add loops on vertices")),
+        ("mode", Numeric(choices=[ IN, OUT, ALL], default=OUT, help="edge directions")),
         ("weighted", Boolean( default=True))
         ]
         for e,v in options: 

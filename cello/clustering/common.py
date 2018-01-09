@@ -54,7 +54,7 @@ class Walktrap(Weighted):
     """
     def __init__(self, name=None, **kwargs):
         super(Walktrap, self).__init__(name=name, **kwargs)
-        self.add_option("l", Numeric(default=4, help="length of the random walks"))
+        self.add_option("l", Numeric(default=kwargs.get("l", 4), help="length of the random walks"))
 
     def __call__(self, graph, l=4, weighted = True):
         if self.graph_is_trivial(graph, weighted=True):
