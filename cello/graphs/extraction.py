@@ -405,15 +405,15 @@ class ProxMarkovExtractionGlobalBigraph(Optionable):
         super(ProxMarkovExtractionGlobalBigraph, self).__init__(name=name)
         self.add_option("half_length", Numeric(
             min=0, max=20, default=2,
-            help="Two walks will be computed one of lenght t*2-1 one of lenght t*2"
+            help="Two walks will be computed one of length t*2-1 one of lenght t*2"
         ))
         self.add_option("odd_count", Numeric(
             min=0, default=15,
-            help="Number of vertices to keep with the *odd* lenght walk"
+            help="Number of vertices to keep with the *odd* length walk"
         ))
         self.add_option("even_count", Numeric(
             min=0, default=35,
-            help="Number of vertices to keep with the *even* lenght walk"
+            help="Number of vertices to keep with the *even* length walk"
         ))
         # create the the basic extractor
         self.extrator = ProxMarkovExtractionGlobal(graph)

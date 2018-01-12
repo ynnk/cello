@@ -95,12 +95,12 @@ class ProxExtract(Optionable):
         return dict(subvs)
 
 
-def ProxSubgraph(ProxExtract):
-    def __init__(self, name=None, ):
-        super(ProxSubgraph, self).__init__(name=name)
+class ProxSubgraph(ProxExtract):
+    def __init__(self, name=None, **kwargs):
+        super(ProxSubgraph, self).__init__(name=name, **kwargs)
     
     @Optionable.check
-    def __call__(self, graph, length=3, cut=100, pzeros=None, add_loops=True, mode=ALL):
+    def __call__(self, graph, **kwargs):
         subvs = super(ProxSubgraph, self).__call__(graph, **kwargs)
         return graph.subgraph( subvs )
         
