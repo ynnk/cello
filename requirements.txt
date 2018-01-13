@@ -1,7 +1,4 @@
 reliure
 six
 future
-python-igraph
-numpy
-scipy
-sklearn
+
