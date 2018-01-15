@@ -4,7 +4,10 @@ from setuptools import setup, find_packages
 
 #TODO; better setup
 # see https://bitbucket.org/mchaput/whoosh/src/999cd5fb0d110ca955fab8377d358e98ba426527/setup.py?at=default
-# for ex
+
+# changes
+# 1.0.3 weighted loops ; sortcut > 0
+
 
 # Read requirements from txt file
 with open('requirements.txt') as f:
@@ -13,7 +16,7 @@ with open('requirements.txt') as f:
 
 setup(
     name='cello',
-    version='1.0.2',
+    version='1.0.3',
     description='Cello',
     author='KodexLab',
     author_email='contact@kodexlab.com',
