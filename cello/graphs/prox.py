@@ -88,7 +88,9 @@ class ProxExtract(Optionable):
         # Extract n prox vertex
         weight = "weight" if weighted else None
          
-        self._logger.info(  "%s %s %s" % (length, cut, pzeros))
+        self._logger.info(  "length %s, cut %s, pzeros %s, weighted %s, add_loops %s, mode  %s" % (length, cut, pzeros, weighted, add_loops, mode))
+
+        
         pzeros =  pzeros if  pzeros is not None and len(pzeros) else range(graph.vcount()) 
         extract = prox_markov_dict(graph, pzeros, length,mode=ALL, add_loops=add_loops, weight=weight)
         subvs =   sortcut(extract,cut)
@@ -169,7 +171,7 @@ def sortcut(v_extract, vcount):
     """
     if type(v_extract) is list:
         v_extract = { i: v for i, v in enumerate(v_extract) }
-    v_extract = list(six.iteritems(v_extract)) #  sparce prox_vect : [(id, prox_value)]
+    v_extract = [ (i,v) for i, v in   six.iteritems(v_extract) if v > 0.] #  sparce prox_vect : [(id, prox_value)]
     v_extract.sort(key=lambda x: x[1], reverse=True) # sorting by prox.prox_markov
     if vcount >= 0:
         v_extract = v_extract[:vcount]
@@ -393,14 +395,18 @@ def prox_markov_dict(graph, p0, length, mode=OUT, add_loops=False, weight=None,
             weight = [weight(graph, edge.source, edge.target) for edge in graph.es]
         # prepare the weights for loops (if any)
         if add_loops:
+            def lw(*args): # loop weight
+                w = get_average_es_weight (*args)
+                return 1. if w == 0.  else w
+            
             #TODO: use a np.array not a list, to save memory
             if isinstance(loops_weight, basestring):
                 loops_weight = graph.vs[weight]
             elif isinstance(loops_weight, list) == False : 
                 #defaut loop weight for each vertex is the average weight OUT/IN edges of the vertex.
                 if not callable(loops_weight) :
-                    loops_weight = get_average_es_weight 
-                    
+                    loops_weight = lw
+                        
                 #compute the weight of incident edges for all vertices
                 vs_incident = []
                 for vtx in graph.vs : 
@@ -412,6 +418,7 @@ def prox_markov_dict(graph, p0, length, mode=OUT, add_loops=False, weight=None,
         # compute prox it self
         for k in range(length):
             vect = spreading_wgt(graph, vect, mode, weight, loops_weight)
+        print vect
     return vect
 
 
@@ -529,6 +536,8 @@ def confluence_simple(graph, p0, length=3, method=prox_markov_dict, neighbors=ce
     return conf
 
 ##########################################################################
+def weight_one(graph, idx, mode=ALL, weight=None): return 1.
+
 def get_average_es_weight(graph, idx, mode=ALL, weight=None):
     """ Compute the average weight of the edges that link the idx vertex to its neighbors
 
