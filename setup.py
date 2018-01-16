@@ -16,11 +16,11 @@ with open('requirements.txt') as f:
 
 setup(
     name='cello',
-    version='1.0.3',
+    version='1.0.4',
     description='Cello',
     author='KodexLab',
-    author_email='contact@kodexlab.com',
-    url='http://www.kodexlab.com/',
+    author_email='contact@padagraph.io',
+    url='http://www.padagraph.io',
     packages=['cello'] + ['cello.%s' % submod for submod in find_packages('cello')],
     install_requires=required,
 )

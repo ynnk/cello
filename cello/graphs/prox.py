@@ -418,7 +418,6 @@ def prox_markov_dict(graph, p0, length, mode=OUT, add_loops=False, weight=None,
         # compute prox it self
         for k in range(length):
             vect = spreading_wgt(graph, vect, mode, weight, loops_weight)
-        print vect
     return vect
 
 
