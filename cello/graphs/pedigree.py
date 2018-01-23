@@ -3,7 +3,7 @@
 import igraph
 import numpy as np
 import StringIO
-
+import time
 # from enavarro http://enavarro.me/
 
 opt_default = { "n":True,
@@ -105,6 +105,7 @@ def compute(g, opt={}):
     opt = opt_default.copy()
     opt.update(_opt)
 
+    start = time.time()
     p = {}
     
     def pset(key, value):
@@ -174,7 +175,14 @@ def compute(g, opt={}):
                 pset("a_lcc", a)
                 pset("r2_lcc", r2)
                 pset("dd_plot_lcc", plot_fname_lcc)
-    return p
+
+    d = []
+    for key, cast, _, cmt in opt_ordre_cast_cmt :
+        if key in p:
+            d.append( (key, p[key], cmt) )
+
+    d.append( ("time", time.time() - start, "pedigree computation time") )
+    return d
 
 
 
