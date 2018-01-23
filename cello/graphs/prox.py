@@ -454,7 +454,7 @@ def prox_markov_mtcl(graph, p0, length, throws, mode=OUT, add_loops=False, loops
     :param mode: given to neighboors, consider OUT links, IN links our ALL for both
     :param add_loops: if True do as if every vertex hold a self loop
          (force the graph to be reflexif)
-    :param weight: if None the graph is not weighting, else it could be:
+    :param weight: if None the graph is not weighted, else it could be:
         a str corresponding to an edge attribute to use as weight,
         or a list of weight (`|weight| == graph.ecount()`),
         or a callable `lambda graph, source, target: wgt`
