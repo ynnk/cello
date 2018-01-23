@@ -136,7 +136,8 @@ def compute(g, opt={}):
     pset("rho", g.assortativity_degree())
     
     cc = []
-    if opt["ncc"] or opt["LCC"]: cc = g.clusters(mode=igraph.WEAK)
+    if opt["ncc"] or opt["LCC"]:
+        cc = g.clusters(mode=igraph.WEAK)
     pset("ncc", len(cc))
 
 
@@ -155,9 +156,9 @@ def compute(g, opt={}):
                 pset("r2_in", r2)
                 pset("dd_plot_in", plot_fname)
 
-    if opt["LCC"]:
+    if opt["LCC"] and cc.n > 0 :
         lcc = cc.giant()
-        
+
         pset("n_lcc", lcc.vcount())
         pset("m_lcc", lcc.ecount())
         #pset("<k>", np.mean(lcc.degree(mode=igraph.OUT)))

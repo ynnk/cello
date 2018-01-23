@@ -7,7 +7,7 @@ from setuptools import setup, find_packages
 
 # changes
 # 1.0.3 weighted loops ; sortcut > 0
-# 1.0.5 pedigree computations
+# 1.0.6 pedigree computations
 
 
 # Read requirements from txt file
@@ -17,7 +17,7 @@ with open('requirements.txt') as f:
 
 setup(
     name='cello',
-    version='1.0.5',
+    version='1.0.6',
     description='Cello',
     author='KodexLab',
     author_email='contact@padagraph.io',
