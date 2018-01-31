@@ -88,8 +88,6 @@ class ProxExtract(Optionable):
         # Extract n prox vertex
         weight = "weight" if weighted else None
         self._logger.info(  "length %s, cut %s, pzeros %s, weighted %s, add_loops %s, mode  %s" % (length, cut, pzeros, weighted, add_loops, mode))
-        print graph.es['weight'] 
-        print [ e['properties'].get('weight', 1) for e in  graph.es ]
         
         pzeros =  pzeros if  pzeros is not None and len(pzeros) else range(graph.vcount()) 
         extract = prox_markov_dict(graph, pzeros, length,mode=mode, add_loops=add_loops, weight=weight)

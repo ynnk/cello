@@ -1,6 +1,7 @@
 #-*- coding:utf-8 -*-
 
 import igraph
+import math
 import numpy as np
 import StringIO
 import time
@@ -139,7 +140,8 @@ def compute(g, opt={}):
     pset("MeanConfluence", prox.mean_confluence_simple(g, [])  if g.vcount() > 0 else None)
     
     # Correlation des degrées
-    pset("rho", g.assortativity_degree())
+    rho = g.assortativity_degree()
+    pset("rho", "nan" if math.isnan(rho) else rho  )
     
     cc = []
     if opt["ncc"] or opt["LCC"]:
