@@ -5,8 +5,11 @@ from setuptools import setup, find_packages
 #TODO; better setup
 # see https://bitbucket.org/mchaput/whoosh/src/999cd5fb0d110ca955fab8377d358e98ba426527/setup.py?at=default
 
+version='1.0.8',
+
 # changes
 
+# 1.0.8 fix pedgigree rho
 # 1.0.7 fix mode on proxextract
 # 1.0.6 pedigree computations
 # 1.0.3 weighted loops ; sortcut > 0
@@ -18,7 +21,7 @@ with open('requirements.txt') as f:
 
 setup(
     name='cello',
-    version='1.0.7',
+    version=version,
     description='Cello',
     author='enavarro, ynnk',
     author_email='contact@padagraph.io',
