@@ -6,9 +6,10 @@ from setuptools import setup, find_packages
 # see https://bitbucket.org/mchaput/whoosh/src/999cd5fb0d110ca955fab8377d358e98ba426527/setup.py?at=default
 
 # changes
-# 1.0.3 weighted loops ; sortcut > 0
-# 1.0.6 pedigree computations
 
+# 1.0.7 fix mode on proxextract
+# 1.0.6 pedigree computations
+# 1.0.3 weighted loops ; sortcut > 0
 
 # Read requirements from txt file
 with open('requirements.txt') as f:
@@ -17,9 +18,9 @@ with open('requirements.txt') as f:
 
 setup(
     name='cello',
-    version='1.0.6',
+    version='1.0.7',
     description='Cello',
-    author='KodexLab',
+    author='enavarro, ynnk',
     author_email='contact@padagraph.io',
     url='http://www.padagraph.io',
     packages=['cello'] + ['cello.%s' % submod for submod in find_packages('cello')],

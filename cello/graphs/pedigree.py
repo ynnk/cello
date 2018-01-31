@@ -4,6 +4,8 @@ import igraph
 import numpy as np
 import StringIO
 import time
+from cello.graphs import prox
+
 # from enavarro http://enavarro.me/
 
 opt_default = { "n":True,
@@ -21,6 +23,7 @@ opt_default = { "n":True,
 
                 "ncc":True,         # nomber of connected components
 
+                "MeanConfluence":True,           # clustering mean confluence
                 "C":True,           # Global clustering coef
                 "rho":True,         # degree correlation
 
@@ -69,6 +72,7 @@ opt_ordre_cast_cmt = [
 
                 ("ncc", str, int,       "number of connected components"),
 
+                ("MeanConfluence", strf4, float,     "clustering mean confluence."),
                 ("C", strf4, float,     "Global clustering coef."),
                 ("rho", strf4, float,   "degree correlation"),
 
@@ -132,6 +136,8 @@ def compute(g, opt={}):
     
     # C Global
     pset("C", g.transitivity_undirected())
+    pset("MeanConfluence", prox.mean_confluence_simple(g, [])  if g.vcount() > 0 else None)
+    
     # Correlation des degrées
     pset("rho", g.assortativity_degree())
     

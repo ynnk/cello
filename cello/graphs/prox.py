@@ -75,7 +75,7 @@ class ProxExtract(Optionable):
         ("cut", Numeric(vtype=int, default=100, min=1, help="vcount cut")),
         ("pzeros", Numeric(multi=True, uniq=True, vtype=int, default=[], min=0, help="pzero vertex index all if empty list or None")),
         ("add_loops", Boolean(default=True, help="add loops on vertices")),
-        ("mode", Numeric(choices=[ IN, OUT, ALL], default=OUT, help="edge directions")),
+        ("mode", Numeric(choices=[ IN, OUT, ALL], default=ALL, help="edge directions")),
         ("weighted", Boolean( default=True))
         ]
         for e,v in options: 
@@ -87,12 +87,12 @@ class ProxExtract(Optionable):
        
         # Extract n prox vertex
         weight = "weight" if weighted else None
-         
         self._logger.info(  "length %s, cut %s, pzeros %s, weighted %s, add_loops %s, mode  %s" % (length, cut, pzeros, weighted, add_loops, mode))
-
+        print graph.es['weight'] 
+        print [ e['properties'].get('weight', 1) for e in  graph.es ]
         
         pzeros =  pzeros if  pzeros is not None and len(pzeros) else range(graph.vcount()) 
-        extract = prox_markov_dict(graph, pzeros, length,mode=ALL, add_loops=add_loops, weight=weight)
+        extract = prox_markov_dict(graph, pzeros, length,mode=mode, add_loops=add_loops, weight=weight)
         subvs =   sortcut(extract,cut)
         return dict(subvs)
 
@@ -441,10 +441,8 @@ def prox_markov_list(graph, p0, length, mode=OUT, add_loops=False, loops_weight=
     return [vect.get(vidx, 0.) for vidx in range(graph.vcount())]
 
 
-
-#TODO: do not put "cello.graphs.neighbors" in default but None and set it to cello.graphs.neighbors in the function
 def prox_markov_mtcl(graph, p0, length, throws, mode=OUT, add_loops=False, loops_weight=None,
-                        weight=None, neighbors=cello.graphs.neighbors):
+                        weight=None, neighbors=None):
     """ Prox 'classic' by an approximate method montecarlo with nb_throw throws
 
     :param graph: graph in igraph format
@@ -470,8 +468,12 @@ def prox_markov_mtcl(graph, p0, length, throws, mode=OUT, add_loops=False, loops
     died = 0 # proba de mourir : on meurt qd on doit faire un pas a partir d'un sommet sans voisins
     #p0 = normalise(p0)
     
+    if neighbors is None:
+         neighbors= cello.graphs.neighbors
+
     if weight is not None:  #FIXME
         raise NotImplementedError
+    
     for throw in range(throws) :
         neighborhood = list(normalize_pzero(graph, p0)) # FIXME not weighted
         for j in range(length) :
@@ -529,10 +531,19 @@ def confluence(graph, vtxa, vtxb, length=3, add_loops=True, remove_edge=False,
     return sim
 
 
-def confluence_simple(graph, p0, length=3, method=prox_markov_dict, neighbors=cello.graphs.neighbors):
-    pm = method(graph, p0, length=length, neighbors=neighbors )
+def mean_confluence_simple(graph, p0, length=3, method=prox_markov_dict, **kwargs):
+    conf = confluence_simple(graph, p0, length=3, method=prox_markov_dict, **kwargs)
+    if len(conf):
+        return sum(conf.values()) / len(conf)
+    return None
+    
+def confluence_simple(graph, p0, length=3, method=prox_markov_dict, **kwargs):
+    pm = method(graph, p0, length=length , **kwargs)
+    neighbors = cello.graphs.neighbors
     conf =  { k: 1.*v / (v+(1.*len(neighbors(graph,k))/(2*graph.ecount()))) for k,v in six.iteritems(pm)}
     return conf
+
+
 
 ##########################################################################
 def weight_one(graph, idx, mode=ALL, weight=None): return 1.
@@ -580,12 +591,14 @@ def get_average_es_weight(graph, idx, mode=ALL, weight=None):
         es = graph.incident(idx, mode)
         es_wgt = [graph.es[eid][weight] for eid in es]
         loop_weight = (1. * sum(es_wgt))/len(es_wgt) if len(es_wgt) > 0 else 1.
+        
     elif isinstance(weight, list):
         if len(weight) != len(graph.incident(idx, mode)):
             raise ValueError("weight list should have the same lenght than vertex incidence list")
         loop_weight = 1. * sum(weight)/len(weight) if len(weight) > 0 else 1.
     else:
         loop_weight = 1.
+        
     return loop_weight
 
 
