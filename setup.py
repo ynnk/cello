@@ -5,10 +5,11 @@ from setuptools import setup, find_packages
 #TODO; better setup
 # see https://bitbucket.org/mchaput/whoosh/src/999cd5fb0d110ca955fab8377d358e98ba426527/setup.py?at=default
 
-version='1.0.8',
+version="1.1.0"
 
 # changes
 
+# 1.1.0 change weighting function signature in prox_markov_dict
 # 1.0.8 fix pedgigree rho
 # 1.0.7 fix mode on proxextract
 # 1.0.6 pedigree computations

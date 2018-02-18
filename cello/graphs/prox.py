@@ -89,9 +89,9 @@ class ProxExtract(Optionable):
         weight = "weight" if weighted else None
         self._logger.info(  "length %s, cut %s, pzeros %s, weighted %s, add_loops %s, mode  %s" % (length, cut, pzeros, weighted, add_loops, mode))
         
-        pzeros =  pzeros if  pzeros is not None and len(pzeros) else range(graph.vcount()) 
+        pzeros  = pzeros if  pzeros is not None and len(pzeros) else range(graph.vcount()) 
         extract = prox_markov_dict(graph, pzeros, length,mode=mode, add_loops=add_loops, weight=weight)
-        subvs =   sortcut(extract,cut)
+        subvs   = sortcut(extract,cut)
         return dict(subvs)
 
 
@@ -304,6 +304,8 @@ def spreading_wgt(graph, in_vect, mode, weight, loops_weight):
     return out_vect
 
 
+
+
 def prox_markov_dict(graph, p0, length, mode=OUT, add_loops=False, weight=None,
                         loops_weight=None, neighbors=None):
     """ Generic prox implementation
@@ -357,7 +359,7 @@ def prox_markov_dict(graph, p0, length, mode=OUT, add_loops=False, weight=None,
     >>> wgt_array = [1, 3]
     >>> prox_markov_dict(graph, [0], 2, add_loops=False, weight=wgt_array)
     {0: 0.25, 2: 0.75}
-    >>> wgt_fct = lambda graph, source, target: 2
+    >>> wgt_fct = lambda graph, edge: 2
     >>> prox_markov_dict(graph, [0], 2, add_loops=False, weight=wgt_fct)
     {0: 0.5, 2: 0.5}
 
@@ -375,8 +377,8 @@ def prox_markov_dict(graph, p0, length, mode=OUT, add_loops=False, weight=None,
     >>> # but you can also give custom weight for loops:
     >>> prox_markov_dict(graph, [0], 2, add_loops=True, weight="wgt", loops_weight=[100, 10, 1])
     {0: 0.9488372406178044, 1: 0.049082315554179065, 2: 0.0020804438280166435}
-
     """
+
     vect = normalize_pzero(graph, p0)
     if neighbors is not None:
         raise NotImplementedError
@@ -390,14 +392,13 @@ def prox_markov_dict(graph, p0, length, mode=OUT, add_loops=False, weight=None,
         if isinstance(weight, basestring):
             weight = graph.es[weight]
         elif callable(weight):
-            weight = [weight(graph, edge.source, edge.target) for edge in graph.es]
+            weight = [weight(graph, edge ) for edge in graph.es]
         # prepare the weights for loops (if any)
         if add_loops:
-            def lw(*args): # loop weight
-                w = get_average_es_weight (*args)
-                return 1. if w == 0.  else w
+            def lw(graph, idx, mode, w): # loop weight
+                _w = get_average_es_weight (graph, idx, mode, w)
+                return 1. if _w == 0.  else _w
             
-            #TODO: use a np.array not a list, to save memory
             if isinstance(loops_weight, basestring):
                 loops_weight = graph.vs[weight]
             elif isinstance(loops_weight, list) == False : 
@@ -416,6 +417,32 @@ def prox_markov_dict(graph, p0, length, mode=OUT, add_loops=False, weight=None,
         # compute prox it self
         for k in range(length):
             vect = spreading_wgt(graph, vect, mode, weight, loops_weight)
+    return vect
+
+def _wneighbors(graph, v ):
+    """
+    force refexiv & ALL edges weight 1
+    ::
+    """
+    e = set([ e for e in graph.neighbors(v, mode=ALL) ] + [v])    
+    return zip( list(e), [1.]*len(e) )
+    
+def pure_prox(graph, p0, length, wneighbors=None):
+
+    if wneighbors == None:
+        wneighbors = _wneighbors
+        
+    vect = normalize_pzero(graph, p0)
+    for k in range(length):
+        out_vect = {}
+        #print vect
+        for vid, value in six.iteritems(vect):
+            neighbors = wneighbors(graph, vid)
+            tot = 1. * sum([ w for v, w in neighbors ])
+            if tot > 0:
+                for v, w in neighbors:
+                    out_vect[v] = out_vect.get(v, 0.) + value * w / tot
+        vect = out_vect
     return vect
 
 
@@ -594,6 +621,10 @@ def get_average_es_weight(graph, idx, mode=ALL, weight=None):
         if len(weight) != len(graph.incident(idx, mode)):
             raise ValueError("weight list should have the same lenght than vertex incidence list")
         loop_weight = 1. * sum(weight)/len(weight) if len(weight) > 0 else 1.
+    elif callable(weight):
+        es = graph.incident(idx, mode)
+        es_wgt = [weight(graph, es[eid]) for eid in es]
+        loop_weight = (1. * sum(es_wgt))/len(es_wgt) if len(es_wgt) > 0 else 1.
     else:
         loop_weight = 1.
         

@@ -120,7 +120,7 @@ def compute(g, opt={}):
     
     pset("n", g.vcount())
     pset("m", g.ecount())
-    pset("<k>", np.mean(g.degree(mode=igraph.OUT)))
+    pset("<k>", np.mean(g.degree(mode=igraph.OUT)) if g.vcount() else 0 )
     
     pset("directed", g.is_directed())
     pset("mutuals", len([1 for e in g.is_mutual() if e]))
@@ -136,7 +136,7 @@ def compute(g, opt={}):
     pset("simple", g.is_simple())
     
     # C Global
-    pset("C", g.transitivity_undirected())
+    pset("C", g.transitivity_undirected() if g.vcount() else "nan")
     pset("MeanConfluence", prox.mean_confluence_simple(g, [])  if g.vcount() > 0 else None)
     
     # Correlation des degrées
