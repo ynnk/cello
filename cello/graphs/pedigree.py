@@ -1,5 +1,7 @@
 #-*- coding:utf-8 -*-
 
+# from enavarro http://enavarro.me/
+
 import igraph
 import math
 import numpy as np
@@ -7,7 +9,6 @@ import StringIO
 import time
 from cello.graphs import prox
 
-# from enavarro http://enavarro.me/
 
 opt_default = { "n":True,
                 "m":True,
@@ -116,8 +117,9 @@ def compute(g, opt={}):
     def pset(key, value):
         if not key in opt:
             warnings.warn("The key '%s' doesn't exist !")
-        if key in opt and opt[key]: p[key] = value
-    
+        if key in opt and opt[key]:
+            p[key] = "nan" if (type( value) == float and math.isnan(value)) else value
+            
     pset("n", g.vcount())
     pset("m", g.ecount())
     pset("<k>", np.mean(g.degree(mode=igraph.OUT)) if g.vcount() else 0 )
@@ -136,12 +138,12 @@ def compute(g, opt={}):
     pset("simple", g.is_simple())
     
     # C Global
-    pset("C", g.transitivity_undirected() if g.vcount() else "nan")
+    pset("C", g.transitivity_undirected() if g.vcount() else "null")
     pset("MeanConfluence", prox.mean_confluence_simple(g, [])  if g.vcount() > 0 else None)
     
     # Correlation des degrées
     rho = g.assortativity_degree()
-    pset("rho", "nan" if math.isnan(rho) else rho  )
+    pset("rho",  rho  )
     
     cc = []
     if opt["ncc"] or opt["LCC"]:
@@ -167,7 +169,7 @@ def compute(g, opt={}):
     if opt["LCC"] and cc.n > 0 :
         lcc = cc.giant()
 
-        pset("n_lcc", lcc.vcount())
+        pset("n_lcc", lcc.vcount() )
         pset("m_lcc", lcc.ecount())
         #pset("<k>", np.mean(lcc.degree(mode=igraph.OUT)))
         
@@ -189,11 +191,9 @@ def compute(g, opt={}):
     for key, cast, _, cmt in opt_ordre_cast_cmt :
         if key in p:
             d.append( (key, p[key], cmt) )
-
+            
     d.append( ("time", time.time() - start, "pedigree computation time") )
     return d
-
-
 
 
 def to_str(p):

@@ -90,7 +90,8 @@ class ProxExtract(Optionable):
         self._logger.info(  "length %s, cut %s, pzeros %s, weighted %s, add_loops %s, mode  %s" % (length, cut, pzeros, weighted, add_loops, mode))
         
         pzeros  = pzeros if  pzeros is not None and len(pzeros) else range(graph.vcount()) 
-        extract = prox_markov_dict(graph, pzeros, length,mode=mode, add_loops=add_loops, weight=weight)
+        
+        extract = prox_markov_dict(graph, pzeros, length, mode=mode, add_loops=add_loops, weight=weight)
         subvs   = sortcut(extract,cut)
         return dict(subvs)
 
@@ -139,6 +140,7 @@ def normalize_pzero(graph, p0):
     {0: 0.3333333333333333, 1: 0.3333333333333333, 2: 0.3333333333333333}
     >>> normalize_pzero(graph, [])
     {0: 0.3333333333333333, 1: 0.3333333333333333, 2: 0.3333333333333333}
+    
     """
     if len(p0) == 0:
         p0 = range(graph.vcount()) # graph global
@@ -428,6 +430,7 @@ def _wneighbors(graph, v ):
     return zip( list(e), [1.]*len(e) )
     
 def pure_prox(graph, p0, length, wneighbors=None):
+    
 
     if wneighbors == None:
         wneighbors = _wneighbors
