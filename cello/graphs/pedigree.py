@@ -5,7 +5,7 @@
 import igraph
 import math
 import numpy as np
-import StringIO
+from six import StringIO
 import time
 from cello.graphs import prox
 
