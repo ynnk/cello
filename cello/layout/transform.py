@@ -156,16 +156,18 @@ class ReduceMDS(Composable):
         """ Process a MDS
         """
         from sklearn import manifold
+        import scipy.spatial.distance as d
         if len(layout) > 0 and len(layout) != layout.dim:
             raise ValueError('The layout should have same number of vertices and dimensions')
         mat = np.array(layout.coords)
+        mat = d.cdist(mat, mat, metric="cosine")
         if len(layout) == 0:
             result = []
         else:
             if layout.dim <= self.out_dim:
                 result = np.hstack((mat, np.zeros((len(layout), self.out_dim - layout.dim)))).tolist()
             else:
-                mds = manifold.MDS(self.out_dim, max_iter=300, n_init=10)
+                mds = manifold.MDS(self.out_dim, max_iter=600, n_init=30, dissimilarity="precomputed")
                 result = mds.fit_transform(mat).tolist()
         return ig.Layout(result, dim=self.out_dim)
 

@@ -49,6 +49,7 @@ class ProxLayout(Optionable):
         if self.weighted:
             weight = EDGE_WEIGHT_ATTR
         #TODO: manage loops weight !
+        graph.to_undirected()
         coords = [prox.prox_markov_list(graph, [vtx.index], weight=weight, length=length, add_loops=add_loops) \
                         for vtx in graph.vs]
         return ig.Layout(coords, dim=len(coords))
@@ -173,8 +174,15 @@ def ProxMDSSugiyamaLayout(name="ProxMDSSugiyama", dim=3, weighted=False):
     
     @Composable
     def computeLayout(graph):
-        ranks = [x[1] for x in graph.layout_sugiyama()[:len(graph.vs)]]
-        prox_coords = ProxLayoutMDS(dim=dim-1)(graph)
+        was_directed = graph.is_directed()
+        if not was_directed:
+            graph.to_directed()
+        sugi = [x[1] for x in graph.layout_sugiyama()[:len(graph.vs)]]
+        if not was_directed:
+            graph.to_undirected()
+        rank_max = max(sugi)
+        ranks = [(x/(rank_max/2))-1 for x in sugi]
+        prox_coords = ProxLayoutPCA(dim=dim-1)(graph)
         return ig.Layout([ prox_coords[i] + [rank] for i, rank in enumerate(ranks)], dim=dim)
 
     computeLayout.name = name
