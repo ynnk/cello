@@ -116,7 +116,7 @@ def normalise(p0):
     >>> normalise(p0)
     {0: 0.5, 3: 0.5}
     """
-    vsum = 1.* np.sum(abs(val) for val in six.itervalues(p0))
+    vsum = 1.* sum(abs(val) for val in six.itervalues(p0))
     return {vid: val/vsum for vid, val in six.iteritems(p0)}
 
 
